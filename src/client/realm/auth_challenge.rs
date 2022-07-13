@@ -1,0 +1,80 @@
+use byteorder::{LittleEndian, WriteBytesExt};
+use std::io::{Cursor, Write, Read};
+use sha1::{Digest, Sha1};
+use flate2::Compression;
+use flate2::write::ZlibEncoder;
+
+use crate::client::opcodes::Opcode;
+use crate::network::packet::OutcomePacket;
+use crate::types::{
+    HandlerInput,
+    HandlerOutput,
+    HandlerResult
+};
+use crate::utils::random_range;
+
+const CLIENT_SEED_SIZE: usize = 4;
+
+pub fn handler(input: &mut HandlerInput) -> HandlerResult {
+    let session = &input.session;
+    let server_id = session.server_id.unwrap();
+    let config = session.get_config();
+    let addons = config.addons.as_vec().unwrap();
+    let username = &config.connection_data.username;
+    let session_key = session.session_key.as_ref().unwrap();
+
+    let mut reader = Cursor::new(input.data.as_ref().unwrap()[8..].to_vec());
+    let mut server_seed = vec![0u8; 32];
+    reader.read_exact(&mut server_seed)?;
+
+    let client_seed = random_range(CLIENT_SEED_SIZE);
+
+    let hasher = Sha1::new();
+    let digest = hasher
+        .chain(&username)
+        .chain(vec![0, 0, 0, 0])
+        .chain(&client_seed)
+        // from server_seed we need only CLIENT_SEED_SIZE first bytes
+        .chain(&server_seed[..CLIENT_SEED_SIZE])
+        .chain(session_key)
+        .finalize();
+
+    let mut body = Vec::new();
+    // TODO: refactor build into config or smth like that
+    body.write_i32::<LittleEndian>(12340)?;
+    body.write_u32::<LittleEndian>(0)?;
+    body.write(username.as_bytes())?;
+    body.write_u8(0)?;
+    body.write_u32::<LittleEndian>(0)?;
+    body.write(&client_seed)?;
+    body.write_u32::<LittleEndian>(0)?;
+    body.write_u32::<LittleEndian>(0)?;
+    body.write_u32::<LittleEndian>(server_id as u32)?;
+    body.write_u32::<LittleEndian>(2)?; // expansion ???
+    body.write_u32::<LittleEndian>(0)?; // ???
+    body.write(&digest.to_vec())?;
+
+    let mut addon_info = Vec::new();
+    addon_info.write_u32::<LittleEndian>(addons.len() as u32)?;
+
+    // TODO: refactor this to be done on config building level
+    for addon in addons {
+        addon_info.write(addon["name"].as_str().unwrap().as_bytes())?;
+        addon_info.write_u8(0)?; // null-terminator for name string
+        addon_info.write_u8(addon["flags"].as_i64().unwrap() as u8)?;
+        addon_info.write_u32::<LittleEndian>(addon["modulus_crc"].as_i64().unwrap() as u32)?;
+        addon_info.write_u32::<LittleEndian>(addon["urlcrc_crc"].as_i64().unwrap() as u32)?;
+    }
+    // seems like this timestamp always same, maybe it can be moved to config or smth ?
+    addon_info.write_u32::<LittleEndian>(1636457673)?; // last modified timestamp, smth like that
+
+    body.write_u32::<LittleEndian>(addon_info.len() as u32)?;
+
+    let mut encoder = ZlibEncoder::new(Vec::new(), Compression::best());
+    encoder.write_all(&addon_info)?;
+    body.write(&encoder.finish().unwrap())?;
+
+    println!("SEND CMSG_AUTH_SESSION");
+
+    Ok(HandlerOutput::Data(OutcomePacket::new(Opcode::CMSG_AUTH_SESSION, Some(body))))
+}
