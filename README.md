@@ -36,4 +36,4 @@ A lot of opcodes need to support.
 
 If you want to support me you can buy me a coffee on https://ko-fi.com/idewave.
 
-Please join us on discord: https://discord.gg/FNpUU6bG
+Please join us on discord: https://discord.gg/PvaJ2g4zTp
