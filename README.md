@@ -1,5 +1,5 @@
 # idewave-cli
-This is Rust implementation of smart wow client (cli). 
+This is Rust implementation of world of warcraft client v3.3.5a. Smart CLI.
 
 This project provide structure for easy apply any amount of handlers of user actions when interact with wow server.
 Current supported version of wow is **3.3.5a** only.
