@@ -35,3 +35,5 @@ It's always welcome. There incomplete part of warden interaction.
 A lot of opcodes need to support.
 
 If you want to support me you can buy me a coffee on https://ko-fi.com/idewave.
+
+Please join us on discord: https://discord.gg/FNpUU6bG
