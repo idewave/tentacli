@@ -1,12 +1,14 @@
 [package]
+edition = "2021"
 name = "idewave-cli"
 version = "0.1.0"
-edition = "2021"
 authors = ["Sergio Ivanuzzo <sergio.ivanuzzo@gmail.com>"]
+description = "Smart wow-client (cli)"
 readme = "README.md"
 keywords = ["wow", "wowcli", "idewave", "wowclient"]
 license = "Apache-2.0"
 license-file = "LICENCE"
+repository = "https://github.com/idewave/idewave-cli"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
