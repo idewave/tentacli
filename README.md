@@ -10,6 +10,14 @@ Manual part currently implemented only within AI part (see movement/ai).
 
 In the future I want to improve some I/O and make manual part more extended.
 
+### How to start
+Rename **Config.yml.dist** into **Config.yml**, then edit it according to your preferences.
+Please notice regex currently supported only for `realm_name` param (see no case why to support somewhere else).
+
+Then just run:
+
+> cargo run
+
 ### What implemented already
 1. Full authentication flow (need to add checks if user banned etc)
 2. Parser of update packets
@@ -25,3 +33,5 @@ This part implemented in learning purpose only.
 ### In case you want contribute
 It's always welcome. There incomplete part of warden interaction. 
 A lot of opcodes need to support.
+
+If you want to support me you can buy me a coffee on https://ko-fi.com/idewave.
