@@ -40,7 +40,7 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
             let mut body = Vec::new();
             body.write_u8(WardenOpcode::WARDEN_CMSG_MODULE_MISSING)?;
 
-            Ok(HandlerOutput::Data(OutcomePacket::new(Opcode::CMSG_WARDEN_DATA, Some(body))))
+            Ok(HandlerOutput::Data(OutcomePacket::from(Opcode::CMSG_WARDEN_DATA, Some(body))))
         },
         WardenOpcode::WARDEN_SMSG_MODULE_CACHE => {
             if let Some(module_info) = input.session.warden_module_info.as_mut() {
@@ -60,7 +60,7 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
                     module_info.assemble();
 
                     return Ok(HandlerOutput::Data(
-                        OutcomePacket::new(Opcode::CMSG_WARDEN_DATA, Some(body))
+                        OutcomePacket::from(Opcode::CMSG_WARDEN_DATA, Some(body))
                     ));
                 }
             }

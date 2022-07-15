@@ -28,7 +28,7 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
     let password = &config.connection_data.password;
 
     let mut srp_client = Srp::new(n, g, server_ephemeral);
-    let proof = srp_client.calculate_proof::<Sha1>(&username, &password, &salt);
+    let proof = srp_client.calculate_proof::<Sha1>(username, password, &salt);
 
     let crc_hash = random_range(20);
 

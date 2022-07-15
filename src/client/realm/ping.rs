@@ -16,5 +16,5 @@ pub fn handler(_: &mut HandlerInput) -> HandlerResult {
 
     println!("SEND CMSG_PING");
 
-    Ok(HandlerOutput::Data(OutcomePacket::new(Opcode::CMSG_PING, Some(body))))
+    Ok(HandlerOutput::Data(OutcomePacket::from(Opcode::CMSG_PING, Some(body))))
 }

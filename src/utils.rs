@@ -37,7 +37,7 @@ pub fn pack_guid(mut guid: u64) -> Vec<u8> {
     while guid != 0 {
         if guid & 0xFF > 0 {
             pack_guid[0] |= 1 << index;
-            pack_guid[size] = (guid as u8) & 0xff;
+            pack_guid[size] = guid as u8;
             size += 1;
         }
 

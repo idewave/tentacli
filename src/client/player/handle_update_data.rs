@@ -61,7 +61,7 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
 
                                 return Ok(
                                     HandlerOutput::Data(
-                                        OutcomePacket::new(Opcode::CMSG_NAME_QUERY, Some(body))
+                                        OutcomePacket::from(Opcode::CMSG_NAME_QUERY, Some(body))
                                     )
                                 );
                             }
@@ -95,7 +95,7 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
 
                         return Ok(
                             HandlerOutput::Data(
-                                OutcomePacket::new(Opcode::CMSG_NAME_QUERY, Some(body))
+                                OutcomePacket::from(Opcode::CMSG_NAME_QUERY, Some(body))
                             )
                         );
                     } else {

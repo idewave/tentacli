@@ -8,5 +8,5 @@ use crate::types::{
 
 
 pub fn handler(_: &mut HandlerInput) -> HandlerResult {
-    Ok(HandlerOutput::Data(OutcomePacket::new(Opcode::CMSG_READY_FOR_ACCOUNT_DATA_TIMES, None)))
+    Ok(HandlerOutput::Data(OutcomePacket::from(Opcode::CMSG_READY_FOR_ACCOUNT_DATA_TIMES, None)))
 }

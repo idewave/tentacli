@@ -59,23 +59,23 @@ impl Config {
 
         return BotChat {
             greet: greet_messages
-                .into_iter()
+                .iter()
                 .map(|msg| msg.as_str().unwrap().to_string())
                 .collect::<Vec<String>>(),
             agree: agree
-                .into_iter()
+                .iter()
                 .map(|msg| msg.as_str().unwrap().to_string())
                 .collect::<Vec<String>>(),
             disagree: disagree
-                .into_iter()
+                .iter()
                 .map(|msg| msg.as_str().unwrap().to_string())
                 .collect::<Vec<String>>(),
             follow_invite: follow_invite
-                .into_iter()
+                .iter()
                 .map(|msg| msg.as_str().unwrap().to_string())
                 .collect::<Vec<String>>(),
             stop: stop
-                .into_iter()
+                .iter()
                 .map(|msg| msg.as_str().unwrap().to_string())
                 .collect::<Vec<String>>(),
         }

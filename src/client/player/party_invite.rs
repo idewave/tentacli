@@ -14,7 +14,7 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
     let mut body = Vec::new();
     body.write_u32::<LittleEndian>(0)?;
 
-    Ok(HandlerOutput::Data(OutcomePacket::new(Opcode::CMSG_GROUP_ACCEPT, Some(body))))
+    Ok(HandlerOutput::Data(OutcomePacket::from(Opcode::CMSG_GROUP_ACCEPT, Some(body))))
 
     // Ok(HandlerOutput::Data(
     //     Opcode::CMSG_GROUP_DECLINE,

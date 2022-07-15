@@ -20,11 +20,7 @@ impl Encryptor {
         let sync = vec![0; 1024];
 
         let mut encryptor = RC4::new(
-            HmacSha::new(
-                &ENCRYPTION_KEY.to_vec(),
-                &secret,
-                Sha1::default()
-            ).compute_digest().to_vec()
+            HmacSha::new(&ENCRYPTION_KEY, secret, Sha1::default()).compute_digest().to_vec()
         );
 
         let _ = &encryptor.encrypt(&sync);

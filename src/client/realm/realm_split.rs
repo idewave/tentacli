@@ -18,5 +18,5 @@ pub fn handler(_: &mut HandlerInput) -> HandlerResult {
 
     println!("SEND CMSG_REALM_SPLIT");
 
-    Ok(HandlerOutput::Data(OutcomePacket::new(Opcode::CMSG_REALM_SPLIT, Some(body))))
+    Ok(HandlerOutput::Data(OutcomePacket::from(Opcode::CMSG_REALM_SPLIT, Some(body))))
 }

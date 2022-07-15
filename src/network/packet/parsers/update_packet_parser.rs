@@ -44,7 +44,7 @@ impl UpdatePacketParser {
                     }
                 },
                 Err(err) => {
-                    println!("Update Packet parser error: {}", err.to_string());
+                    println!("Update Packet parser error: {}", err);
                     break;
                 },
             }
@@ -181,14 +181,14 @@ impl UpdatePacketParser {
                             },
                         }
                     }
-                    bitmask = bitmask >> 1;
+                    bitmask >>= 1;
                     index += 1;
                 }
             }
 
             Ok((reader.borrow_mut().position(), update_fields))
         } else {
-            return Err(Error::new(ErrorKind::Other, "No blocks for update. Just ignore."));
+            Err(Error::new(ErrorKind::Other, "No blocks for update. Just ignore."))
         }
     }
     fn parse_movement_data(reader: RefCell<Cursor<Vec<u8>>>) -> Result<(u64, MovementData), Error> {
