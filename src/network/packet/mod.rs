@@ -13,8 +13,8 @@ use crate::network::packet::parsers::types::ParsedBlock;
 pub struct OutcomePacket {}
 
 impl OutcomePacket {
-    pub fn new(opcode: u32, body: Option<Vec<u8>>) -> (u32, Vec<u8>, Vec<u8>) {
-        let body = body.unwrap_or(vec![]);
+    pub fn from(opcode: u32, body: Option<Vec<u8>>) -> (u32, Vec<u8>, Vec<u8>) {
+        let body = body.unwrap_or_default();
 
         let mut header = Vec::new();
         header.write_u16::<BigEndian>((body.len() as u16) + OUTCOMING_OPCODE_LENGTH).unwrap();

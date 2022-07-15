@@ -89,19 +89,17 @@ impl AI {
                                     output_queue.push_back(packet);
                                 }
                             }
-                        } else {
-                            if self.is_moving_started {
-                                let (_, header, body) = Self::build_movement_packet(
-                                    u32::from(Opcode::MSG_MOVE_STOP),
-                                    me.guid,
-                                    source_position,
-                                    MovementFlags::NONE,
-                                );
-                                let packet = [header, body].concat();
+                        } else if self.is_moving_started {
+                            let (_, header, body) = Self::build_movement_packet(
+                                u32::from(Opcode::MSG_MOVE_STOP),
+                                me.guid,
+                                source_position,
+                                MovementFlags::NONE,
+                            );
+                            let packet = [header, body].concat();
 
-                                output_queue.push_back(packet);
-                                self.is_moving_started = false;
-                            }
+                            output_queue.push_back(packet);
+                            self.is_moving_started = false;
                         }
 
                         me.position = Some(source_position);
@@ -126,20 +124,19 @@ impl AI {
         body.write_u16::<LittleEndian>(MovementFlagsExtra::NONE.bits()).unwrap();
         // TODO: need to investigate how better get u32 value from timestamp
         body.write_u32::<LittleEndian>(now.as_millis() as u32).unwrap();
-        // body.write_u32::<LittleEndian>(0).unwrap();
         body.write_f32::<LittleEndian>(new_position.x).unwrap();
         body.write_f32::<LittleEndian>(new_position.y).unwrap();
         body.write_f32::<LittleEndian>(new_position.z).unwrap();
         body.write_f32::<LittleEndian>(new_position.orientation).unwrap();
         body.write_u32::<LittleEndian>(0).unwrap();
 
-        OutcomePacket::new(opcode, Some(body))
+        OutcomePacket::from(opcode, Some(body))
     }
 
     fn calculate_velocity(from: Position, to: Position, speed: f32) -> Position {
         let distance = Self::calculate_distance(from, to);
+        // TODO: need to investigate what is correct const value here
         let total_time = (distance / speed) * 60.5;
-        println!("TOTAL TIME: {}", total_time);
 
         Position::new(
             (to.x - from.x) / total_time,

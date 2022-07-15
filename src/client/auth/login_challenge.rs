@@ -15,7 +15,7 @@ pub fn handler(username: &str) -> Vec<u8> {
     packet.write_u8(0).unwrap();
     packet.write_u16::<LittleEndian>(size as u16).unwrap();
     packet.write_all(String::from("WoW\0").as_bytes()).unwrap();
-    packet.write_all(&vec![3, 3, 5]).unwrap();
+    packet.write_all(&[3, 3, 5]).unwrap();
     packet.write_u16::<LittleEndian>(12340).unwrap();
     packet.write_all(String::from("68x\0").as_bytes()).unwrap();
     packet.write_all(String::from("niW\0").as_bytes()).unwrap();

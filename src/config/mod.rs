@@ -2,19 +2,9 @@ use std::fs::read_to_string;
 use std::io::{Error};
 use yaml_rust::{Yaml, YamlLoader};
 
-pub struct ConnectionData {
-    pub username: String,
-    pub password: String,
-    pub realm_name: String,
-}
+mod types;
 
-pub struct BotChat {
-    pub greet: Vec<String>,
-    pub agree: Vec<String>,
-    pub disagree: Vec<String>,
-    pub follow_invite: Vec<String>,
-    pub stop: Vec<String>,
-}
+use crate::config::types::{AddonInfo, BotChat, ConnectionData};
 
 pub struct ConfigParams<'a> {
     pub host: &'a str,
@@ -22,7 +12,7 @@ pub struct ConfigParams<'a> {
 
 pub struct Config {
     pub connection_data: ConnectionData,
-    pub addons: Yaml,
+    pub addons: Vec<AddonInfo>,
     pub bot_chat: BotChat,
 }
 
@@ -32,12 +22,12 @@ impl Config {
         let docs = YamlLoader::load_from_str(&data).unwrap();
 
         let connection_data = Self::parse_connection_data(&docs[0]["connection_data"][params.host]);
-        let addons = &docs[0]["addons"];
+        let addons = Self::parse_addons(&docs[0]["addons"]);
         let bot_chat = Self::parse_chat_config(&docs[0]["bot_chat"]);
 
         Ok(Self {
             connection_data,
-            addons: addons.to_owned(),
+            addons,
             bot_chat,
         })
     }
@@ -50,6 +40,21 @@ impl Config {
         }
     }
 
+    fn parse_addons(config: &Yaml) -> Vec<AddonInfo> {
+        let mut addons: Vec<AddonInfo> = Vec::new();
+
+        for addon in config.as_vec().unwrap() {
+            addons.push(AddonInfo {
+                name: addon["name"].as_str().unwrap().to_string(),
+                flags: addon["flags"].as_i64().unwrap() as u8,
+                modulus_crc: addon["modulus_crc"].as_i64().unwrap() as u32,
+                urlcrc_crc: addon["urlcrc_crc"].as_i64().unwrap() as u32,
+            });
+        }
+
+        addons
+    }
+
     fn parse_chat_config(config: &Yaml) -> BotChat {
         let greet_messages = config["greet_messages"].as_vec().unwrap();
         let agree = config["agree"].as_vec().unwrap();
@@ -59,23 +64,23 @@ impl Config {
 
         return BotChat {
             greet: greet_messages
-                .into_iter()
+                .iter()
                 .map(|msg| msg.as_str().unwrap().to_string())
                 .collect::<Vec<String>>(),
             agree: agree
-                .into_iter()
+                .iter()
                 .map(|msg| msg.as_str().unwrap().to_string())
                 .collect::<Vec<String>>(),
             disagree: disagree
-                .into_iter()
+                .iter()
                 .map(|msg| msg.as_str().unwrap().to_string())
                 .collect::<Vec<String>>(),
             follow_invite: follow_invite
-                .into_iter()
+                .iter()
                 .map(|msg| msg.as_str().unwrap().to_string())
                 .collect::<Vec<String>>(),
             stop: stop
-                .into_iter()
+                .iter()
                 .map(|msg| msg.as_str().unwrap().to_string())
                 .collect::<Vec<String>>(),
         }

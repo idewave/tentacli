@@ -6,7 +6,7 @@ pub struct RC4 {
 
 impl RC4 {
     pub fn new(key: Vec<u8>) -> Self {
-        assert!(key.len() >= 1 && key.len() <= 256);
+        assert!(!key.is_empty() && key.len() <= 256);
 
         let mut state = [0u8; 256];
         let mut j: u8 = 0;

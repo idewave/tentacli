@@ -4,6 +4,7 @@ use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::sync::Mutex;
+use crate::client::Opcode;
 
 use crate::crypto::decryptor::{Decryptor, INCOMING_HEADER_LENGTH, INCOMING_OPCODE_LENGTH};
 use crate::crypto::encryptor::Encryptor;
@@ -79,18 +80,16 @@ impl Reader {
             let mut header = [0u8; INCOMING_HEADER_LENGTH as usize];
             std::io::Read::read_exact(&mut reader, &mut header).unwrap();
 
-            let mut header_reader = Cursor::new(decryptor.decrypt(&header.to_vec()));
+            let mut header_reader = Cursor::new(decryptor.decrypt(&header));
             let size = ReadBytesExt::read_u16::<BigEndian>(&mut header_reader).unwrap();
             let opcode = ReadBytesExt::read_u16::<LittleEndian>(&mut header_reader).unwrap();
 
-            // println!("DATA: {}, {}", size, opcode);
-
             let mut body = vec![0u8; (size - INCOMING_OPCODE_LENGTH) as usize];
-            std::io::Read::read_exact(&mut reader, &mut body).expect(
-                &format!("Cannot read raw data for opcode {} and size {}", opcode, size)
+            std::io::Read::read_exact(&mut reader, &mut body).unwrap_or_else(
+                |_| panic!("Cannot read raw data for opcode {} and size {}", opcode, size)
             );
 
-            if opcode == 742 {
+            if opcode == Opcode::SMSG_WARDEN_DATA {
                 body = warden_crypt.decrypt(&body);
             }
 

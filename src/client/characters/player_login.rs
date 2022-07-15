@@ -14,5 +14,5 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
     let mut body = Vec::new();
     body.write_u64::<LittleEndian>(me.guid)?;
 
-    Ok(HandlerOutput::Data(OutcomePacket::new(Opcode::CMSG_PLAYER_LOGIN, Some(body))))
+    Ok(HandlerOutput::Data(OutcomePacket::from(Opcode::CMSG_PLAYER_LOGIN, Some(body))))
 }

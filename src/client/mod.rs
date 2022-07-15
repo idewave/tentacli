@@ -3,7 +3,9 @@ use std::sync::{Arc};
 use std::time::Duration;
 use tokio::sync::{Mutex};
 use tokio::net::TcpStream;
+use tokio::task::{JoinHandle};
 use tokio::time::{sleep};
+use futures::future::join_all;
 
 mod auth;
 mod characters;
@@ -40,7 +42,7 @@ use movement::ai::AI as MovementAI;
 
 // TODO: REMOVE THIS ! (need to think how better refactor this part)
 use auth::login_challenge;
-use crate::client::opcodes::Opcode;
+pub use crate::client::opcodes::Opcode;
 
 use crate::client::types::ClientFlags;
 use crate::crypto::warden_crypt::WardenCrypt;
@@ -58,7 +60,10 @@ use crate::types::{
     State
 };
 
-const READ_TIMEOUT: u64 = 25;
+// for each server need to play with this values
+// for local server values can be much less then for external server
+// for me it seems this values are related to ping, need to investigate this in future
+const READ_TIMEOUT: u64 = 50;
 const WRITE_TIMEOUT: u64 = 1;
 
 pub struct Client {
@@ -120,24 +125,19 @@ impl Client {
     }
 
     pub async fn handle_connection(&mut self) {
-        // TODO: refactor this part
-        if let config = self.session.lock().await.get_config() {
-            let username = &config.connection_data.username;
-            let packet = login_challenge(username);
-            self.output_queue.lock().await.push_back(packet);
-        }
+        self.output_queue.lock().await.push_back(
+            login_challenge(&self.session.lock().await.get_config().connection_data.username)
+        );
 
-        self.handle_ai().await;
-        self.handle_queue().await;
-        self.handle_read().await;
-        self.handle_write().await;
-
-        loop {
-            // sleep(Duration::from_millis(10)).await;
-        }
+        join_all(vec![
+            self.handle_ai().await,
+            self.handle_queue().await,
+            self.handle_read().await,
+            self.handle_write().await,
+        ]).await;
     }
 
-    async fn handle_ai(&mut self) {
+    async fn handle_ai(&mut self) -> JoinHandle<()> {
         let session = Arc::clone(&self.session);
         let data_storage = Arc::clone(&self.data_storage);
         let output_queue = Arc::clone(&self.output_queue);
@@ -154,10 +154,10 @@ impl Client {
 
                 sleep(Duration::from_millis(WRITE_TIMEOUT)).await;
             }
-        });
+        })
     }
 
-    async fn handle_queue(&mut self) {
+    async fn handle_queue(&mut self) -> JoinHandle<()> {
         let input_queue = Arc::clone(&self.input_queue);
         let output_queue = Arc::clone(&self.output_queue);
         let session = Arc::clone(&self.session);
@@ -252,10 +252,10 @@ impl Client {
                     sleep(Duration::from_millis(WRITE_TIMEOUT)).await;
                 }
             }
-        });
+        })
     }
 
-    async fn handle_write(&mut self) {
+    async fn handle_write(&mut self) -> JoinHandle<()> {
         let output_queue = Arc::clone(&self.output_queue);
         let writer = Arc::clone(&self.writer);
 
@@ -278,10 +278,10 @@ impl Client {
                 };
                 sleep(Duration::from_millis(WRITE_TIMEOUT)).await;
             }
-        });
+        })
     }
 
-    async fn handle_read(&mut self) {
+    async fn handle_read(&mut self) -> JoinHandle<()> {
         let input_queue = Arc::clone(&self.input_queue);
         let reader = Arc::clone(&self.reader);
 
@@ -300,7 +300,7 @@ impl Client {
 
                 sleep(Duration::from_millis(READ_TIMEOUT)).await;
             }
-        });
+        })
     }
 
     fn get_login_processors<'a>() -> Vec<ProcessorFunction<'a>> {

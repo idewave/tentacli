@@ -18,7 +18,7 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
     let sender_guid = reader.read_u64::<LittleEndian>()?;
     let text_emote = reader.read_u32::<LittleEndian>()?;
 
-    return match text_emote {
+    match text_emote {
         TextEmoteType::TEXT_HEAL_ME | TextEmoteType::TEXT_HELP_ME => {
 
             input.session.action_flags.set(ActionFlags::IS_CASTING, true);
@@ -30,7 +30,7 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
             body.write_u32::<LittleEndian>(SpellCastTargetType::TARGET_FLAG_UNIT)?;
             body.write_all(&pack_guid(sender_guid))?;
 
-            Ok(HandlerOutput::Data(OutcomePacket::new(Opcode::CMSG_CAST_SPELL, Some(body))))
+            Ok(HandlerOutput::Data(OutcomePacket::from(Opcode::CMSG_CAST_SPELL, Some(body))))
         },
         _ => {
             Ok(HandlerOutput::Void)
