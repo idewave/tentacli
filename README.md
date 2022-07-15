@@ -1,14 +1,11 @@
 # idewave-cli
-This is Rust implementation of world of warcraft client v3.3.5a. Smart CLI.
+This is Rust implementation of World of Warcraft client v3.3.5a. Smart CLI.
 
-This project provide structure for easy apply any amount of handlers of user actions when interact with wow server.
-Current supported version of wow is **3.3.5a** only.
+Use this project to customize actions when interact with WoW server. Interaction can be automatic and manual. 
 
-Packet interaction contains of two parts: processors part and manual part. 
-Processor is just automatic reaction to packets that come from server (like response to LOGIN_CHALLENGE).
-Manual part currently implemented only within AI part (see movement/ai).
+In case of automatic interaction you just define any amount of handlers and bind them to specific opcode inside special `Processor` object. So this handlers will be processed once packet with specific opcode received from server.
 
-In the future I want to improve some I/O and make manual part more extended.
+In case of manual interaction you can define special manager (see **movement/ai** as example) where you decide by yourself when to send packets (or do another actions).
 
 ### How to start
 Rename **Config.yml.dist** into **Config.yml**, then edit it according to your preferences.
