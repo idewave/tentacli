@@ -19,7 +19,6 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
     let session = &input.session;
     let server_id = session.server_id.unwrap();
     let config = session.get_config();
-    let addons = config.addons.as_vec().unwrap();
     let username = &config.connection_data.username;
     let session_key = session.session_key.as_ref().unwrap();
 
@@ -55,16 +54,16 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
     body.write_all(&digest)?;
 
     let mut addon_info = Vec::new();
-    addon_info.write_u32::<LittleEndian>(addons.len() as u32)?;
+    addon_info.write_u32::<LittleEndian>(config.addons.len() as u32)?;
 
-    // TODO: refactor this to be done on config building level
-    for addon in addons {
-        addon_info.write_all(addon["name"].as_str().unwrap().as_bytes())?;
+    for addon in &config.addons {
+        addon_info.write_all(addon.name.as_bytes())?;
         addon_info.write_u8(0)?; // null-terminator for name string
-        addon_info.write_u8(addon["flags"].as_i64().unwrap() as u8)?;
-        addon_info.write_u32::<LittleEndian>(addon["modulus_crc"].as_i64().unwrap() as u32)?;
-        addon_info.write_u32::<LittleEndian>(addon["urlcrc_crc"].as_i64().unwrap() as u32)?;
+        addon_info.write_u8(addon.flags)?;
+        addon_info.write_u32::<LittleEndian>(addon.modulus_crc)?;
+        addon_info.write_u32::<LittleEndian>(addon.urlcrc_crc)?;
     }
+
     // seems like this timestamp always same, maybe it can be moved to config or smth ?
     addon_info.write_u32::<LittleEndian>(1636457673)?; // last modified timestamp, smth like that
 
