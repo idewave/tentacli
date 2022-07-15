@@ -33,7 +33,7 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
             let mut body: Vec<u8> = Vec::new();
             body.write_u32::<LittleEndian>(EmoteType::ONESHOT_WAVE as u32)?;
 
-            Ok(HandlerOutput::Data(OutcomePacket::new(Opcode::CMSG_EMOTE, Some(body))))
+            Ok(HandlerOutput::Data(OutcomePacket::from(Opcode::CMSG_EMOTE, Some(body))))
         },
         follow_invite if bot_chat.follow_invite.contains(&follow_invite.to_string()) => {
             let mut body: Vec<u8> = Vec::new();
@@ -42,10 +42,10 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
             input.session.follow_target = Some(sender_guid);
             input.session.action_flags.set(ActionFlags::IS_FOLLOWING, true);
 
-            Ok(HandlerOutput::Data(OutcomePacket::new(Opcode::CMSG_SET_SELECTION, Some(body))))
+            Ok(HandlerOutput::Data(OutcomePacket::from(Opcode::CMSG_SET_SELECTION, Some(body))))
         },
         "logout" => {
-            Ok(HandlerOutput::Data(OutcomePacket::new(Opcode::CMSG_LOGOUT_REQUEST, None)))
+            Ok(HandlerOutput::Data(OutcomePacket::from(Opcode::CMSG_LOGOUT_REQUEST, None)))
         },
         _ => Ok(HandlerOutput::Void)
     }

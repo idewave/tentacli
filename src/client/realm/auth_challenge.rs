@@ -43,23 +43,23 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
     // TODO: refactor build into config or smth like that
     body.write_i32::<LittleEndian>(12340)?;
     body.write_u32::<LittleEndian>(0)?;
-    body.write(username.as_bytes())?;
+    body.write_all(username.as_bytes())?;
     body.write_u8(0)?;
     body.write_u32::<LittleEndian>(0)?;
-    body.write(&client_seed)?;
+    body.write_all(&client_seed)?;
     body.write_u32::<LittleEndian>(0)?;
     body.write_u32::<LittleEndian>(0)?;
     body.write_u32::<LittleEndian>(server_id as u32)?;
     body.write_u32::<LittleEndian>(2)?; // expansion ???
     body.write_u32::<LittleEndian>(0)?; // ???
-    body.write(&digest.to_vec())?;
+    body.write_all(&digest)?;
 
     let mut addon_info = Vec::new();
     addon_info.write_u32::<LittleEndian>(addons.len() as u32)?;
 
     // TODO: refactor this to be done on config building level
     for addon in addons {
-        addon_info.write(addon["name"].as_str().unwrap().as_bytes())?;
+        addon_info.write_all(addon["name"].as_str().unwrap().as_bytes())?;
         addon_info.write_u8(0)?; // null-terminator for name string
         addon_info.write_u8(addon["flags"].as_i64().unwrap() as u8)?;
         addon_info.write_u32::<LittleEndian>(addon["modulus_crc"].as_i64().unwrap() as u32)?;
@@ -72,9 +72,9 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
 
     let mut encoder = ZlibEncoder::new(Vec::new(), Compression::best());
     encoder.write_all(&addon_info)?;
-    body.write(&encoder.finish().unwrap())?;
+    body.write_all(&encoder.finish().unwrap())?;
 
     println!("SEND CMSG_AUTH_SESSION");
 
-    Ok(HandlerOutput::Data(OutcomePacket::new(Opcode::CMSG_AUTH_SESSION, Some(body))))
+    Ok(HandlerOutput::Data(OutcomePacket::from(Opcode::CMSG_AUTH_SESSION, Some(body))))
 }

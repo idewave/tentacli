@@ -55,7 +55,7 @@ impl Srp {
         let username = username.to_uppercase();
         let password = password.to_uppercase();
 
-        self.session_key = self.calculate_session_key::<D>(&username, &password, &salt);
+        self.session_key = self.calculate_session_key::<D>(&username, &password, salt);
 
         D::new()
             .chain(self.calculate_xor_hash::<D>())
@@ -145,7 +145,7 @@ impl Srp {
     where
         D: Digest,
     {
-        let x = self.calculate_x::<D>(&username, &password, &salt);
+        let x = self.calculate_x::<D>(username, password, salt);
         let verifier = self.generator.modpow(
             &x,
             &self.modulus,
