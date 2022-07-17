@@ -327,10 +327,6 @@ impl Client {
 
 #[cfg(test)]
 mod tests {
-    extern crate tokio;
-    extern crate futures;
-
-    use std::io::{Read, Write};
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::TcpListener;
     use crate::Client;
@@ -338,7 +334,10 @@ mod tests {
     use crate::network::session::types::{ActionFlags, StateFlags};
 
     const HOST: &str = "127.0.0.1";
-    const PORT: u16 = 1234;
+    // https://users.rust-lang.org/t/async-tests-sometimes-fails/78451
+    // port should be zero to avoid race condition
+    // so OS will create connection with random port
+    const PORT: u16 = 0;
     const WRONG_HOST: &str = "1.2.3.4";
     const PACKET: [u8; 8] = [1, 2, 3, 4, 5, 6, 7, 8];
 
@@ -356,7 +355,7 @@ mod tests {
         assert!(warden_crypt.is_none());
 
         let client_flags = &mut *client.flags.lock().await;
-        assert_eq!(&mut ClientFlags::NONE, client_flags);
+        assert_eq!(ClientFlags::NONE, *client_flags);
 
         let input_queue = &mut *client.input_queue.lock().await;
         assert!(input_queue.is_empty());
@@ -384,7 +383,8 @@ mod tests {
     async fn test_client_connect() {
         let mut client = Client::new();
         if let Some(listener) = TcpListener::bind(format!("{}:{}", HOST, PORT)).await.ok() {
-            client.connect(HOST, PORT).await.ok();
+            let local_addr = listener.local_addr().unwrap();
+            client.connect(HOST, local_addr.port()).await.ok();
 
             let reader = &mut *client.reader.lock().await;
             assert!(reader.is_some());
@@ -399,7 +399,8 @@ mod tests {
     async fn test_client_connect_with_wrong_data() {
         let mut client = Client::new();
         if let Some(listener) = TcpListener::bind(format!("{}:{}", HOST, PORT)).await.ok() {
-            client.connect(WRONG_HOST, PORT).await.unwrap();
+            let local_addr = listener.local_addr().unwrap();
+            client.connect(WRONG_HOST, local_addr.port()).await.unwrap();
         }
     }
 
@@ -407,14 +408,20 @@ mod tests {
     async fn test_client_read_incoming_data() {
         let mut client = Client::new();
         if let Some(listener) = TcpListener::bind(format!("{}:{}", HOST, PORT)).await.ok() {
-            client.connect(HOST, PORT).await.ok();
+            let local_addr = listener.local_addr().unwrap();
+            client.connect(HOST, local_addr.port()).await.ok();
 
             if let Some((mut stream, _)) = listener.accept().await.ok() {
                 stream.write(&PACKET).await.unwrap();
+                stream.flush().await.unwrap();
                 client.handle_read().await;
 
-                let packet = client.input_queue.lock().await.pop_front().unwrap();
-                assert_eq!(PACKET.to_vec(), packet[0]);
+                loop {
+                    if let Some(packet) = client.input_queue.lock().await.pop_front() {
+                        assert_eq!(PACKET.to_vec(), packet[0]);
+                        break;
+                    }
+                }
             }
         }
     }
@@ -423,14 +430,16 @@ mod tests {
     async fn test_client_write_outcoming_data() {
         let mut client = Client::new();
         if let Some(listener) = TcpListener::bind(format!("{}:{}", HOST, PORT)).await.ok() {
-            client.connect(HOST, PORT).await.unwrap();
+            let local_addr = listener.local_addr().unwrap();
+            client.connect(HOST, local_addr.port()).await.ok();
+            client.output_queue.lock().await.push_back(PACKET.to_vec());
 
-            if let Some((mut stream, _)) = listener.accept().await.ok() {
-                let mut buffer = Vec::new();
+            if let Some((stream, _)) = listener.accept().await.ok() {
+                let buffer_size = PACKET.to_vec().len();
+                let mut buffer = Vec::with_capacity(buffer_size);
 
-                client.output_queue.lock().await.push_back(PACKET.to_vec());
                 client.handle_write().await;
-                stream.read(&mut buffer).await.unwrap();
+                stream.take(buffer_size as u64).read_to_end(&mut buffer).await.unwrap();
 
                 assert_eq!(PACKET.to_vec(), buffer);
             }

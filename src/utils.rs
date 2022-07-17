@@ -20,7 +20,6 @@ pub fn decode_hex(s: &str) -> Result<Vec<u8>, ParseIntError> {
         .collect()
 }
 
-#[allow(dead_code)]
 pub fn encode_hex(bytes: &[u8]) -> String {
     let mut s = String::with_capacity(bytes.len() * 2);
     for &b in bytes {
@@ -78,4 +77,53 @@ pub fn decompress(data: &[u8]) -> Vec<u8> {
     decoder.read_to_end(&mut buffer).unwrap();
 
     buffer
+}
+
+#[cfg(test)]
+mod tests {
+    use std::cell::RefCell;
+    use std::io::{Cursor, Write};
+    use flate2::Compression;
+    use flate2::write::ZlibEncoder;
+
+    use crate::utils::{decode_hex, decompress, encode_hex, pack_guid, random_range, read_packed_guid};
+
+    #[test]
+    fn test_random_range() {
+        const RANGE_SIZE: usize = 10;
+
+        let range = random_range(RANGE_SIZE);
+        assert_eq!(RANGE_SIZE, range.len());
+    }
+
+    #[test]
+    fn test_decompress() {
+        let origin = vec![1, 2, 3, 4, 5, 6, 7, 8];
+
+        let mut encoder = ZlibEncoder::new(Vec::new(), Compression::best());
+        encoder.write_all(&origin).unwrap();
+
+        assert_eq!(origin, decompress(&encoder.finish().unwrap()));
+    }
+
+    #[test]
+    fn test_packed_guid() {
+        const ORIGIN_GUID: u64 = 1;
+
+        let packed_guid = pack_guid(ORIGIN_GUID);
+        let reader = RefCell::new(Cursor::new(packed_guid));
+
+        let (unpacked_guid, _) = read_packed_guid(RefCell::clone(&reader));
+
+        assert_eq!(ORIGIN_GUID, unpacked_guid);
+    }
+
+    #[test]
+    fn test_encode_decode() {
+        const ORIGIN: [u8; 5] = [255, 12, 3, 45, 5];
+        let encoded = encode_hex(&ORIGIN);
+        assert_eq!("FF0C032D05", encoded);
+
+        assert_eq!(ORIGIN.to_vec(), decode_hex(&encoded).unwrap());
+    }
 }
