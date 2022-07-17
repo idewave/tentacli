@@ -15,6 +15,6 @@ mod utils;
 #[tokio::main]
 async fn main() {
     let mut client = Client::new();
-    client.connect("127.0.0.1", 3724).await;
+    client.connect("127.0.0.1", 3724).await.unwrap();
     client.handle_connection().await;
 }
