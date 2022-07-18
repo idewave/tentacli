@@ -1,5 +1,5 @@
 use std::fs::read_to_string;
-use std::io::{Error};
+use std::io::{Error, ErrorKind};
 use yaml_rust::{Yaml, YamlLoader};
 
 mod types;
@@ -18,18 +18,23 @@ pub struct Config {
 
 impl Config {
     pub fn new(params: ConfigParams) -> Result<Self, Error> {
-        let data = read_to_string("Config.yml").unwrap();
-        let docs = YamlLoader::load_from_str(&data).unwrap();
+        if let Ok(data) = read_to_string("Config.yml") {
+            let docs = YamlLoader::load_from_str(&data).unwrap();
 
-        let connection_data = Self::parse_connection_data(&docs[0]["connection_data"][params.host]);
-        let addons = Self::parse_addons(&docs[0]["addons"]);
-        let bot_chat = Self::parse_chat_config(&docs[0]["bot_chat"]);
+            let connection_data = Self::parse_connection_data(
+                &docs[0]["connection_data"][params.host]
+            );
+            let addons = Self::parse_addons(&docs[0]["addons"]);
+            let bot_chat = Self::parse_chat_config(&docs[0]["bot_chat"]);
 
-        Ok(Self {
-            connection_data,
-            addons,
-            bot_chat,
-        })
+            return Ok(Self {
+                connection_data,
+                addons,
+                bot_chat,
+            });
+        }
+
+        Err(Error::new(ErrorKind::NotFound, "Config.yml file is not found"))
     }
 
     fn parse_connection_data(config: &Yaml) -> ConnectionData {
