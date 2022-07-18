@@ -1,4 +1,5 @@
 use std::collections::{VecDeque};
+use std::io::Error;
 use std::sync::{Arc};
 use std::time::Duration;
 use tokio::sync::{Mutex};
@@ -91,19 +92,21 @@ impl Client {
         }
     }
 
-    pub async fn connect(&mut self, host: &str, port: u16) {
-        let stream = Self::connect_inner(host, port).await;
+    pub async fn connect(&mut self, host: &str, port: u16) -> Result<(), Error> {
+        let stream = Self::connect_inner(host, port).await.unwrap();
         Self::set_stream_halves(stream, &self.reader, &self.writer).await;
 
         self.session.lock().await.set_config(host);
+
+        Ok(())
     }
 
-    async fn connect_inner(host: &str, port: u16) -> TcpStream {
+    async fn connect_inner(host: &str, port: u16) -> Result<TcpStream, Error> {
         let addr = format!("{}:{}", host, port);
         match TcpStream::connect(&addr).await {
             Ok(stream) => {
                 println!("Connected to {}", addr);
-                stream
+                Ok(stream)
             },
             Err(err) => {
                 panic!("Cannot connect: {:?}", err);
@@ -214,7 +217,7 @@ impl Client {
                                     output_queue.lock().await.push_back(packet);
                                 },
                                 HandlerOutput::ConnectionRequest(host, port) => {
-                                    let stream = Self::connect_inner(&host, port).await;
+                                    let stream = Self::connect_inner(&host, port).await.unwrap();
                                     Self::set_stream_halves(stream, &reader, &writer).await;
                                 },
                                 HandlerOutput::UpdateState(state) => {
@@ -319,5 +322,127 @@ impl Client {
             Box::new(SpellProcessor::process_input),
             Box::new(WardenProcessor::process_input),
         ];
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::TcpListener;
+    use crate::Client;
+    use crate::client::types::ClientFlags;
+    use crate::network::session::types::{ActionFlags, StateFlags};
+
+    const HOST: &str = "127.0.0.1";
+    // https://users.rust-lang.org/t/async-tests-sometimes-fails/78451
+    // port should be zero to avoid race condition (in case of running in parallel)
+    // so OS will create connection with random port
+    const PORT: u16 = 0;
+    const WRONG_HOST: &str = "1.2.3.4";
+    const PACKET: [u8; 8] = [1, 2, 3, 4, 5, 6, 7, 8];
+
+    #[tokio::test]
+    async fn test_client_create() {
+        let client = Client::new();
+
+        let reader = &mut *client.reader.lock().await;
+        assert!(reader.is_none());
+
+        let writer = &mut *client.writer.lock().await;
+        assert!(writer.is_none());
+
+        let warden_crypt = &mut *client.warden_crypt.lock().await;
+        assert!(warden_crypt.is_none());
+
+        let client_flags = &mut *client.flags.lock().await;
+        assert_eq!(ClientFlags::NONE, *client_flags);
+
+        let input_queue = &mut *client.input_queue.lock().await;
+        assert!(input_queue.is_empty());
+
+        let output_queue = &mut *client.output_queue.lock().await;
+        assert!(output_queue.is_empty());
+
+        let data_storage = &mut *client.data_storage.lock().await;
+        assert!(data_storage.players_map.is_empty());
+
+        let session = &mut *client.session.lock().await;
+        assert!(session.session_key.is_none());
+        assert!(session.me.is_none());
+        assert!(session.warden_module_info.is_none());
+        assert!(session.config.is_none());
+        assert!(session.follow_target.is_none());
+        assert!(session.server_id.is_none());
+        assert!(session.party.is_empty());
+        assert_eq!(ActionFlags::NONE, session.action_flags);
+        assert_eq!(StateFlags::NONE, session.state_flags);
+
+    }
+
+    #[tokio::test]
+    async fn test_client_connect() {
+        let mut client = Client::new();
+        if let Some(listener) = TcpListener::bind(format!("{}:{}", HOST, PORT)).await.ok() {
+            let local_addr = listener.local_addr().unwrap();
+            client.connect(HOST, local_addr.port()).await.ok();
+
+            let reader = &mut *client.reader.lock().await;
+            assert!(reader.is_some());
+
+            let writer = &mut *client.writer.lock().await;
+            assert!(writer.is_some());
+        }
+    }
+
+    #[tokio::test]
+    #[should_panic]
+    async fn test_client_connect_with_wrong_data() {
+        let mut client = Client::new();
+        if let Some(listener) = TcpListener::bind(format!("{}:{}", HOST, PORT)).await.ok() {
+            let local_addr = listener.local_addr().unwrap();
+            client.connect(WRONG_HOST, local_addr.port()).await.unwrap();
+        }
+    }
+
+    #[tokio::test]
+    async fn test_client_read_incoming_data() {
+        let mut client = Client::new();
+        if let Some(listener) = TcpListener::bind(format!("{}:{}", HOST, PORT)).await.ok() {
+            let local_addr = listener.local_addr().unwrap();
+            client.connect(HOST, local_addr.port()).await.ok();
+
+            if let Some((mut stream, _)) = listener.accept().await.ok() {
+                stream.write(&PACKET).await.unwrap();
+                stream.flush().await.unwrap();
+                client.handle_read().await;
+
+                loop {
+                    if let Some(packet) = client.input_queue.lock().await.pop_front() {
+                        assert_eq!(PACKET.to_vec(), packet[0]);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_client_write_outcoming_data() {
+        let mut client = Client::new();
+        if let Some(listener) = TcpListener::bind(format!("{}:{}", HOST, PORT)).await.ok() {
+            let local_addr = listener.local_addr().unwrap();
+            client.connect(HOST, local_addr.port()).await.ok();
+            client.output_queue.lock().await.push_back(PACKET.to_vec());
+
+            if let Some((stream, _)) = listener.accept().await.ok() {
+                let buffer_size = PACKET.to_vec().len();
+                let mut buffer = Vec::with_capacity(buffer_size);
+
+                client.handle_write().await;
+                stream.take(buffer_size as u64).read_to_end(&mut buffer).await.unwrap();
+
+                assert_eq!(PACKET.to_vec(), buffer);
+            }
+        }
     }
 }
