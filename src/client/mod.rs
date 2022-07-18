@@ -335,7 +335,7 @@ mod tests {
 
     const HOST: &str = "127.0.0.1";
     // https://users.rust-lang.org/t/async-tests-sometimes-fails/78451
-    // port should be zero to avoid race condition
+    // port should be zero to avoid race condition (in case of running in parallel)
     // so OS will create connection with random port
     const PORT: u16 = 0;
     const WRONG_HOST: &str = "1.2.3.4";
