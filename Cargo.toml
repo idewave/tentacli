@@ -1,7 +1,7 @@
 [package]
 edition = "2021"
 name = "idewave-cli"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Sergio Ivanuzzo <sergio.ivanuzzo@gmail.com>"]
 description = "Smart wow-client (cli)"
 readme = "README.md"
