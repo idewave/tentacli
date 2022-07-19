@@ -25,6 +25,15 @@ yaml-rust = "0.4.5"
 tokio = { version = "1", features = ["sync", "net", "io-util", "macros", "time", "rt-multi-thread"] }
 bitflags = "1.3.2"
 futures = "0.3.21"
+cargo-release = "0.21.1"
 
 [dev-dependencies]
 rusty-hook = "0.11.2"
+
+[package.metadata.release]
+pre-release-commit-message = "chore: Release"
+tag-name = "v{{version}}"
+tag-message = "{{tag_name}}"
+consolidate-commits = false
+consolidate-pushes = true
+allow-branch = ["primary"]
