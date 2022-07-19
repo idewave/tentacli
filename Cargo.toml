@@ -28,3 +28,12 @@ futures = "0.3.21"
 
 [dev-dependencies]
 rusty-hook = "0.11.2"
+cargo-release = "0.21.1"
+
+[package.metadata.release]
+pre-release-commit-message = "chore: Release"
+tag-name = "v{{version}}"
+tag-message = "{{tag_name}}"
+consolidate-commits = true
+consolidate-pushes = true
+allow-branch = ["primary"]
