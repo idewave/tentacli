@@ -34,6 +34,6 @@ cargo-release = "0.21.1"
 pre-release-commit-message = "chore: Release"
 tag-name = "v{{version}}"
 tag-message = "{{tag_name}}"
-consolidate-commits = true
+consolidate-commits = false
 consolidate-pushes = true
 allow-branch = ["primary"]
