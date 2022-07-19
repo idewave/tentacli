@@ -6,7 +6,7 @@ authors = ["Sergio Ivanuzzo <sergio.ivanuzzo@gmail.com>"]
 description = "Smart wow-client (cli)"
 readme = "README.md"
 keywords = ["wow", "wowcli", "idewave", "wowclient"]
-license-file = "LICENCE"
+license-file = "LICENSE"
 repository = "https://github.com/idewave/idewave-cli"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
