@@ -6,7 +6,7 @@ authors = ["Sergio Ivanuzzo <sergio.ivanuzzo@gmail.com>"]
 description = "Smart wow-client (cli)"
 readme = "README.md"
 keywords = ["wow", "wowcli", "idewave", "wowclient"]
-license-file = "LICENCE"
+license-file = "LICENSE"
 repository = "https://github.com/idewave/idewave-cli"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -28,3 +28,11 @@ futures = "0.3.21"
 
 [dev-dependencies]
 rusty-hook = "0.11.2"
+
+[package.metadata.release]
+pre-release-commit-message = "chore: Release"
+tag-message = "{{tag_name}}"
+tag-name = "v{{version}}"
+consolidate-commits = false
+consolidate-pushes = true
+allow-branch = ["primary"]
