@@ -16,7 +16,7 @@ Then just run:
 > cargo run
 
 ### What implemented already
-1. Full authentication flow (need to add checks if user banned etc)
+1. Full authentication flow (without extra checks)
 2. Parser of update packets
 3. Examples of chat/movement handling
 4. Incomplete warden part
@@ -27,9 +27,8 @@ If somebody can help to finish warden part I would appreciate it.
 Please consider also: I do not support cheaters and cheat making. 
 This part implemented in learning purpose only.
 
-### In case you want contribute
-It's always welcome. There incomplete part of warden interaction. 
-A lot of opcodes need to support.
+### You want contribute
+It's always welcome. Just create pull request with your improvements, bugfix etc.
 
 If you want to support me you can buy me a coffee on https://ko-fi.com/idewave.
 
