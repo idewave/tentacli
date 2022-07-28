@@ -43,8 +43,7 @@ impl UpdatePacketParser {
                         parsed_blocks.push(parsed_block);
                     }
                 },
-                Err(err) => {
-                    println!("Update Packet parser error: {}", err);
+                _ => {
                     break;
                 },
             }
@@ -62,7 +61,6 @@ impl UpdatePacketParser {
             ObjectUpdateType::VALUES => {
                 let (guid, position) = read_packed_guid(RefCell::clone(&reader));
                 reader.borrow_mut().set_position(position);
-                println!("UPDATETYPE_VALUES {}", guid);
 
                 parsed_block.guid = Some(guid);
 
@@ -77,7 +75,6 @@ impl UpdatePacketParser {
                 }
             }
             ObjectUpdateType::MOVEMENT => {
-                println!("UPDATETYPE_MOVEMENT");
                 let (guid, position) = read_packed_guid(RefCell::clone(&reader));
                 reader.borrow_mut().set_position(position);
 
@@ -99,7 +96,6 @@ impl UpdatePacketParser {
                 reader.borrow_mut().set_position(position);
 
                 parsed_block.guid = Some(guid);
-                println!("UPDATETYPE_CREATE_OBJECT: {:?}", guid);
 
                 let _object_type_id = reader.borrow_mut().read_u8().ok();
 
@@ -124,23 +120,17 @@ impl UpdatePacketParser {
                 }
             }
             ObjectUpdateType::OUT_OF_RANGE_OBJECTS => {
-                println!("OUT OF RANGE");
                 let guid_amount = reader.borrow_mut().read_u32::<LittleEndian>()?;
                 for _ in 0..guid_amount {
-                    let (guid, position) = read_packed_guid(RefCell::clone(&reader));
+                    let (_guid, position) = read_packed_guid(RefCell::clone(&reader));
                     reader.borrow_mut().set_position(position);
-
-                    println!("FAR GUID: {}", guid);
                 }
             }
             ObjectUpdateType::NEAR_OBJECTS => {
-                println!("NEAR");
                 let guid_amount = reader.borrow_mut().read_u32::<LittleEndian>()?;
                 for _ in 0..guid_amount {
-                    let (guid, position) = read_packed_guid(RefCell::clone(&reader));
+                    let (_guid, position) = read_packed_guid(RefCell::clone(&reader));
                     reader.borrow_mut().set_position(position);
-
-                    println!("NEAR GUID: {}", guid);
                 }
             }
             _ => {
@@ -176,7 +166,6 @@ impl UpdatePacketParser {
                                 update_fields.insert(index, value);
                             },
                             _ => {
-                                println!("Error on {} position", &index);
                                 return Err(Error::new(ErrorKind::InvalidData, "Cannot read data"));
                             },
                         }
@@ -199,7 +188,7 @@ impl UpdatePacketParser {
         ).unwrap();
 
         if object_update_flags.contains(ObjectUpdateFlags::SELF)  {
-            println!("UPDATING MOVEMENT INFO FOR CURRENT CHARACTER");
+            // current player movement
         }
 
         if object_update_flags.contains(ObjectUpdateFlags::LIVING) {

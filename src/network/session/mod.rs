@@ -33,16 +33,17 @@ impl Session {
         }
     }
 
-    pub fn get_config(&self) -> &Config {
-        let config = self.config.as_ref().unwrap();
-        config
+    pub fn get_config(&self) -> Option<&Config> {
+        self.config.as_ref()
     }
 
     pub fn set_config(&mut self, host: &str) {
         if self.config.is_none() {
-            self.config = Config::new(ConfigParams {
+            let config = Config::new(ConfigParams {
                 host,
-            }).ok();
+            }).unwrap();
+
+            self.config = Some(config);
         }
     }
 }

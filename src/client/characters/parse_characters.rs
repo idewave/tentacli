@@ -73,10 +73,7 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
             });
         }
 
-        println!("CHARS: {:?}", &characters);
-
         let selected_character = characters.remove(0);
-        println!("SELECTED: {:?}", &selected_character);
         let mut me = Player::new(
             selected_character.guid,
             selected_character.name,

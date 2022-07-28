@@ -5,11 +5,12 @@ use sha1::{Sha1};
 use super::opcodes::Opcode;
 
 use crate::crypto::srp::Srp;
+use crate::logger::types::LoggerOutput;
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
 use crate::utils::random_range;
 
 pub fn handler(input: &mut HandlerInput) -> HandlerResult {
-    let config = &input.session.get_config();
+    let config = input.session.get_config().unwrap();
 
     let mut reader = Cursor::new(input.data.as_ref().unwrap()[3..].to_vec());
 
@@ -43,6 +44,9 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
     body.write_u8(0)?; // security flags
 
     input.session.session_key = Some(srp_client.session_key());
+
+    input.output_sender.send(LoggerOutput::Debug(String::from("Session key created"))).unwrap();
+    input.output_sender.send(LoggerOutput::Client(String::from("LOGIN_PROOF"))).unwrap();
 
     Ok(HandlerOutput::Data((Opcode::LOGIN_PROOF as u32, header, body)))
 }
