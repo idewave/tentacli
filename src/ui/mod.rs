@@ -54,9 +54,6 @@ impl<'a> UI<'a> {
     }
 
     pub fn render(&mut self, options: UIOptions) {
-        // self._terminal.clear().unwrap();
-        // self._terminal.hide_cursor().unwrap();
-
         self.build_debug_output(options.buffer_output);
 
         self._terminal.draw(|frame| {

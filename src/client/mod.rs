@@ -142,7 +142,7 @@ impl Client {
                 let username = &config.connection_data.username;
                 let message = format!("LOGIN_CHALLENGE as {}", username);
                 self._logger_channel.lock().await.output_sender
-                    .send(LoggerOutput::Client(message.to_string()))
+                    .send(LoggerOutput::Client(message))
                     .unwrap();
 
                 self._output_queue.lock().await.push_back(login_challenge(username));

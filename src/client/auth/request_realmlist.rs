@@ -12,7 +12,7 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
     let mut body = Vec::new();
     body.write_i32::<LittleEndian>(0)?;
 
-    input.output_sender.send(LoggerOutput::Client("REALM_LIST".to_string())).unwrap();
+    input.output_sender.send(LoggerOutput::Client(String::from("REALM_LIST"))).unwrap();
 
     Ok(HandlerOutput::Data((Opcode::REALM_LIST as u32, header, body)))
 }
