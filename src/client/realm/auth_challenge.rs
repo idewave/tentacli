@@ -5,6 +5,7 @@ use flate2::Compression;
 use flate2::write::ZlibEncoder;
 
 use crate::client::opcodes::Opcode;
+use crate::logger::types::LoggerOutput;
 use crate::network::packet::OutcomePacket;
 use crate::types::{
     HandlerInput,
@@ -16,11 +17,10 @@ use crate::utils::random_range;
 const CLIENT_SEED_SIZE: usize = 4;
 
 pub fn handler(input: &mut HandlerInput) -> HandlerResult {
-    let session = &input.session;
-    let server_id = session.server_id.unwrap();
-    let config = session.get_config();
+    let server_id = input.session.server_id.unwrap();
+    let config = input.session.get_config().unwrap();
     let username = &config.connection_data.username;
-    let session_key = session.session_key.as_ref().unwrap();
+    let session_key = input.session.session_key.as_ref().unwrap();
 
     let mut reader = Cursor::new(input.data.as_ref().unwrap()[8..].to_vec());
     let mut server_seed = vec![0u8; 32];
@@ -73,7 +73,7 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
     encoder.write_all(&addon_info)?;
     body.write_all(&encoder.finish().unwrap())?;
 
-    println!("SEND CMSG_AUTH_SESSION");
+    input.output_sender.send(LoggerOutput::Client(String::from("CMSG_AUTH_SESSION"))).unwrap();
 
     Ok(HandlerOutput::Data(OutcomePacket::from(Opcode::CMSG_AUTH_SESSION, Some(body))))
 }

@@ -12,6 +12,7 @@ mod set_connected_to_realm;
 pub use login_challenge::handler as login_challenge;
 
 use crate::client::auth::opcodes::Opcode;
+use crate::logger::types::LoggerOutput;
 use crate::traits::Processor;
 use crate::types::{
     HandlerFunction,
@@ -27,17 +28,19 @@ impl Processor for AuthProcessor {
         let mut reader = Cursor::new(input.data.as_ref().unwrap());
         let opcode = reader.read_u8().unwrap();
 
+        let mut message = String::new();
+
         let handlers: Vec<HandlerFunction> = match opcode {
             Opcode::LOGIN_CHALLENGE => {
-                println!("RESPOND TO LOGIN_CHALLENGE");
+                message = String::from("LOGIN_CHALLENGE");
                 vec![Box::new(login_proof::handler)]
             },
             Opcode::LOGIN_PROOF => {
-                println!("RESPOND TO LOGIN_PROOF");
+                message = String::from("LOGIN_PROOF");
                 vec![Box::new(request_realmlist::handler)]
             },
             Opcode::REALM_LIST => {
-                println!("RESPOND TO REALM_LIST");
+                message = String::from("REALM_LIST");
                 vec![
                     Box::new(get_realmlist::handler),
                     Box::new(set_connected_to_realm::handler)
@@ -45,6 +48,8 @@ impl Processor for AuthProcessor {
             }
             _ => vec![],
         };
+
+        input.output_sender.send(LoggerOutput::Server(message)).unwrap();
 
         Self::collect_responses(handlers, input)
     }

@@ -4,6 +4,7 @@ use crate::client::{ObjectField, Player};
 
 use crate::client::opcodes::Opcode;
 use crate::crypto::decryptor::INCOMING_HEADER_LENGTH;
+use crate::logger::types::LoggerOutput;
 use crate::network::packet::{OutcomePacket, ParsedUpdatePacket};
 use crate::network::packet::types::{ObjectTypeMask};
 use crate::types::{
@@ -22,8 +23,10 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
     let parsed_packet: Result<ParsedUpdatePacket, Error> = match opcode {
         Opcode::SMSG_UPDATE_OBJECT => Ok(ParsedUpdatePacket::new(data)),
         Opcode::SMSG_COMPRESSED_UPDATE_OBJECT => Ok(ParsedUpdatePacket::from_compressed(data)),
-        _ => Err(Error::new(ErrorKind::InvalidInput, "Handler used with wrong opcode"))
+        _ => Err(Error::new(ErrorKind::InvalidInput, "Wrong opcode"))
     };
+
+    input.output_sender.send(LoggerOutput::Debug(String::from("Handling update packet"))).unwrap();
 
     let me = input.session.me.as_mut().unwrap();
 
@@ -35,8 +38,8 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
                 Some(type_mask) => {
                     match *type_mask {
                         ObjectTypeMask::IS_PLAYER => {
-                            if let Some(player) = input.data_storage.players_map.get(&guid) {
-                                println!("PLAYER: {:?}", player);
+                            if let Some(_player) = input.data_storage.players_map.get(&guid) {
+                                // ...
                             } else {
                                 let mut body = Vec::new();
                                 body.write_u64::<LittleEndian>(guid)?;

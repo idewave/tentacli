@@ -11,7 +11,7 @@ use crate::types::{
 };
 
 pub fn handler(input: &mut HandlerInput) -> HandlerResult {
-    let config = &input.session.get_config();
+    let config = input.session.get_config().unwrap();
     let realm_name_pattern = &config.connection_data.realm_name;
     let re = Regex::new(realm_name_pattern.as_str()).unwrap();
 
@@ -51,16 +51,12 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
         });
     }
 
-    println!("REALMS: {:?}", &realms);
-
     let get_realm = || realms.into_iter().find(|item| re.is_match(&item.name[..]));
 
     return match get_realm() {
         Some(realm) => {
             // https://rust-lang.github.io/rust-clippy/master/index.html#single_char_pattern
             let connection_data: Vec<&str> = realm.address.split(':').collect();
-
-            println!("REALM: {:?}", &realm);
 
             let host = connection_data[0].to_string();
             let port = u16::from_str(connection_data[1]).unwrap();
