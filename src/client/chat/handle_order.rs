@@ -8,7 +8,7 @@ use crate::network::session::types::ActionFlags;
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
 
 pub fn handler(input: &mut HandlerInput) -> HandlerResult {
-    let config = input.session.get_config();
+    let config = input.session.get_config().unwrap();
     let bot_chat = &config.bot_chat;
 
     let mut reader = Cursor::new(input.data.as_ref().unwrap()[4..].to_vec());

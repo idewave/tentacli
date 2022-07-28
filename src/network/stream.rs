@@ -62,7 +62,6 @@ impl Reader {
                     panic!("[CRITICAL ERROR] on read: {:?}", err.to_string());
                 }
 
-                println!("[ERROR] on read: {:?}", err.to_string());
                 Err(Error::new(ErrorKind::NotFound, "No data read"))
             },
         }
@@ -132,19 +131,18 @@ impl Writer {
         self.encryptor = Some(Encryptor::new(session_key));
     }
 
-    pub async fn write(&mut self, packet: &[u8]) {
+    pub async fn write(&mut self, packet: &[u8]) -> Result<usize, Error> {
         let packet = match self.encryptor.as_mut() {
             Some(encryptor) => encryptor.encrypt(packet),
             _ => packet.to_vec(),
         };
 
-        match self.stream.write(&packet).await {
-            Ok(_) => {
+        return match self.stream.write(&packet).await {
+            Ok(bytes_amount) => {
                 let _ = &self.stream.flush().await.unwrap();
+                Ok(bytes_amount)
             },
-            Err(err) => {
-                println!("Error on write: {:?}", err.to_string());
-            },
+            Err(err) => Err(err),
         }
     }
 }

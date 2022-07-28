@@ -6,6 +6,7 @@ mod send_data;
 pub mod types;
 
 use crate::client::opcodes::Opcode;
+use crate::logger::types::LoggerOutput;
 use crate::traits::Processor;
 use crate::types::{
     HandlerFunction,
@@ -21,14 +22,18 @@ impl Processor for WardenProcessor {
         let mut reader = Cursor::new(input.data.as_ref().unwrap());
         let _size = reader.read_u16::<BigEndian>().unwrap();
         let opcode = reader.read_u16::<LittleEndian>().unwrap();
+        
+        let mut message = String::new();
 
         let handlers: Vec<HandlerFunction> = match opcode {
             Opcode::SMSG_WARDEN_DATA => {
-                println!("RECEIVE SMSG_WARDEN_DATA");
+                message = String::from("RECEIVE SMSG_WARDEN_DATA");
                 vec![Box::new(send_data::handler)]
             },
             _ => vec![],
         };
+
+        input.output_sender.send(LoggerOutput::Debug(message)).unwrap();
 
         Self::collect_responses(handlers, input)
     }
