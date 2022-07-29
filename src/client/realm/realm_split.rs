@@ -1,7 +1,6 @@
 use byteorder::{WriteBytesExt};
 
 use crate::client::opcodes::Opcode;
-use crate::logger::types::LoggerOutput;
 use crate::network::packet::OutcomePacket;
 use crate::types::{
     HandlerInput,
@@ -17,7 +16,7 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
     body.write_u8(0xFF)?;
     body.write_u8(0xFF)?;
 
-    input.output_sender.send(LoggerOutput::Client(String::from("CMSG_REALM_SPLIT"))).unwrap();
+    input.message_sender.send_client_message(String::from("CMSG_REALM_SPLIT"));
 
     Ok(HandlerOutput::Data(OutcomePacket::from(Opcode::CMSG_REALM_SPLIT, Some(body))))
 }

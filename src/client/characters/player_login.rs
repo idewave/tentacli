@@ -2,7 +2,6 @@ use std::io::{Error, ErrorKind};
 use byteorder::{LittleEndian, WriteBytesExt};
 
 use crate::client::opcodes::Opcode;
-use crate::logger::types::LoggerOutput;
 use crate::network::packet::OutcomePacket;
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
 
@@ -19,7 +18,7 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
     let mut body = Vec::new();
     body.write_u64::<LittleEndian>(me.guid)?;
 
-    input.output_sender.send(LoggerOutput::Client(String::from("CMSG_PLAYER_LOGIN"))).unwrap();
+    input.message_sender.send_client_message(String::from("CMSG_PLAYER_LOGIN"));
 
     Ok(HandlerOutput::Data(OutcomePacket::from(Opcode::CMSG_PLAYER_LOGIN, Some(body))))
 }
