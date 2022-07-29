@@ -8,7 +8,7 @@ mod client;
 mod config;
 mod crypto;
 mod data_storage;
-mod logger;
+mod message_pipe;
 mod network;
 mod traits;
 mod types;

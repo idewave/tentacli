@@ -12,7 +12,6 @@ mod set_connected_to_realm;
 pub use login_challenge::handler as login_challenge;
 
 use crate::client::auth::opcodes::Opcode;
-use crate::logger::types::LoggerOutput;
 use crate::traits::Processor;
 use crate::types::{
     HandlerFunction,
@@ -24,7 +23,7 @@ use crate::types::{
 pub struct AuthProcessor;
 
 impl Processor for AuthProcessor {
-    fn process_input(input: HandlerInput) -> ProcessorResult {
+    fn process_input(mut input: HandlerInput) -> ProcessorResult {
         let mut reader = Cursor::new(input.data.as_ref().unwrap());
         let opcode = reader.read_u8().unwrap();
 
@@ -49,7 +48,7 @@ impl Processor for AuthProcessor {
             _ => vec![],
         };
 
-        input.output_sender.send(LoggerOutput::Server(message)).unwrap();
+        input.message_sender.send_server_message(message);
 
         Self::collect_responses(handlers, input)
     }

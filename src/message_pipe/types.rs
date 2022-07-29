@@ -1,3 +1,5 @@
+use crate::client::{Character, Realm};
+
 #[derive(Debug)]
 pub enum LoggerOutput {
     Info(String),
@@ -7,4 +9,10 @@ pub enum LoggerOutput {
 
     Server(String),
     Client(String),
+}
+
+pub enum MessageType {
+    ChooseRealm(Vec<Realm>),
+    ChooseCharacter(Vec<Character>),
+    Message(LoggerOutput),
 }

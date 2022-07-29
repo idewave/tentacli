@@ -5,7 +5,6 @@ use flate2::Compression;
 use flate2::write::ZlibEncoder;
 
 use crate::client::opcodes::Opcode;
-use crate::logger::types::LoggerOutput;
 use crate::network::packet::OutcomePacket;
 use crate::types::{
     HandlerInput,
@@ -73,7 +72,7 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
     encoder.write_all(&addon_info)?;
     body.write_all(&encoder.finish().unwrap())?;
 
-    input.output_sender.send(LoggerOutput::Client(String::from("CMSG_AUTH_SESSION"))).unwrap();
+    input.message_sender.send_client_message(String::from("CMSG_AUTH_SESSION"));
 
     Ok(HandlerOutput::Data(OutcomePacket::from(Opcode::CMSG_AUTH_SESSION, Some(body))))
 }

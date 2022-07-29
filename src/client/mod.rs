@@ -48,8 +48,7 @@ pub use crate::client::opcodes::Opcode;
 use crate::client::types::ClientFlags;
 use crate::crypto::warden_crypt::WardenCrypt;
 use crate::data_storage::DataStorage;
-use crate::logger::LoggerChannel;
-use crate::logger::types::LoggerOutput;
+use crate::message_pipe::MessagePipe;
 use crate::network::session::Session;
 use crate::network::stream::{Reader, Writer};
 
@@ -71,7 +70,7 @@ pub struct Client {
     _input_queue: Arc<Mutex<VecDeque<Vec<Vec<u8>>>>>,
     _output_queue: Arc<Mutex<VecDeque<Vec<u8>>>>,
     _flags: Arc<Mutex<ClientFlags>>,
-    _logger_channel: Arc<Mutex<LoggerChannel>>,
+    _message_pipe: Arc<Mutex<MessagePipe>>,
 
     session: Arc<Mutex<Session>>,
     data_storage: Arc<Mutex<DataStorage>>,
@@ -86,7 +85,7 @@ impl Client {
             _input_queue: Arc::new(Mutex::new(VecDeque::new())),
             _output_queue: Arc::new(Mutex::new(VecDeque::new())),
             _flags: Arc::new(Mutex::new(ClientFlags::NONE)),
-            _logger_channel: Arc::new(Mutex::new(LoggerChannel::new())),
+            _message_pipe: Arc::new(Mutex::new(MessagePipe::new())),
 
             session: Arc::new(Mutex::new(Session::new())),
             data_storage: Arc::new(Mutex::new(DataStorage::new())),
@@ -98,16 +97,16 @@ impl Client {
             Ok(stream) => {
                 Self::set_stream_halves(stream, &self._reader, &self._writer).await;
                 self.session.lock().await.set_config(host);
-                self._logger_channel.lock().await.output_sender
-                    .send(LoggerOutput::Success(format!("Connected to {}:{}", host, port)))
-                    .unwrap();
+                self._message_pipe.lock().await.message_sender.send_success_message(
+                    format!("Connected to {}:{}", host, port)
+                );
 
                 Ok(())
             },
             Err(err) => {
-                self._logger_channel.lock().await.output_sender
-                    .send(LoggerOutput::Error(format!("Cannot connect: {}", err.to_string())))
-                    .unwrap();
+                self._message_pipe.lock().await.message_sender.send_error_message(
+                    format!("Cannot connect: {}", err.to_string())
+                );
 
                 Err(err)
             },
@@ -140,10 +139,9 @@ impl Client {
         match self.session.lock().await.get_config() {
             Some(config) => {
                 let username = &config.connection_data.username;
-                let message = format!("LOGIN_CHALLENGE as {}", username);
-                self._logger_channel.lock().await.output_sender
-                    .send(LoggerOutput::Client(message))
-                    .unwrap();
+                self._message_pipe.lock().await.message_sender.send_client_message(
+                    format!("LOGIN_CHALLENGE as {}", username)
+                );
 
                 self._output_queue.lock().await.push_back(login_challenge(username));
             },
@@ -160,16 +158,14 @@ impl Client {
     }
 
     async fn handle_ui(&mut self) -> JoinHandle<()> {
-        let logger_channel = Arc::clone(&self._logger_channel);
+        let message_pipe = Arc::clone(&self._message_pipe);
 
         tokio::spawn(async move {
             let mut ui = UI::new();
 
             loop {
-                let buffer_output = logger_channel.lock().await.recv();
-
                 ui.render(UIOptions {
-                    buffer_output,
+                    message: message_pipe.lock().await.recv(),
                 });
 
                 sleep(Duration::from_millis(WRITE_TIMEOUT)).await;
@@ -206,7 +202,7 @@ impl Client {
         let warden_crypt = Arc::clone(&self._warden_crypt);
         let client_flags = Arc::clone(&self._flags);
         let data_storage = Arc::clone(&self.data_storage);
-        let output_sender = self._logger_channel.lock().await.output_sender.clone();
+        let mut message_sender = self._message_pipe.lock().await.message_sender.clone();
 
         tokio::spawn(async move {
             loop {
@@ -231,7 +227,7 @@ impl Client {
                                     // packet: size + opcode + body, need to parse separately
                                     data: Some(&packet),
                                     data_storage,
-                                    output_sender: output_sender.clone(),
+                                    message_sender: message_sender.clone(),
                                 })
                             })
                             .flatten()
@@ -266,14 +262,13 @@ impl Client {
                                                         stream, &reader, &writer
                                                     ).await;
 
-                                                    output_sender
-                                                        .send(LoggerOutput::Success(message))
-                                                        .unwrap();
+                                                    message_sender.send_success_message(message);
+
                                                 },
                                                 Err(err) => {
-                                                    output_sender
-                                                        .send(LoggerOutput::Error(err.to_string()))
-                                                        .unwrap();
+                                                    message_sender.send_error_message(
+                                                        err.to_string()
+                                                    );
                                                 }
                                             }
                                         },
@@ -309,9 +304,7 @@ impl Client {
                                     };
                                 },
                                 Err(err) => {
-                                    output_sender
-                                        .send(LoggerOutput::Error(err.to_string()))
-                                        .unwrap();
+                                    message_sender.send_error_message(err.to_string());
                                 },
                             };
 
@@ -328,7 +321,7 @@ impl Client {
     async fn handle_write(&mut self) -> JoinHandle<()> {
         let output_queue = Arc::clone(&self._output_queue);
         let writer = Arc::clone(&self._writer);
-        let output_sender = self._logger_channel.lock().await.output_sender.clone();
+        let mut message_sender = self._message_pipe.lock().await.message_sender.clone();
 
         tokio::spawn(async move {
             loop {
@@ -341,17 +334,14 @@ impl Client {
                                         // ...
                                     },
                                     Err(err) => {
-                                        output_sender
-                                            .send(LoggerOutput::Error(err.to_string()))
-                                            .unwrap();
+                                        message_sender.send_error_message(err.to_string());
                                     }
                                 };
                             },
                             None => {
-                                let message = String::from("Not connected to TCP");
-                                output_sender
-                                    .send(LoggerOutput::Error(message.to_string()))
-                                    .unwrap();
+                                message_sender.send_error_message(
+                                    String::from("Not connected to TCP")
+                                );
                             },
                         };
                     }
@@ -365,7 +355,7 @@ impl Client {
     async fn handle_read(&mut self) -> JoinHandle<()> {
         let input_queue = Arc::clone(&self._input_queue);
         let reader = Arc::clone(&self._reader);
-        let output_sender = self._logger_channel.lock().await.output_sender.clone();
+        let mut message_sender = self._message_pipe.lock().await.message_sender.clone();
 
         tokio::spawn(async move {
             loop {
@@ -376,10 +366,7 @@ impl Client {
                         }
                     },
                     None => {
-                        let message = String::from("Not connected to TCP");
-                        output_sender
-                            .send(LoggerOutput::Error(message.to_string()))
-                            .unwrap();
+                        message_sender.send_error_message(String::from("Not connected to TCP"));
                     },
                 };
 

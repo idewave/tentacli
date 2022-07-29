@@ -21,7 +21,7 @@ use tui::style::{Color, Style};
 use tui::Terminal;
 use tui::text::{Span, Spans};
 
-use crate::logger::types::LoggerOutput;
+use crate::message_pipe::types::{LoggerOutput, MessageType};
 use crate::ui::debug_panel::DebugPanel;
 use crate::ui::title::Title;
 use crate::ui::types::UIOptions;
@@ -54,7 +54,11 @@ impl<'a> UI<'a> {
     }
 
     pub fn render(&mut self, options: UIOptions) {
-        self.build_debug_output(options.buffer_output);
+        match options.message {
+            MessageType::Message(output) => { self.build_debug_output(output); },
+            MessageType::ChooseCharacter(_characters) => {},
+            MessageType::ChooseRealm(_realms) => {},
+        }
 
         self._terminal.draw(|frame| {
             let chunks = Layout::default()

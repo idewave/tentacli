@@ -1,11 +1,10 @@
 use std::collections::VecDeque;
 use std::io::Error;
 use std::sync::Arc;
-use std::sync::mpsc::Sender;
 use tokio::sync::Mutex;
-use crate::data_storage::DataStorage;
-use crate::logger::types::LoggerOutput;
 
+use crate::data_storage::DataStorage;
+use crate::message_pipe::message_sender::MessageSender;
 use crate::network::session::Session;
 
 pub enum State {
@@ -17,7 +16,7 @@ pub struct HandlerInput<'a> {
     pub session: &'a mut Session,
     pub data: Option<&'a [u8]>,
     pub data_storage: &'a mut DataStorage,
-    pub output_sender: Sender<LoggerOutput>,
+    pub message_sender: MessageSender,
 }
 
 pub enum HandlerOutput {
