@@ -8,8 +8,6 @@ pub mod dialog_sender;
 pub mod message_sender;
 pub mod types;
 
-// const BUFFER_SIZE: usize = 64;
-
 pub struct MessagePipe {
     pub dialog_sender: DialogSender,
     pub message_sender: MessageSender,
