@@ -1,5 +1,5 @@
-use crate::logger::types::LoggerOutput;
+use crate::message_pipe::types::MessageType;
 
 pub struct UIOptions {
-    pub buffer_output: LoggerOutput,
+    pub message: MessageType,
 }

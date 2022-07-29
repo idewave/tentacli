@@ -10,14 +10,13 @@ pub mod parsers;
 pub mod types;
 
 use crate::client::opcodes::Opcode;
-use crate::logger::types::LoggerOutput;
 use crate::traits::Processor;
 use crate::types::{HandlerFunction, HandlerInput, ProcessorResult};
 
 pub struct MovementProcessor;
 
 impl Processor for MovementProcessor {
-    fn process_input(input: HandlerInput) -> ProcessorResult {
+    fn process_input(mut input: HandlerInput) -> ProcessorResult {
         let mut reader = Cursor::new(input.data.as_ref().unwrap()[2..].to_vec());
         let opcode = reader.read_u16::<LittleEndian>().unwrap();
 
@@ -102,7 +101,7 @@ impl Processor for MovementProcessor {
             },
         };
 
-        input.output_sender.send(LoggerOutput::Server(message)).unwrap();
+        input.message_sender.send_server_message(message);
 
         Self::collect_responses(handlers, input)
     }

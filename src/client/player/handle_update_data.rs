@@ -1,10 +1,9 @@
 use std::io::{Cursor, Error, ErrorKind};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use crate::client::{ObjectField, Player};
 
+use crate::client::{ObjectField, Player};
 use crate::client::opcodes::Opcode;
 use crate::crypto::decryptor::INCOMING_HEADER_LENGTH;
-use crate::logger::types::LoggerOutput;
 use crate::network::packet::{OutcomePacket, ParsedUpdatePacket};
 use crate::network::packet::types::{ObjectTypeMask};
 use crate::types::{
@@ -26,7 +25,7 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
         _ => Err(Error::new(ErrorKind::InvalidInput, "Wrong opcode"))
     };
 
-    input.output_sender.send(LoggerOutput::Debug(String::from("Handling update packet"))).unwrap();
+    input.message_sender.send_debug_message(String::from("Handling update packet"));
 
     let me = input.session.me.as_mut().unwrap();
 

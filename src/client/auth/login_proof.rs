@@ -5,7 +5,6 @@ use sha1::{Sha1};
 use super::opcodes::Opcode;
 
 use crate::crypto::srp::Srp;
-use crate::logger::types::LoggerOutput;
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
 use crate::utils::random_range;
 
@@ -45,8 +44,8 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
 
     input.session.session_key = Some(srp_client.session_key());
 
-    input.output_sender.send(LoggerOutput::Debug(String::from("Session key created"))).unwrap();
-    input.output_sender.send(LoggerOutput::Client(String::from("LOGIN_PROOF"))).unwrap();
+    input.message_sender.send_debug_message(String::from("Session key created"));
+    input.message_sender.send_client_message(String::from("LOGIN_PROOF"));
 
     Ok(HandlerOutput::Data((Opcode::LOGIN_PROOF as u32, header, body)))
 }

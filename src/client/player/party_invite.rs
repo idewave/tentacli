@@ -1,7 +1,6 @@
 use byteorder::{LittleEndian, WriteBytesExt};
 
 use crate::client::opcodes::Opcode;
-use crate::logger::types::LoggerOutput;
 use crate::network::packet::OutcomePacket;
 use crate::types::{
     HandlerInput,
@@ -15,7 +14,7 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
     let mut body = Vec::new();
     body.write_u32::<LittleEndian>(0)?;
 
-    input.output_sender.send(LoggerOutput::Client(String::from("CMSG_GROUP_ACCEPT"))).unwrap();
+    input.message_sender.send_client_message(String::from("CMSG_GROUP_ACCEPT"));
 
     Ok(HandlerOutput::Data(OutcomePacket::from(Opcode::CMSG_GROUP_ACCEPT, Some(body))))
 

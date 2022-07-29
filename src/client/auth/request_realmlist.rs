@@ -1,5 +1,4 @@
 use byteorder::{LittleEndian, WriteBytesExt};
-use crate::logger::types::LoggerOutput;
 
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
 
@@ -12,7 +11,7 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
     let mut body = Vec::new();
     body.write_i32::<LittleEndian>(0)?;
 
-    input.output_sender.send(LoggerOutput::Client(String::from("REALM_LIST"))).unwrap();
+    input.message_sender.send_client_message(String::from("REALM_LIST"));
 
     Ok(HandlerOutput::Data((Opcode::REALM_LIST as u32, header, body)))
 }

@@ -6,7 +6,6 @@ mod send_data;
 pub mod types;
 
 use crate::client::opcodes::Opcode;
-use crate::logger::types::LoggerOutput;
 use crate::traits::Processor;
 use crate::types::{
     HandlerFunction,
@@ -18,7 +17,7 @@ use crate::types::{
 pub struct WardenProcessor;
 
 impl Processor for WardenProcessor {
-    fn process_input(input: HandlerInput) -> ProcessorResult {
+    fn process_input(mut input: HandlerInput) -> ProcessorResult {
         let mut reader = Cursor::new(input.data.as_ref().unwrap());
         let _size = reader.read_u16::<BigEndian>().unwrap();
         let opcode = reader.read_u16::<LittleEndian>().unwrap();
@@ -33,7 +32,7 @@ impl Processor for WardenProcessor {
             _ => vec![],
         };
 
-        input.output_sender.send(LoggerOutput::Debug(message)).unwrap();
+        input.message_sender.send_server_message(message);
 
         Self::collect_responses(handlers, input)
     }
