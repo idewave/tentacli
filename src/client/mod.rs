@@ -53,7 +53,15 @@ use crate::network::session::Session;
 use crate::network::stream::{Reader, Writer};
 
 use crate::traits::Processor;
-use crate::types::{AIManagerInput, HandlerInput, HandlerOutput, HandlerResult, ProcessorFunction, ProcessorResult, State};
+use crate::types::{
+    AIManagerInput,
+    HandlerInput,
+    HandlerOutput,
+    HandlerFunction,
+    ProcessorFunction,
+    ProcessorResult,
+    State
+};
 use crate::UI;
 use crate::ui::types::UIOptions;
 
@@ -219,22 +227,22 @@ impl Client {
 
                         let session = &mut *session.lock().await;
                         let data_storage = &mut *data_storage.lock().await;
-                        let result_list = processors
-                            .iter()
-                            .map(|processor| {
-                                processor(HandlerInput {
-                                    session,
-                                    // packet: size + opcode + body, need to parse separately
-                                    data: Some(&packet),
-                                    data_storage,
-                                    message_sender: message_sender.clone(),
-                                })
-                            })
-                            .flatten()
-                            .collect::<Vec<HandlerResult>>();
+                        let mut handler_input = HandlerInput {
+                            session,
+                            // packet: size + opcode + body, need to parse separately
+                            data: Some(&packet),
+                            data_storage,
+                            message_sender: message_sender.clone(),
+                        };
 
-                        for result in result_list {
-                            match result {
+                        let handler_list = processors
+                            .iter()
+                            .map(|processor| processor(&mut handler_input))
+                            .flatten()
+                            .collect::<Vec<HandlerFunction>>();
+
+                        for mut handler in handler_list {
+                            match handler(&mut handler_input) {
                                 Ok(output) => {
                                     match output {
                                         HandlerOutput::Data((opcode, header, body)) => {
@@ -300,6 +308,7 @@ impl Client {
                                                 },
                                             }
                                         },
+                                        HandlerOutput::WaitForInput => {},
                                         HandlerOutput::Void => {},
                                     };
                                 },
@@ -375,13 +384,13 @@ impl Client {
         })
     }
 
-    fn get_login_processors<'a>() -> Vec<ProcessorFunction<'a>> {
+    fn get_login_processors() -> Vec<ProcessorFunction> {
         return vec![
             Box::new(AuthProcessor::process_input),
         ];
     }
 
-    fn get_realm_processors<'a>() -> Vec<ProcessorFunction<'a>> {
+    fn get_realm_processors() -> Vec<ProcessorFunction> {
         return vec![
             Box::new(CharactersProcessor::process_input),
             Box::new(ChatProcessor::process_input),

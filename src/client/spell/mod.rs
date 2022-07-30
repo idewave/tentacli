@@ -11,7 +11,7 @@ use crate::types::{HandlerFunction, HandlerInput, ProcessorResult};
 pub struct SpellProcessor;
 
 impl Processor for SpellProcessor {
-    fn process_input(mut input: HandlerInput) -> ProcessorResult {
+    fn process_input(input: &mut HandlerInput) -> ProcessorResult {
         let mut reader = Cursor::new(input.data.as_ref().unwrap());
         let _size = reader.read_u16::<BigEndian>().unwrap();
         let opcode = reader.read_u16::<LittleEndian>().unwrap();
@@ -48,6 +48,6 @@ impl Processor for SpellProcessor {
 
         input.message_sender.send_server_message(message);
 
-        Self::collect_responses(handlers, input)
+        handlers
     }
 }

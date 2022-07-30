@@ -23,7 +23,7 @@ use crate::types::{
 pub struct AuthProcessor;
 
 impl Processor for AuthProcessor {
-    fn process_input(mut input: HandlerInput) -> ProcessorResult {
+    fn process_input(input: &mut HandlerInput) -> ProcessorResult {
         let mut reader = Cursor::new(input.data.as_ref().unwrap());
         let opcode = reader.read_u8().unwrap();
 
@@ -50,6 +50,6 @@ impl Processor for AuthProcessor {
 
         input.message_sender.send_server_message(message);
 
-        Self::collect_responses(handlers, input)
+        handlers
     }
 }

@@ -23,6 +23,7 @@ pub enum HandlerOutput {
     Data((u32, Vec<u8>, Vec<u8>)),
     ConnectionRequest(String, u16),
     UpdateState(State),
+    WaitForInput,
     Void,
 }
 
@@ -34,8 +35,8 @@ pub struct AIManagerInput {
 
 pub type HandlerResult = Result<HandlerOutput, Error>;
 
-pub type HandlerFunction<'a> = Box<dyn FnMut(&mut HandlerInput) -> HandlerResult + 'a>;
+pub type HandlerFunction = Box<dyn FnMut(&mut HandlerInput) -> HandlerResult + Send>;
 
-pub type ProcessorResult = Vec<HandlerResult>;
+pub type ProcessorResult = Vec<HandlerFunction>;
 
-pub type ProcessorFunction<'a> = Box<dyn Fn(HandlerInput) -> ProcessorResult + Send + 'a>;
+pub type ProcessorFunction = Box<dyn Fn(&mut HandlerInput) -> ProcessorResult + Send>;

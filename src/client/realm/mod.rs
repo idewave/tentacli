@@ -21,7 +21,7 @@ use crate::types::{
 pub struct RealmProcessor;
 
 impl Processor for RealmProcessor {
-    fn process_input(mut input: HandlerInput) -> ProcessorResult {
+    fn process_input(input: &mut HandlerInput) -> ProcessorResult {
         let mut reader = Cursor::new(input.data.as_ref().unwrap()[2..].to_vec());
         let opcode = reader.read_u16::<LittleEndian>().unwrap();
         
@@ -82,6 +82,6 @@ impl Processor for RealmProcessor {
 
         input.message_sender.send_server_message(message);
 
-        Self::collect_responses(handlers, input)
+        handlers
     }
 }
