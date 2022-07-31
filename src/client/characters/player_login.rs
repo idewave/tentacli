@@ -18,7 +18,7 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
     let mut body = Vec::new();
     body.write_u64::<LittleEndian>(me.guid)?;
 
-    input.message_sender.send_client_message(String::from("CMSG_PLAYER_LOGIN"));
+    input.message_income.send_client_message(String::from("CMSG_PLAYER_LOGIN"));
 
     Ok(HandlerOutput::Data(OutcomePacket::from(Opcode::CMSG_PLAYER_LOGIN, Some(body))))
 }

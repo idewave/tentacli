@@ -3,7 +3,7 @@ use std::io::{Cursor};
 use byteorder::{LittleEndian, ReadBytesExt};
 
 use crate::client::opcodes::Opcode;
-use crate::network::session::types::{StateFlags};
+use crate::ipc::session::types::{StateFlags};
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
 use crate::utils::{read_packed_guid};
 

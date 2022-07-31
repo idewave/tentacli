@@ -12,12 +12,8 @@ mod set_connected_to_realm;
 pub use login_challenge::handler as login_challenge;
 
 use crate::client::auth::opcodes::Opcode;
-use crate::traits::Processor;
-use crate::types::{
-    HandlerFunction,
-    HandlerInput,
-    ProcessorResult
-};
+use crate::types::traits::Processor;
+use crate::types::{HandlerFunction, HandlerInput, ProcessorResult};
 
 
 pub struct AuthProcessor;
@@ -48,7 +44,7 @@ impl Processor for AuthProcessor {
             _ => vec![],
         };
 
-        input.message_sender.send_server_message(message);
+        input.message_income.send_server_message(message);
 
         handlers
     }

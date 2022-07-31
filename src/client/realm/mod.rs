@@ -11,12 +11,8 @@ pub mod types;
 
 use crate::client::opcodes::Opcode;
 use crate::client::characters::request_characters;
-use crate::traits::Processor;
-use crate::types::{
-    HandlerFunction,
-    HandlerInput,
-    ProcessorResult
-};
+use crate::types::traits::Processor;
+use crate::types::{HandlerFunction, HandlerInput, ProcessorResult};
 
 pub struct RealmProcessor;
 
@@ -80,7 +76,7 @@ impl Processor for RealmProcessor {
             },
         };
 
-        input.message_sender.send_server_message(message);
+        input.message_income.send_server_message(message);
 
         handlers
     }

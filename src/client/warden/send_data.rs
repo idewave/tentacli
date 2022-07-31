@@ -6,11 +6,7 @@ use super::opcodes::WardenOpcode;
 use crate::client::opcodes::Opcode;
 use crate::client::WardenModuleInfo;
 use crate::network::packet::OutcomePacket;
-use crate::types::{
-    HandlerInput,
-    HandlerOutput,
-    HandlerResult
-};
+use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
 
 // I did this part mostly according to https://www.getmangos.eu/forums/topic/3409-warden/
 // unfortunately this topic incomplete and seems like TS will not finish it. In case somebody know

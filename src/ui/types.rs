@@ -1,5 +1,5 @@
-use crate::message_pipe::types::MessageType;
+use crate::ipc::duplex::types::IncomeMessageType;
 
 pub struct UIOptions {
-    pub message: MessageType,
+    pub message: IncomeMessageType,
 }

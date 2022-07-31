@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::io::{Cursor};
 
-use crate::network::session::types::ActionFlags;
+use crate::ipc::session::types::ActionFlags;
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
 use crate::utils::read_packed_guid;
 

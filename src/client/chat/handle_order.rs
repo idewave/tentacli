@@ -3,8 +3,8 @@ use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use crate::client::chat::types::{EmoteType};
 use crate::client::opcodes::Opcode;
+use crate::ipc::session::types::ActionFlags;
 use crate::network::packet::OutcomePacket;
-use crate::network::session::types::ActionFlags;
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
 
 pub fn handler(input: &mut HandlerInput) -> HandlerResult {

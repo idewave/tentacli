@@ -1,5 +1,5 @@
 use std::collections::{VecDeque};
-use std::io::{Error};
+use std::io::{Error, Stdout};
 use std::sync::{Arc};
 use std::time::Duration;
 use tokio::sync::{Mutex};
@@ -7,6 +7,7 @@ use tokio::net::TcpStream;
 use tokio::task::{JoinHandle};
 use tokio::time::{sleep};
 use futures::future::join_all;
+use tui::backend::CrosstermBackend;
 
 mod auth;
 mod characters;
@@ -43,16 +44,15 @@ use movement::ai::AI as MovementAI;
 
 // TODO: REMOVE THIS ! (need to think how better refactor this part)
 use auth::login_challenge;
-pub use crate::client::opcodes::Opcode;
 
+pub use crate::client::opcodes::Opcode;
 use crate::client::types::ClientFlags;
 use crate::crypto::warden_crypt::WardenCrypt;
-use crate::data_storage::DataStorage;
-use crate::message_pipe::MessagePipe;
-use crate::network::session::Session;
+use crate::ipc::storage::DataStorage;
+use crate::ipc::duplex::MessageDuplex;
+use crate::ipc::session::Session;
 use crate::network::stream::{Reader, Writer};
-
-use crate::traits::Processor;
+use crate::types::traits::Processor;
 use crate::types::{
     AIManagerInput,
     HandlerInput,
@@ -64,12 +64,14 @@ use crate::types::{
 };
 use crate::UI;
 use crate::ui::types::UIOptions;
+use crate::ui::UIInput;
 
 // for each server need to play with this values
 // for local server values can be much less then for external server
 // for me it seems this values are related to ping, need to investigate this in future
 const READ_TIMEOUT: u64 = 50;
 const WRITE_TIMEOUT: u64 = 1;
+const UI_INPUT_TICK_RATE: u64 = 100;
 
 pub struct Client {
     _reader: Arc<Mutex<Option<Reader>>>,
@@ -78,7 +80,7 @@ pub struct Client {
     _input_queue: Arc<Mutex<VecDeque<Vec<Vec<u8>>>>>,
     _output_queue: Arc<Mutex<VecDeque<Vec<u8>>>>,
     _flags: Arc<Mutex<ClientFlags>>,
-    _message_pipe: Arc<Mutex<MessagePipe>>,
+    _message_duplex: Arc<Mutex<MessageDuplex>>,
 
     session: Arc<Mutex<Session>>,
     data_storage: Arc<Mutex<DataStorage>>,
@@ -93,7 +95,7 @@ impl Client {
             _input_queue: Arc::new(Mutex::new(VecDeque::new())),
             _output_queue: Arc::new(Mutex::new(VecDeque::new())),
             _flags: Arc::new(Mutex::new(ClientFlags::NONE)),
-            _message_pipe: Arc::new(Mutex::new(MessagePipe::new())),
+            _message_duplex: Arc::new(Mutex::new(MessageDuplex::new())),
 
             session: Arc::new(Mutex::new(Session::new())),
             data_storage: Arc::new(Mutex::new(DataStorage::new())),
@@ -105,14 +107,14 @@ impl Client {
             Ok(stream) => {
                 Self::set_stream_halves(stream, &self._reader, &self._writer).await;
                 self.session.lock().await.set_config(host);
-                self._message_pipe.lock().await.message_sender.send_success_message(
+                self._message_duplex.lock().await.message_income.send_success_message(
                     format!("Connected to {}:{}", host, port)
                 );
 
                 Ok(())
             },
             Err(err) => {
-                self._message_pipe.lock().await.message_sender.send_error_message(
+                self._message_duplex.lock().await.message_income.send_error_message(
                     format!("Cannot connect: {}", err.to_string())
                 );
 
@@ -147,7 +149,7 @@ impl Client {
         match self.session.lock().await.get_config() {
             Some(config) => {
                 let username = &config.connection_data.username;
-                self._message_pipe.lock().await.message_sender.send_client_message(
+                self._message_duplex.lock().await.message_income.send_client_message(
                     format!("LOGIN_CHALLENGE as {}", username)
                 );
 
@@ -158,6 +160,7 @@ impl Client {
 
         join_all(vec![
             self.handle_ui().await,
+            self.handle_ui_input().await,
             self.handle_ai().await,
             self.handle_queue().await,
             self.handle_read().await,
@@ -165,15 +168,29 @@ impl Client {
         ]).await;
     }
 
+    async fn handle_ui_input(&mut self) -> JoinHandle<()> {
+        tokio::spawn(async move {
+            let mut ui_input = UIInput::new();
+
+            loop {
+                if crossterm::event::poll(Duration::from_millis(UI_INPUT_TICK_RATE)).unwrap() {
+                    ui_input.handle();
+                }
+
+                sleep(Duration::from_millis(WRITE_TIMEOUT)).await;
+            }
+        })
+    }
+
     async fn handle_ui(&mut self) -> JoinHandle<()> {
-        let message_pipe = Arc::clone(&self._message_pipe);
+        let message_duplex = Arc::clone(&self._message_duplex);
 
         tokio::spawn(async move {
-            let mut ui = UI::new();
+            let mut ui = UI::new(CrosstermBackend::new(std::io::stdout()));
 
             loop {
                 ui.render(UIOptions {
-                    message: message_pipe.lock().await.recv(),
+                    message: message_duplex.lock().await.get_income(),
                 });
 
                 sleep(Duration::from_millis(WRITE_TIMEOUT)).await;
@@ -210,7 +227,8 @@ impl Client {
         let warden_crypt = Arc::clone(&self._warden_crypt);
         let client_flags = Arc::clone(&self._flags);
         let data_storage = Arc::clone(&self.data_storage);
-        let mut message_sender = self._message_pipe.lock().await.message_sender.clone();
+        let mut message_income = self._message_duplex.lock().await.message_income.clone();
+        let dialog_income = self._message_duplex.lock().await.dialog_income.clone();
 
         tokio::spawn(async move {
             loop {
@@ -232,7 +250,8 @@ impl Client {
                             // packet: size + opcode + body, need to parse separately
                             data: Some(&packet),
                             data_storage,
-                            message_sender: message_sender.clone(),
+                            message_income: message_income.clone(),
+                            dialog_income: dialog_income.clone(),
                         };
 
                         let handler_list = processors
@@ -270,11 +289,11 @@ impl Client {
                                                         stream, &reader, &writer
                                                     ).await;
 
-                                                    message_sender.send_success_message(message);
+                                                    message_income.send_success_message(message);
 
                                                 },
                                                 Err(err) => {
-                                                    message_sender.send_error_message(
+                                                    message_income.send_error_message(
                                                         err.to_string()
                                                     );
                                                 }
@@ -308,12 +327,29 @@ impl Client {
                                                 },
                                             }
                                         },
-                                        HandlerOutput::WaitForInput => {},
+                                        HandlerOutput::Freeze => {
+                                            client_flags.lock().await.set(
+                                                ClientFlags::IN_FROZEN_MODE,
+                                                true
+                                            );
+
+                                            loop {
+                                                let frozen_mode = client_flags
+                                                    .lock().await
+                                                    .contains(ClientFlags::IN_FROZEN_MODE);
+
+                                                if !frozen_mode {
+                                                    break;
+                                                }
+
+                                                sleep(Duration::from_millis(WRITE_TIMEOUT)).await;
+                                            }
+                                        },
                                         HandlerOutput::Void => {},
                                     };
                                 },
                                 Err(err) => {
-                                    message_sender.send_error_message(err.to_string());
+                                    message_income.send_error_message(err.to_string());
                                 },
                             };
 
@@ -330,7 +366,7 @@ impl Client {
     async fn handle_write(&mut self) -> JoinHandle<()> {
         let output_queue = Arc::clone(&self._output_queue);
         let writer = Arc::clone(&self._writer);
-        let mut message_sender = self._message_pipe.lock().await.message_sender.clone();
+        let mut message_income = self._message_duplex.lock().await.message_income.clone();
 
         tokio::spawn(async move {
             loop {
@@ -343,12 +379,12 @@ impl Client {
                                         // ...
                                     },
                                     Err(err) => {
-                                        message_sender.send_error_message(err.to_string());
+                                        message_income.send_error_message(err.to_string());
                                     }
                                 };
                             },
                             None => {
-                                message_sender.send_error_message(
+                                message_income.send_error_message(
                                     String::from("Not connected to TCP")
                                 );
                             },
@@ -364,7 +400,7 @@ impl Client {
     async fn handle_read(&mut self) -> JoinHandle<()> {
         let input_queue = Arc::clone(&self._input_queue);
         let reader = Arc::clone(&self._reader);
-        let mut message_sender = self._message_pipe.lock().await.message_sender.clone();
+        let mut message_income = self._message_duplex.lock().await.message_income.clone();
 
         tokio::spawn(async move {
             loop {
@@ -375,7 +411,7 @@ impl Client {
                         }
                     },
                     None => {
-                        message_sender.send_error_message(String::from("Not connected to TCP"));
+                        message_income.send_error_message(String::from("Not connected to TCP"));
                     },
                 };
 
@@ -407,9 +443,10 @@ impl Client {
 mod tests {
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::TcpListener;
+
     use crate::Client;
     use crate::client::types::ClientFlags;
-    use crate::network::session::types::{ActionFlags, StateFlags};
+    use crate::ipc::session::types::{ActionFlags, StateFlags};
 
     const HOST: &str = "127.0.0.1";
     // https://users.rust-lang.org/t/async-tests-sometimes-fails/78451

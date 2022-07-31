@@ -73,18 +73,20 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
             });
         }
 
-        let selected_character = characters.remove(0);
-        let mut me = Player::new(
-            selected_character.guid,
-            selected_character.name,
-            selected_character.race,
-            selected_character.class
-        );
+        input.dialog_income.send_characters_dialog(characters);
 
-        me.position = Some(selected_character.position);
+        // let selected_character = characters.remove(0);
+        // let mut me = Player::new(
+        //     selected_character.guid,
+        //     selected_character.name,
+        //     selected_character.race,
+        //     selected_character.class
+        // );
+        //
+        // me.position = Some(selected_character.position);
+        //
+        // input.session.me = Some(me);
 
-        input.session.me = Some(me);
-
-        Ok(HandlerOutput::Void)
+        Ok(HandlerOutput::Freeze)
     }
 }

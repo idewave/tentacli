@@ -3,9 +3,12 @@ use std::io::Error;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-use crate::data_storage::DataStorage;
-use crate::message_pipe::message_sender::MessageSender;
-use crate::network::session::Session;
+pub mod traits;
+
+use crate::ipc::storage::DataStorage;
+use crate::ipc::duplex::dialog::DialogIncome;
+use crate::ipc::duplex::message::MessageIncome;
+use crate::ipc::session::Session;
 
 pub enum State {
     SetEncryption(Vec<u8>),
@@ -16,14 +19,15 @@ pub struct HandlerInput<'a> {
     pub session: &'a mut Session,
     pub data: Option<&'a [u8]>,
     pub data_storage: &'a mut DataStorage,
-    pub message_sender: MessageSender,
+    pub message_income: MessageIncome,
+    pub dialog_income: DialogIncome,
 }
 
 pub enum HandlerOutput {
     Data((u32, Vec<u8>, Vec<u8>)),
     ConnectionRequest(String, u16),
     UpdateState(State),
-    WaitForInput,
+    Freeze,
     Void,
 }
 

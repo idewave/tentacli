@@ -3,12 +3,8 @@ use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
 
 pub mod types;
 
-use crate::traits::Processor;
-use crate::types::{
-    HandlerFunction,
-    HandlerInput,
-    ProcessorResult
-};
+use crate::types::traits::Processor;
+use crate::types::{HandlerFunction, HandlerInput, ProcessorResult};
 
 pub struct TradeProcessor;
 

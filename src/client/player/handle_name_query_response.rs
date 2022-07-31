@@ -3,11 +3,7 @@ use std::io::{BufRead, Cursor};
 use byteorder::{ReadBytesExt};
 
 use crate::client::Player;
-use crate::types::{
-    HandlerInput,
-    HandlerOutput,
-    HandlerResult
-};
+use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
 use crate::utils::read_packed_guid;
 
 pub fn handler(input: &mut HandlerInput) -> HandlerResult {

@@ -44,8 +44,8 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
 
     input.session.session_key = Some(srp_client.session_key());
 
-    input.message_sender.send_debug_message(String::from("Session key created"));
-    input.message_sender.send_client_message(String::from("LOGIN_PROOF"));
+    input.message_income.send_debug_message(String::from("Session key created"));
+    input.message_income.send_client_message(String::from("LOGIN_PROOF"));
 
     Ok(HandlerOutput::Data((Opcode::LOGIN_PROOF as u32, header, body)))
 }

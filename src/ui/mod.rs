@@ -15,51 +15,53 @@ use crossterm::{
         LeaveAlternateScreen
     }
 };
-use tui::backend::{CrosstermBackend};
+use tui::backend::{Backend, CrosstermBackend};
 use tui::layout::{Constraint, Direction, Layout};
 use tui::style::{Color, Style};
 use tui::Terminal;
 use tui::text::{Span, Spans};
 
-use crate::message_pipe::types::{LoggerOutput, MessageType};
+use crate::ipc::duplex::types::{LoggerOutput, IncomeMessageType};
+use crate::types::traits::UIComponent;
+use crate::ui::characters_modal::CharactersModal;
 use crate::ui::debug_panel::DebugPanel;
 use crate::ui::title::Title;
-use crate::ui::types::UIOptions;
+use crate::ui::types::{UIOptions};
 
+mod characters_modal;
 mod debug_panel;
 pub mod types;
 mod title;
 
 pub const MARGIN: u16 = 1;
 
-pub struct UI<'a> {
-    _terminal: Terminal<CrosstermBackend<Stdout>>,
-    spans: Vec<Spans<'a>>,
+pub struct UI<'a, B: Backend> {
+    _terminal: Terminal<B>,
+    _debug_panel: DebugPanel<'a>,
+    _title: Title,
+    _characters_modal: CharactersModal<'a>,
 }
 
-impl<'a> UI<'a> {
-    pub fn new() -> Self {
+impl<'a, B: Backend> UI<'a, B> {
+    pub fn new(backend: B) -> Self {
         enable_raw_mode().unwrap();
-        let mut stdout = std::io::stdout();
-        execute!(stdout, EnterAlternateScreen, EnableMouseCapture).unwrap();
-        let backend = CrosstermBackend::new(stdout);
+        execute!(std::io::stdout(), EnterAlternateScreen, EnableMouseCapture).unwrap();
+
         let mut _terminal = Terminal::new(backend).unwrap();
         _terminal.clear().unwrap();
         _terminal.hide_cursor().unwrap();
 
         Self {
             _terminal,
-            spans: vec![],
+
+            // components
+            _debug_panel: DebugPanel::new(),
+            _title: Title::new(),
+            _characters_modal: CharactersModal::new(),
         }
     }
 
     pub fn render(&mut self, options: UIOptions) {
-        match options.message {
-            MessageType::Message(output) => { self.build_debug_output(output); },
-            MessageType::ChooseCharacter(_characters) => {},
-            MessageType::ChooseRealm(_realms) => {},
-        }
-
         self._terminal.draw(|frame| {
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
@@ -78,37 +80,39 @@ impl<'a> UI<'a> {
                 ])
                 .split(chunks[1]);
 
-            Title::render(frame, chunks[0]);
-            DebugPanel::render(frame, output_panels[0], self.spans.to_vec());
+            match options.message {
+                IncomeMessageType::Message(output) => {
+                    self._debug_panel.add_item(output);
+                },
+                IncomeMessageType::ChooseCharacter(characters) => {
+                    self._characters_modal.set_items(characters);
+                },
+                IncomeMessageType::ChooseRealm(_realms) => {
+                    // ...
+                },
+            }
+
+            self._title.render(frame, chunks[0]);
+            self._debug_panel.render(frame, output_panels[0]);
+
+            if self._characters_modal.has_items() {
+                self._characters_modal.render(frame, chunks[1])
+            }
 
         }).unwrap();
     }
+}
 
-    fn build_debug_output(&mut self, output: LoggerOutput) {
-        let message = match output {
-            LoggerOutput::Info(data) if !data.is_empty() => Span::styled(
-                format!("[INFO]: {}\n", data), Style::default().fg(Color::Gray)
-            ),
-            LoggerOutput::Debug(data) if !data.is_empty() => Span::styled(
-                format!("[DEBUG]: {}\n", data), Style::default().fg(Color::DarkGray)
-            ),
-            LoggerOutput::Error(data) if !data.is_empty() => Span::styled(
-                format!("[ERROR]: {}\n", data), Style::default().fg(Color::Red)
-            ),
-            LoggerOutput::Success(data) if !data.is_empty() => Span::styled(
-                format!("[SUCCESS]: {}\n", data), Style::default().fg(Color::LightGreen)
-            ),
-            LoggerOutput::Server(data) if !data.is_empty() => Span::styled(
-                format!("[SERVER]: {}\n", data), Style::default().fg(Color::LightMagenta)
-            ),
-            LoggerOutput::Client(data) if !data.is_empty() => Span::styled(
-                format!("[CLIENT]: {}\n", data), Style::default().fg(Color::LightBlue)
-            ),
-            _ => Span::raw(""),
-        };
+pub struct UIInput;
 
-        if !message.content.is_empty() {
-            self.spans.push(Spans::from(message));
+impl UIInput {
+    pub fn new() -> Self {
+        Self
+    }
+
+    pub fn handle(&mut self) {
+        if let event::Event::Key(key) = event::read().unwrap() {
+            // ...
         }
     }
 }

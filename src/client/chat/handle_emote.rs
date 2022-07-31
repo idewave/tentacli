@@ -3,9 +3,9 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use crate::client::chat::types::{TextEmoteType};
 use crate::client::opcodes::Opcode;
-use crate::network::packet::OutcomePacket;
 use crate::client::spell::types::SpellCastTargetType;
-use crate::network::session::types::ActionFlags;
+use crate::ipc::session::types::ActionFlags;
+use crate::network::packet::OutcomePacket;
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
 use crate::utils::pack_guid;
 

@@ -4,7 +4,7 @@ pub mod types;
 
 use crate::client::{Player, WardenModuleInfo};
 use crate::config::{Config, ConfigParams};
-use crate::network::session::types::{ActionFlags, StateFlags};
+use crate::ipc::session::types::{ActionFlags, StateFlags};
 
 pub struct Session {
     pub session_key: Option<Vec<u8>>,

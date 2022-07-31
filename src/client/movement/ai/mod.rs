@@ -9,7 +9,7 @@ use crate::client::movement::parsers::types::Position;
 use crate::client::{MovementFlags, MovementFlagsExtra, UnitMoveType};
 use crate::client::opcodes::Opcode;
 use crate::network::packet::OutcomePacket;
-use crate::network::session::types::ActionFlags;
+use crate::ipc::session::types::ActionFlags;
 use crate::types::AIManagerInput;
 use crate::utils::pack_guid;
 

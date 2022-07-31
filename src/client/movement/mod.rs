@@ -5,12 +5,11 @@ pub mod ai;
 
 mod detect_motion;
 mod handle_follow;
-mod monster_move;
 pub mod parsers;
 pub mod types;
 
 use crate::client::opcodes::Opcode;
-use crate::traits::Processor;
+use crate::types::traits::Processor;
 use crate::types::{HandlerFunction, HandlerInput, ProcessorResult};
 
 pub struct MovementProcessor;
@@ -101,7 +100,7 @@ impl Processor for MovementProcessor {
             },
         };
 
-        input.message_sender.send_server_message(message);
+        input.message_income.send_server_message(message);
 
         handlers
     }

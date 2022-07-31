@@ -6,11 +6,7 @@ use crate::client::opcodes::Opcode;
 use crate::crypto::decryptor::INCOMING_HEADER_LENGTH;
 use crate::network::packet::{OutcomePacket, ParsedUpdatePacket};
 use crate::network::packet::types::{ObjectTypeMask};
-use crate::types::{
-    HandlerInput,
-    HandlerOutput,
-    HandlerResult
-};
+use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
 
 pub fn handler(input: &mut HandlerInput) -> HandlerResult {
     // omit size
@@ -25,7 +21,7 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
         _ => Err(Error::new(ErrorKind::InvalidInput, "Wrong opcode"))
     };
 
-    input.message_sender.send_debug_message(String::from("Handling update packet"));
+    input.message_income.send_debug_message(String::from("Handling update packet"));
 
     let me = input.session.me.as_mut().unwrap();
 

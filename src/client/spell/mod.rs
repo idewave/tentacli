@@ -5,7 +5,7 @@ mod handle_spell_go;
 pub mod types;
 
 use crate::client::opcodes::Opcode;
-use crate::traits::Processor;
+use crate::types::traits::Processor;
 use crate::types::{HandlerFunction, HandlerInput, ProcessorResult};
 
 pub struct SpellProcessor;
@@ -46,7 +46,7 @@ impl Processor for SpellProcessor {
             _ => vec![]
         };
 
-        input.message_sender.send_server_message(message);
+        input.message_income.send_server_message(message);
 
         handlers
     }
