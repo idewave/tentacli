@@ -1,10 +1,14 @@
+use crossterm::event::{KeyCode, KeyModifiers};
+
 use crate::client::{Character, Realm};
 
 // messages from client to UI
+#[derive(Debug)]
 pub enum IncomeMessageType {
     ChooseRealm(Vec<Realm>),
     ChooseCharacter(Vec<Character>),
     Message(LoggerOutput),
+    KeyEvent(KeyModifiers, KeyCode),
 }
 
 // messages from UI to client

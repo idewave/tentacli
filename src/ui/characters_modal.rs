@@ -27,10 +27,6 @@ impl<'a> CharactersModal<'a> {
     pub fn drop_items(&mut self) {
         self.items = vec![];
     }
-
-    pub fn has_items(&mut self) -> bool {
-        !self.items.is_empty()
-    }
 }
 
 impl<'a> UIComponent for CharactersModal<'a> {

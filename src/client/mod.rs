@@ -63,7 +63,7 @@ use crate::types::{
     State
 };
 use crate::UI;
-use crate::ui::types::UIOptions;
+use crate::ui::types::{UIOptions};
 use crate::ui::UIInput;
 
 // for each server need to play with this values
@@ -71,7 +71,6 @@ use crate::ui::UIInput;
 // for me it seems this values are related to ping, need to investigate this in future
 const READ_TIMEOUT: u64 = 50;
 const WRITE_TIMEOUT: u64 = 1;
-const UI_INPUT_TICK_RATE: u64 = 100;
 
 pub struct Client {
     _reader: Arc<Mutex<Option<Reader>>>,
@@ -169,15 +168,13 @@ impl Client {
     }
 
     async fn handle_ui_input(&mut self) -> JoinHandle<()> {
+        let key_event_income = self._message_duplex.lock().await.key_event_income.clone();
+
         tokio::spawn(async move {
-            let mut ui_input = UIInput::new();
+            let mut ui_input = UIInput::new(key_event_income);
 
             loop {
-                if crossterm::event::poll(Duration::from_millis(UI_INPUT_TICK_RATE)).unwrap() {
-                    ui_input.handle();
-                }
-
-                sleep(Duration::from_millis(WRITE_TIMEOUT)).await;
+                ui_input.handle();
             }
         })
     }
