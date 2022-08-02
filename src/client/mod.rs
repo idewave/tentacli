@@ -174,7 +174,7 @@ impl Client {
             let mut ui_input = UIInput::new(key_event_income);
 
             loop {
-                ui_input.handle();
+                ui_input.handle().await;
             }
         })
     }

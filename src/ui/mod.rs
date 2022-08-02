@@ -3,10 +3,10 @@ use std::sync::mpsc::Sender;
 use std::time::Duration;
 use crossterm::{
     event::{
-        self,
         DisableMouseCapture,
         EnableMouseCapture,
         Event,
+        EventStream,
         KeyCode,
     },
     execute,
@@ -18,6 +18,7 @@ use crossterm::{
     }
 };
 use crossterm::event::KeyModifiers;
+use futures::{FutureExt, select, StreamExt, TryStreamExt};
 use tui::backend::{Backend, CrosstermBackend};
 use tui::layout::{Constraint, Direction, Layout};
 use tui::Terminal;
@@ -113,14 +114,13 @@ impl<'a, B: Backend> UI<'a, B> {
 
     fn handle_key_event(&mut self, modifiers: KeyModifiers, key_code: KeyCode) {
         let is_modal_opened = self._state_flags.contains(
-            UIStateFlags::IS_CHARACTERS_MODAL_OPENED | UIStateFlags::IS_REALM_MODAL_OPENED
+            UIStateFlags::IS_CHARACTERS_MODAL_OPENED & UIStateFlags::IS_REALM_MODAL_OPENED
         );
 
         if is_modal_opened {
             if key_code == KeyCode::Esc {
                 self._state_flags.set(UIStateFlags::IS_CHARACTERS_MODAL_OPENED, false);
                 self._state_flags.set(UIStateFlags::IS_REALM_MODAL_OPENED, false);
-                self._terminal.clear().unwrap();
             }
         }
     }
@@ -128,20 +128,27 @@ impl<'a, B: Backend> UI<'a, B> {
 
 pub struct UIInput {
     _key_event_income: KeyEventIncome,
+    _event_stream: EventStream,
 }
 
 impl UIInput {
     pub fn new(key_event_income: KeyEventIncome) -> Self {
+        let event_stream = EventStream::new();
+
         Self {
             _key_event_income: key_event_income,
+            _event_stream: event_stream,
         }
     }
 
-    pub fn handle(&mut self) {
-        if event::poll(Duration::from_millis(UI_INPUT_TICK_RATE)).unwrap() {
-            if let Event::Key(key) = event::read().unwrap() {
-                self._key_event_income.send_key_event(key);
-            }
+    pub async fn handle(&mut self) {
+        match self._event_stream.next().fuse().await {
+            Some(Ok(event)) => {
+                if let Event::Key(key) = event {
+                    self._key_event_income.send_key_event(key);
+                }
+            },
+            _ => {},
         }
     }
 }
