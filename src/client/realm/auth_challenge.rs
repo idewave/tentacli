@@ -12,10 +12,11 @@ use crate::utils::random_range;
 const CLIENT_SEED_SIZE: usize = 4;
 
 pub fn handler(input: &mut HandlerInput) -> HandlerResult {
-    let server_id = input.session.server_id.unwrap();
-    let config = input.session.get_config().unwrap();
+    let session = input.session.lock().unwrap();
+    let server_id = session.selected_realm.as_ref().unwrap().server_id;
+    let config = session.get_config().unwrap();
     let username = &config.connection_data.username;
-    let session_key = input.session.session_key.as_ref().unwrap();
+    let session_key = session.session_key.as_ref().unwrap();
 
     let mut reader = Cursor::new(input.data.as_ref().unwrap()[8..].to_vec());
     let mut server_seed = vec![0u8; 32];

@@ -21,7 +21,7 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
     match text_emote {
         TextEmoteType::TEXT_HEAL_ME | TextEmoteType::TEXT_HELP_ME => {
 
-            input.session.action_flags.set(ActionFlags::IS_CASTING, true);
+            input.session.lock().unwrap().action_flags.set(ActionFlags::IS_CASTING, true);
 
             let mut body = Vec::new();
             body.write_u8(0)?;

@@ -24,12 +24,13 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
     let _gender = reader.borrow_mut().read_u8()?;
     let class = reader.borrow_mut().read_u8()?;
 
-    let me = input.session.me.as_ref().unwrap();
+    let session = input.session.lock().unwrap();
+    let me = session.me.as_ref().unwrap();
 
     // modify/insert only another players
     // current player stored inside Session instance
     if me.guid != guid {
-        input.data_storage.players_map.entry(guid).and_modify(|p| {
+        input.data_storage.lock().unwrap().players_map.entry(guid).and_modify(|p| {
             p.name = name.to_string();
             p.race = race;
             p.class = class;

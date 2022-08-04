@@ -27,13 +27,14 @@ impl AI {
     }
 
     pub async fn manage(&mut self, input: AIManagerInput) {
-        let session = &mut *input.session.lock().await;
-        let data_storage = &mut *input.data_storage.lock().await;
         let output_queue = &mut *input.output_queue.lock().await;
+        let mut session = input.session.lock().unwrap();
+        let data_storage = input.data_storage.lock().unwrap();
 
-        if let Some(me) = session.me.as_mut() {
+        if session.me.is_some() {
             if session.action_flags.contains(ActionFlags::IS_FOLLOWING) {
                 let target_guid = session.follow_target.unwrap();
+                let me = session.me.as_mut().unwrap();
 
                 if let Some(target) = data_storage.players_map.get(&target_guid) {
                     let mut source_position = me.position.unwrap();
@@ -55,8 +56,6 @@ impl AI {
                                 source_position.x += velocity.x;
                                 source_position.y += velocity.y;
                                 source_position.z += velocity.z;
-
-                                // println!("CURRENT POS: {:?}", me.position);
 
                                 if !self.is_moving_started {
                                     self.is_moving_started = true;

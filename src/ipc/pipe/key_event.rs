@@ -1,7 +1,7 @@
 use std::sync::mpsc::Sender;
 use crossterm::event::KeyEvent;
 
-use crate::ipc::duplex::types::IncomeMessageType;
+use crate::ipc::pipe::types::IncomeMessageType;
 
 #[derive(Clone)]
 pub struct KeyEventIncome {

@@ -1,6 +1,7 @@
 use std::io::{Cursor};
 use byteorder::{ReadBytesExt};
 
+mod connect_to_realm;
 mod get_realmlist;
 mod login_challenge;
 mod login_proof;
@@ -38,7 +39,8 @@ impl Processor for AuthProcessor {
                 message = String::from("REALM_LIST");
                 vec![
                     Box::new(get_realmlist::handler),
-                    Box::new(set_connected_to_realm::handler)
+                    Box::new(connect_to_realm::handler),
+                    Box::new(set_connected_to_realm::handler),
                 ]
             }
             _ => vec![],

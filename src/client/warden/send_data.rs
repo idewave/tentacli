@@ -31,7 +31,7 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
                 module_decrypt_key.to_vec(),
                 compressed_size
             );
-            input.session.warden_module_info = Some(module_info);
+            input.session.lock().unwrap().warden_module_info = Some(module_info);
 
             let mut body = Vec::new();
             body.write_u8(WardenOpcode::WARDEN_CMSG_MODULE_MISSING)?;
@@ -39,7 +39,7 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
             Ok(HandlerOutput::Data(OutcomePacket::from(Opcode::CMSG_WARDEN_DATA, Some(body))))
         },
         WardenOpcode::WARDEN_SMSG_MODULE_CACHE => {
-            if let Some(module_info) = input.session.warden_module_info.as_mut() {
+            if let Some(module_info) = input.session.lock().unwrap().warden_module_info.as_mut() {
                 let partial_size = reader.read_u16::<LittleEndian>()?;
 
                 let mut partial = vec![0u8; partial_size as usize];
@@ -64,7 +64,7 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
             Ok(HandlerOutput::Void)
         },
         WardenOpcode::WARDEN_SMSG_HASH_REQUEST => {
-            if let Some(module_info) = input.session.warden_module_info.as_mut() {
+            if let Some(module_info) = input.session.lock().unwrap().warden_module_info.as_mut() {
                 let mut seed = vec![0u8; 16];
                 reader.read_exact(&mut seed)?;
 

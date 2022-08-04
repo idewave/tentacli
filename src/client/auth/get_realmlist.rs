@@ -11,10 +11,6 @@ use crate::types::{
 };
 
 pub fn handler(input: &mut HandlerInput) -> HandlerResult {
-    let config = input.session.get_config().unwrap();
-    let realm_name_pattern = &config.connection_data.realm_name;
-    let re = Regex::new(realm_name_pattern.as_str()).unwrap();
-
     let mut realms: Vec<Realm> = Vec::new();
 
     // omit opcode and first 6 bytes (unknown)
@@ -37,8 +33,6 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
         let timezone = reader.read_u8().unwrap();
         let server_id = reader.read_u8().unwrap();
 
-        input.session.server_id = Some(server_id);
-
         realms.push(Realm {
             icon,
             flags,
@@ -51,20 +45,24 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
         });
     }
 
-    let get_realm = || realms.into_iter().find(|item| re.is_match(&item.name[..]));
+    input.dialog_income.send_realm_dialog(realms);
 
-    return match get_realm() {
-        Some(realm) => {
-            // https://rust-lang.github.io/rust-clippy/master/index.html#single_char_pattern
-            let connection_data: Vec<&str> = realm.address.split(':').collect();
+    Ok(HandlerOutput::Freeze)
 
-            let host = connection_data[0].to_string();
-            let port = u16::from_str(connection_data[1]).unwrap();
+    // let get_realm = || realms.into_iter().find(|item| re.is_match(&item.name[..]));
 
-            Ok(HandlerOutput::ConnectionRequest(host, port))
-        }
-        _ => {
-            Err(Error::new(ErrorKind::Other, "No realm found !"))
-        }
-    }
+    // return match get_realm() {
+    //     Some(realm) => {
+    //         // https://rust-lang.github.io/rust-clippy/master/index.html#single_char_pattern
+    //         let connection_data: Vec<&str> = realm.address.split(':').collect();
+    //
+    //         let host = connection_data[0].to_string();
+    //         let port = u16::from_str(connection_data[1]).unwrap();
+    //
+    //         Ok(HandlerOutput::ConnectionRequest(host, port))
+    //     }
+    //     _ => {
+    //         Err(Error::new(ErrorKind::Other, "No realm found !"))
+    //     }
+    // }
 }

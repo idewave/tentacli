@@ -1,7 +1,8 @@
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult, State};
 
 pub fn handler(input: &mut HandlerInput) -> HandlerResult {
-    let session_key = input.session.session_key.as_ref().unwrap();
+    let session = input.session.lock().unwrap();
+    let session_key = session.session_key.as_ref().unwrap();
 
     input.message_income.send_debug_message(String::from("Set encryption"));
 

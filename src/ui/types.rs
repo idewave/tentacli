@@ -1,9 +1,14 @@
 use bitflags::bitflags;
 
-use crate::ipc::duplex::types::IncomeMessageType;
+use crate::ipc::pipe::dialog::DialogOutcome;
+use crate::ipc::pipe::types::IncomeMessageType;
 
-pub struct UIOptions {
+pub struct UIRenderOptions {
     pub message: IncomeMessageType,
+}
+
+pub struct UIOutputOptions {
+    pub dialog_outcome: DialogOutcome,
 }
 
 bitflags! {

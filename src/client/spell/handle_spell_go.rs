@@ -13,9 +13,9 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
     let (caster_guid, position) = read_packed_guid(RefCell::clone(&reader));
     reader.borrow_mut().set_position(position);
 
-    input.session.action_flags.set(
+    input.session.lock().unwrap().action_flags.set(
         ActionFlags::IS_CASTING,
-        input.session.me.as_ref().unwrap().guid == caster_guid
+        input.session.lock().unwrap().me.as_ref().unwrap().guid == caster_guid
     );
 
     Ok(HandlerOutput::Void)

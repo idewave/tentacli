@@ -1,8 +1,8 @@
 use std::sync::mpsc::Sender;
 
-use crate::ipc::duplex::types::{LoggerOutput, IncomeMessageType};
+use crate::ipc::pipe::types::{IncomeMessageType, LoggerOutput};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MessageIncome {
     _sender: Sender<IncomeMessageType>,
 }

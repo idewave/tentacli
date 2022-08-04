@@ -5,7 +5,7 @@ use tui::style::{Color, Style};
 use tui::text::{Span, Spans};
 use tui::widgets::{Block, Borders, BorderType, Paragraph, Wrap};
 
-use crate::ipc::duplex::types::LoggerOutput;
+use crate::ipc::pipe::types::LoggerOutput;
 use crate::types::traits::UIComponent;
 use crate::ui::MARGIN;
 

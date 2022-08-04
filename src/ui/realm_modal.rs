@@ -5,33 +5,34 @@ use tui::style::{Color, Modifier, Style};
 use tui::text::{Span, Spans};
 use tui::widgets::{Block, Borders, BorderType, Clear, List, ListItem, ListState};
 
-use crate::client::Character;
+use crate::client::{Character, Realm};
 use crate::types::traits::UIComponent;
 use crate::ui::MARGIN;
 
-const PANEL_TITLE: &str = "SELECT CHARACTER";
+const PANEL_TITLE: &str = "SELECT REALM";
 
-pub struct CharactersModal<'a> {
+pub struct RealmModal<'a> {
     items: Vec<ListItem<'a>>,
     state: ListState,
-    characters: Vec<Character>,
+    realms: Vec<Realm>,
 }
 
-impl<'a> CharactersModal<'a> {
-    pub fn set_items(&mut self, characters: Vec<Character>) -> &mut Self {
-        self.items = characters
+impl<'a> RealmModal<'a> {
+    pub fn set_items(&mut self, realms: Vec<Realm>) -> &mut Self {
+        self.items = realms
             .iter()
-            .map(|character| ListItem::new(vec![
+            .map(|realm| ListItem::new(vec![
                 Spans::from(vec![
+                    Span::raw("Connect to ["),
                     Span::styled(
-                        character.name.to_string(),
+                        realm.name.to_string(),
                         Style::default()
                             .fg(Color::LightGreen)
                             .add_modifier(Modifier::BOLD)
                     ),
-                    Span::raw(" - "),
+                    Span::raw("]: "),
                     Span::styled(
-                        format!("{} lvl", character.level),
+                        realm.address.to_string(),
                         Style::default()
                             .fg(Color::LightYellow)
                     ),
@@ -39,7 +40,7 @@ impl<'a> CharactersModal<'a> {
             ]))
             .collect();
 
-        self.characters = characters;
+        self.realms = realms;
 
         self
     }
@@ -62,22 +63,22 @@ impl<'a> CharactersModal<'a> {
         self.state.select(Some(i));
     }
 
-    pub fn get_selected(&mut self) -> Character {
+    pub fn get_selected(&mut self) -> Realm {
         let index = match self.state.selected() {
             Some(i) => i,
             None => 0,
         };
 
-        self.characters.remove(index)
+        self.realms.remove(index)
     }
 }
 
-impl<'a> UIComponent for CharactersModal<'a> {
+impl<'a> UIComponent for RealmModal<'a> {
     fn new() -> Self {
         Self {
             items: vec![],
             state: ListState::default(),
-            characters: vec![],
+            realms: vec![],
         }
     }
 

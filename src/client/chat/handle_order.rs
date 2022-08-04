@@ -8,7 +8,8 @@ use crate::network::packet::OutcomePacket;
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
 
 pub fn handler(input: &mut HandlerInput) -> HandlerResult {
-    let config = input.session.get_config().unwrap();
+    let session = input.session.lock().unwrap();
+    let config = session.get_config().unwrap();
     let bot_chat = &config.bot_chat;
 
     let mut reader = Cursor::new(input.data.as_ref().unwrap()[4..].to_vec());
@@ -39,8 +40,8 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
             let mut body: Vec<u8> = Vec::new();
             body.write_u64::<LittleEndian>(sender_guid)?;
 
-            input.session.follow_target = Some(sender_guid);
-            input.session.action_flags.set(ActionFlags::IS_FOLLOWING, true);
+            input.session.lock().unwrap().follow_target = Some(sender_guid);
+            input.session.lock().unwrap().action_flags.set(ActionFlags::IS_FOLLOWING, true);
 
             Ok(HandlerOutput::Data(OutcomePacket::from(Opcode::CMSG_SET_SELECTION, Some(body))))
         },
