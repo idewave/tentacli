@@ -38,7 +38,7 @@ pub enum HandlerOutput {
 pub struct AIManagerInput {
     pub session: Arc<SyncMutex<Session>>,
     pub data_storage: Arc<SyncMutex<DataStorage>>,
-    pub output_queue: Arc<Mutex<VecDeque<Vec<u8>>>>,
+    pub output_queue: Arc<SyncMutex<VecDeque<Vec<u8>>>>,
 }
 
 pub type HandlerResult = Result<HandlerOutput, Error>;

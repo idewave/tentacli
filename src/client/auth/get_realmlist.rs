@@ -1,7 +1,6 @@
 use std::io::{BufRead, Cursor, Error, ErrorKind};
 use std::str::FromStr;
 use byteorder::{LittleEndian, ReadBytesExt};
-use regex::Regex;
 
 use crate::client::realm::types::Realm;
 use crate::types::{
@@ -13,7 +12,6 @@ use crate::types::{
 pub fn handler(input: &mut HandlerInput) -> HandlerResult {
     let mut realms: Vec<Realm> = Vec::new();
 
-    // omit opcode and first 6 bytes (unknown)
     let mut reader = Cursor::new(input.data.as_ref().unwrap()[7..].to_vec());
 
     let realms_count = reader.read_i16::<LittleEndian>().unwrap();
@@ -48,21 +46,4 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
     input.dialog_income.send_realm_dialog(realms);
 
     Ok(HandlerOutput::Freeze)
-
-    // let get_realm = || realms.into_iter().find(|item| re.is_match(&item.name[..]));
-
-    // return match get_realm() {
-    //     Some(realm) => {
-    //         // https://rust-lang.github.io/rust-clippy/master/index.html#single_char_pattern
-    //         let connection_data: Vec<&str> = realm.address.split(':').collect();
-    //
-    //         let host = connection_data[0].to_string();
-    //         let port = u16::from_str(connection_data[1]).unwrap();
-    //
-    //         Ok(HandlerOutput::ConnectionRequest(host, port))
-    //     }
-    //     _ => {
-    //         Err(Error::new(ErrorKind::Other, "No realm found !"))
-    //     }
-    // }
 }

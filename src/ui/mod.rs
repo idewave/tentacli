@@ -10,6 +10,8 @@ use crossterm::{
         Event,
         EventStream,
         KeyCode,
+        KeyModifiers,
+        read
     },
     execute,
     terminal::{
@@ -19,7 +21,6 @@ use crossterm::{
         LeaveAlternateScreen
     }
 };
-use crossterm::event::KeyModifiers;
 use futures::{FutureExt, StreamExt};
 use tui::backend::{Backend, CrosstermBackend};
 use tui::layout::{Constraint, Direction, Layout};
@@ -131,6 +132,7 @@ impl<'a, B: Backend> UI<'a, B> {
     }
 
     fn handle_key_event(&mut self, modifiers: KeyModifiers, key_code: KeyCode) {
+        // TODO: move parts of this into related components
         match key_code {
             KeyCode::Up => {
                 if self._state_flags.contains(UIStateFlags::IS_CHARACTERS_MODAL_OPENED) {
@@ -173,27 +175,20 @@ impl<'a, B: Backend> UI<'a, B> {
 
 pub struct UIInput {
     _key_event_income: KeyEventIncome,
-    _event_stream: EventStream,
 }
 
 impl UIInput {
     pub fn new(key_event_income: KeyEventIncome) -> Self {
-        let event_stream = EventStream::new();
-
         Self {
             _key_event_income: key_event_income,
-            _event_stream: event_stream,
         }
     }
 
-    pub async fn handle(&mut self) {
-        match self._event_stream.next().fuse().await {
-            Some(Ok(event)) => {
-                if let Event::Key(key) = event {
-                    self._key_event_income.send_key_event(key);
-                }
-            },
-            _ => {},
+    pub fn handle(&mut self) {
+        let event = read().unwrap();
+
+        if let Event::Key(key) = event {
+            self._key_event_income.send_key_event(key);
         }
     }
 }

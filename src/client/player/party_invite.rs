@@ -10,9 +10,13 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
     let mut body = Vec::new();
     body.write_u32::<LittleEndian>(0)?;
 
-    input.message_income.send_client_message(String::from("CMSG_GROUP_ACCEPT"));
+    input.message_income.send_client_message(
+        String::from("CMSG_GROUP_ACCEPT")
+    );
 
-    Ok(HandlerOutput::Data(OutcomePacket::from(Opcode::CMSG_GROUP_ACCEPT, Some(body))))
+    Ok(HandlerOutput::Data(
+        OutcomePacket::from(Opcode::CMSG_GROUP_ACCEPT, Some(body))
+    ))
 
     // Ok(HandlerOutput::Data(
     //     Opcode::CMSG_GROUP_DECLINE,

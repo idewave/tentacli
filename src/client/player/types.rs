@@ -64,6 +64,20 @@ impl Debug for Player {
     }
 }
 
+impl Default for Player {
+    fn default() -> Self {
+        Self {
+            guid: 0,
+            name: String::new(),
+            race: 0,
+            class: 0,
+            fields: BTreeMap::new(),
+            movement_speed: BTreeMap::new(),
+            position: None,
+        }
+    }
+}
+
 #[non_exhaustive]
 pub struct Race;
 

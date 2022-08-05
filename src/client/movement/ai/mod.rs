@@ -27,7 +27,7 @@ impl AI {
     }
 
     pub async fn manage(&mut self, input: AIManagerInput) {
-        let output_queue = &mut *input.output_queue.lock().await;
+        let mut output_queue = input.output_queue.lock().unwrap();
         let mut session = input.session.lock().unwrap();
         let data_storage = input.data_storage.lock().unwrap();
 
@@ -156,8 +156,6 @@ impl AI {
     fn calculate_orientation(from: Position, to: Position) -> f32 {
         let dx = to.x - from.x;
         let dy = to.y - from.y;
-        // let dx = from.x - to.x;
-        // let dy = from.y - to.y;
         let angle = dy.atan2(dx);
 
         if angle >= 0.0 { angle } else { 2.0 * PI + angle }

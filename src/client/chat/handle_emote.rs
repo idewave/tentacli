@@ -13,6 +13,7 @@ use crate::utils::pack_guid;
 const SPELL_ID: u32 = 2050;
 
 pub fn handler(input: &mut HandlerInput) -> HandlerResult {
+    let mut session = input.session.lock().unwrap();
     let mut reader = Cursor::new(input.data.as_ref().unwrap()[4..].to_vec());
 
     let sender_guid = reader.read_u64::<LittleEndian>()?;
@@ -20,8 +21,7 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
 
     match text_emote {
         TextEmoteType::TEXT_HEAL_ME | TextEmoteType::TEXT_HELP_ME => {
-
-            input.session.lock().unwrap().action_flags.set(ActionFlags::IS_CASTING, true);
+            session.action_flags.set(ActionFlags::IS_CASTING, true);
 
             let mut body = Vec::new();
             body.write_u8(0)?;

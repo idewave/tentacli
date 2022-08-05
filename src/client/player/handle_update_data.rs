@@ -34,13 +34,14 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
                 Some(type_mask) => {
                     match *type_mask {
                         ObjectTypeMask::IS_PLAYER => {
-                            if let Some(_player) = input.data_storage.lock().unwrap().players_map.get(&guid) {
-                                // ...
-                            } else {
+                            let data_storage = input.data_storage.lock().unwrap();
+                            let player = data_storage.players_map.get(&guid);
+                            if player.is_none() {
                                 let mut body = Vec::new();
                                 body.write_u64::<LittleEndian>(guid)?;
 
-                                let mut player = Player::new(guid, String::new(), 0, 0);
+                                let mut player = Player::default();
+                                player.guid = guid;
 
                                 if let Some(movement_data) = parsed_block.movement_data {
                                     if let Some(movement_info) = movement_data.movement_info {

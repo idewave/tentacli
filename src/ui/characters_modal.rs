@@ -23,13 +23,14 @@ impl<'a> CharactersModal<'a> {
             .iter()
             .map(|character| ListItem::new(vec![
                 Spans::from(vec![
+                    Span::raw("name: "),
                     Span::styled(
                         character.name.to_string(),
                         Style::default()
                             .fg(Color::LightGreen)
                             .add_modifier(Modifier::BOLD)
                     ),
-                    Span::raw(" - "),
+                    Span::raw(format!(", guid: {:?}, ", character.guid)),
                     Span::styled(
                         format!("{} lvl", character.level),
                         Style::default()

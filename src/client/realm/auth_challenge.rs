@@ -69,7 +69,11 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
     encoder.write_all(&addon_info)?;
     body.write_all(&encoder.finish().unwrap())?;
 
-    input.message_income.send_client_message(String::from("CMSG_AUTH_SESSION"));
+    input.message_income.send_client_message(
+        String::from("CMSG_AUTH_SESSION")
+    );
 
-    Ok(HandlerOutput::Data(OutcomePacket::from(Opcode::CMSG_AUTH_SESSION, Some(body))))
+    Ok(HandlerOutput::Data(
+        OutcomePacket::from(Opcode::CMSG_AUTH_SESSION, Some(body))
+    ))
 }
