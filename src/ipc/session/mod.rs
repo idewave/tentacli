@@ -2,13 +2,13 @@ use std::fmt::{Debug, Formatter};
 
 pub mod types;
 
-use crate::client::{Player, WardenModuleInfo};
+use crate::client::{Player, Realm, WardenModuleInfo};
 use crate::config::{Config, ConfigParams};
-use crate::network::session::types::{ActionFlags, StateFlags};
+use crate::ipc::session::types::{ActionFlags, StateFlags};
 
 pub struct Session {
     pub session_key: Option<Vec<u8>>,
-    pub server_id: Option<u8>,
+    pub selected_realm: Option<Realm>,
     pub warden_module_info: Option<WardenModuleInfo>,
     pub config: Option<Config>,
     pub me: Option<Player>,
@@ -22,7 +22,7 @@ impl Session {
     pub fn new() -> Self {
         Self {
             session_key: None,
-            server_id: None,
+            selected_realm: None,
             warden_module_info: None,
             config: None,
             me: None,
@@ -52,9 +52,8 @@ impl Debug for Session {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "\nsession_key: {:?}, server_id: '{:?}'",
+            "session_key: {:?}",
             self.session_key,
-            self.server_id,
         )
     }
 }

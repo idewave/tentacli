@@ -17,7 +17,7 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
 
     let (movement_info, _) = MovementParser::parse(RefCell::clone(&reader));
 
-    input.data_storage.players_map.entry(guid).and_modify(|p| {
+    input.data_storage.lock().unwrap().players_map.entry(guid).and_modify(|p| {
         p.position = Some(movement_info.position);
     });
 

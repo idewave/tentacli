@@ -1,16 +1,21 @@
 use std::io::{BufRead, Cursor};
 use byteorder::{LittleEndian, ReadBytesExt};
-use crate::client::movement::parsers::types::Position;
-use crate::client::Player;
 
-use super::types::Character;
+use crate::client::movement::parsers::types::Position;
 use crate::types::{
     HandlerInput,
     HandlerOutput,
     HandlerResult,
 };
 
+use super::types::Character;
+
 pub fn handler(input: &mut HandlerInput) -> HandlerResult {
+    let session = input.session.lock().unwrap();
+    if session.me.is_some() {
+        return Ok(HandlerOutput::Void);
+    }
+
     let mut characters: Vec<Character> = Vec::new();
 
     let mut reader = Cursor::new(input.data.as_ref().unwrap()[4..].to_vec());
@@ -18,7 +23,7 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
     let characters_count = reader.read_u8()?;
 
     if characters_count == 0 {
-        Ok(HandlerOutput::Void)
+        return Ok(HandlerOutput::Void);
     } else {
         for _ in 0 .. characters_count {
             let guid = reader.read_u64::<LittleEndian>()?;
@@ -73,18 +78,8 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
             });
         }
 
-        let selected_character = characters.remove(0);
-        let mut me = Player::new(
-            selected_character.guid,
-            selected_character.name,
-            selected_character.race,
-            selected_character.class
-        );
+        input.dialog_income.send_characters_dialog(characters);
 
-        me.position = Some(selected_character.position);
-
-        input.session.me = Some(me);
-
-        Ok(HandlerOutput::Void)
+        Ok(HandlerOutput::Freeze)
     }
 }

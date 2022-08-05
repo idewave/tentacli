@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 use std::fmt::{Debug, Formatter};
+use crate::client::Character;
 use crate::client::movement::parsers::types::Position;
 
 pub struct Player {
@@ -22,6 +23,18 @@ impl Player {
             fields: BTreeMap::new(),
             movement_speed: BTreeMap::new(),
             position: None,
+        }
+    }
+
+    pub fn from(character: Character) -> Self {
+        Self {
+            guid: character.guid,
+            name: character.name,
+            race: character.race,
+            class: character.class,
+            fields: BTreeMap::new(),
+            movement_speed: BTreeMap::new(),
+            position: Some(character.position),
         }
     }
 
@@ -48,6 +61,20 @@ impl Debug for Player {
             self.fields,
             self.movement_speed,
         )
+    }
+}
+
+impl Default for Player {
+    fn default() -> Self {
+        Self {
+            guid: 0,
+            name: String::new(),
+            race: 0,
+            class: 0,
+            fields: BTreeMap::new(),
+            movement_speed: BTreeMap::new(),
+            position: None,
+        }
     }
 }
 

@@ -1,11 +1,13 @@
-use std::io::Stdout;
+use std::process::exit;
+use std::sync::{Arc, Mutex};
 use crossterm::{
     event::{
-        self,
         DisableMouseCapture,
         EnableMouseCapture,
         Event,
-        KeyCode
+        KeyCode,
+        KeyModifiers,
+        read
     },
     execute,
     terminal::{
@@ -15,49 +17,80 @@ use crossterm::{
         LeaveAlternateScreen
     }
 };
-use tui::backend::{CrosstermBackend};
+use tui::backend::{Backend};
 use tui::layout::{Constraint, Direction, Layout};
-use tui::style::{Color, Style};
 use tui::Terminal;
-use tui::text::{Span, Spans};
 
-use crate::message_pipe::types::{LoggerOutput, MessageType};
-use crate::ui::debug_panel::DebugPanel;
-use crate::ui::title::Title;
-use crate::ui::types::UIOptions;
-
+mod characters_modal;
 mod debug_panel;
+mod realm_modal;
 pub mod types;
 mod title;
 
+use crate::client::Player;
+use crate::client::types::ClientFlags;
+use crate::ipc::pipe::dialog::DialogOutcome;
+use crate::ipc::pipe::key_event::KeyEventIncome;
+use crate::ipc::pipe::types::{IncomeMessageType, OutcomeMessageType};
+use crate::ipc::session::Session;
+use crate::types::traits::UIComponent;
+use crate::ui::characters_modal::CharactersModal;
+use crate::ui::debug_panel::DebugPanel;
+use crate::ui::realm_modal::RealmModal;
+use crate::ui::title::Title;
+use crate::ui::types::{UIOutputOptions, UIRenderOptions, UIStateFlags};
+
 pub const MARGIN: u16 = 1;
 
-pub struct UI<'a> {
-    _terminal: Terminal<CrosstermBackend<Stdout>>,
-    spans: Vec<Spans<'a>>,
+pub struct UI<'a, B: Backend> {
+    _terminal: Terminal<B>,
+    _state_flags: UIStateFlags,
+
+    _debug_panel: DebugPanel<'a>,
+    _title: Title,
+    _characters_modal: CharactersModal<'a>,
+    _dialog_outcome: DialogOutcome,
+    _realm_modal: RealmModal<'a>,
 }
 
-impl<'a> UI<'a> {
-    pub fn new() -> Self {
+impl<'a, B: Backend> UI<'a, B> {
+    pub fn new(backend: B, output_options: UIOutputOptions) -> Self {
         enable_raw_mode().unwrap();
-        let mut stdout = std::io::stdout();
-        execute!(stdout, EnterAlternateScreen, EnableMouseCapture).unwrap();
-        let backend = CrosstermBackend::new(stdout);
+        execute!(std::io::stdout(), EnterAlternateScreen, EnableMouseCapture).unwrap();
+
         let mut _terminal = Terminal::new(backend).unwrap();
         _terminal.clear().unwrap();
         _terminal.hide_cursor().unwrap();
 
         Self {
             _terminal,
-            spans: vec![],
+            _state_flags: UIStateFlags::NONE,
+            _dialog_outcome: output_options.dialog_outcome,
+
+            // components
+            _debug_panel: DebugPanel::new(),
+            _title: Title::new(),
+            _characters_modal: CharactersModal::new(),
+            _realm_modal: RealmModal::new(),
         }
     }
 
-    pub fn render(&mut self, options: UIOptions) {
+    pub fn render(&mut self, options: UIRenderOptions) {
         match options.message {
-            MessageType::Message(output) => { self.build_debug_output(output); },
-            MessageType::ChooseCharacter(_characters) => {},
-            MessageType::ChooseRealm(_realms) => {},
+            IncomeMessageType::Message(output) => {
+                self._debug_panel.add_item(output);
+            },
+            IncomeMessageType::ChooseCharacter(characters) => {
+                self._state_flags.set(UIStateFlags::IS_CHARACTERS_MODAL_OPENED, true);
+                self._characters_modal.set_items(characters);
+            },
+            IncomeMessageType::ChooseRealm(realms) => {
+                self._state_flags.set(UIStateFlags::IS_REALM_MODAL_OPENED, true);
+                self._realm_modal.set_items(realms);
+            },
+            IncomeMessageType::KeyEvent(modifiers, key_code) => {
+                self.handle_key_event(modifiers, key_code);
+            },
         }
 
         self._terminal.draw(|frame| {
@@ -78,37 +111,107 @@ impl<'a> UI<'a> {
                 ])
                 .split(chunks[1]);
 
-            Title::render(frame, chunks[0]);
-            DebugPanel::render(frame, output_panels[0], self.spans.to_vec());
+            self._title.render(frame, chunks[0]);
+            self._debug_panel.render(frame, output_panels[0]);
+
+            if self._state_flags.contains(UIStateFlags::IS_CHARACTERS_MODAL_OPENED) {
+                self._characters_modal.render(frame, chunks[1])
+            }
+
+            if self._state_flags.contains(UIStateFlags::IS_REALM_MODAL_OPENED) {
+                self._realm_modal.render(frame, chunks[1])
+            }
 
         }).unwrap();
     }
 
-    fn build_debug_output(&mut self, output: LoggerOutput) {
-        let message = match output {
-            LoggerOutput::Info(data) if !data.is_empty() => Span::styled(
-                format!("[INFO]: {}\n", data), Style::default().fg(Color::Gray)
-            ),
-            LoggerOutput::Debug(data) if !data.is_empty() => Span::styled(
-                format!("[DEBUG]: {}\n", data), Style::default().fg(Color::DarkGray)
-            ),
-            LoggerOutput::Error(data) if !data.is_empty() => Span::styled(
-                format!("[ERROR]: {}\n", data), Style::default().fg(Color::Red)
-            ),
-            LoggerOutput::Success(data) if !data.is_empty() => Span::styled(
-                format!("[SUCCESS]: {}\n", data), Style::default().fg(Color::LightGreen)
-            ),
-            LoggerOutput::Server(data) if !data.is_empty() => Span::styled(
-                format!("[SERVER]: {}\n", data), Style::default().fg(Color::LightMagenta)
-            ),
-            LoggerOutput::Client(data) if !data.is_empty() => Span::styled(
-                format!("[CLIENT]: {}\n", data), Style::default().fg(Color::LightBlue)
-            ),
-            _ => Span::raw(""),
-        };
+    fn handle_key_event(&mut self, modifiers: KeyModifiers, key_code: KeyCode) {
+        // TODO: move parts of this into related components
+        match key_code {
+            KeyCode::Up => {
+                if self._state_flags.contains(UIStateFlags::IS_CHARACTERS_MODAL_OPENED) {
+                    self._characters_modal.prev();
+                }
 
-        if !message.content.is_empty() {
-            self.spans.push(Spans::from(message));
+                if self._state_flags.contains(UIStateFlags::IS_REALM_MODAL_OPENED) {
+                    self._realm_modal.prev();
+                }
+            },
+            KeyCode::Down => {
+                if self._state_flags.contains(UIStateFlags::IS_CHARACTERS_MODAL_OPENED) {
+                    self._characters_modal.next();
+                }
+
+                if self._state_flags.contains(UIStateFlags::IS_REALM_MODAL_OPENED) {
+                    self._realm_modal.next();
+                }
+            },
+            KeyCode::Enter => {
+                if self._state_flags.contains(UIStateFlags::IS_CHARACTERS_MODAL_OPENED) {
+                    self._state_flags.set(UIStateFlags::IS_CHARACTERS_MODAL_OPENED, false);
+                    self._dialog_outcome.send_selected_character(
+                        self._characters_modal.get_selected()
+                    );
+                }
+                if self._state_flags.contains(UIStateFlags::IS_REALM_MODAL_OPENED) {
+                    self._state_flags.set(UIStateFlags::IS_REALM_MODAL_OPENED, false);
+                    self._dialog_outcome.send_selected_realm(self._realm_modal.get_selected());
+                }
+            },
+            KeyCode::Char('c') if modifiers.contains(KeyModifiers::CONTROL) => {
+                // TODO: probably need exit from app in different way
+                disable_raw_mode().unwrap();
+                execute!(std::io::stdout(), LeaveAlternateScreen, DisableMouseCapture).unwrap();
+                exit(0);
+            },
+            _ => {},
         }
+    }
+}
+
+pub struct UIInput {
+    _key_event_income: KeyEventIncome,
+}
+
+impl UIInput {
+    pub fn new(key_event_income: KeyEventIncome) -> Self {
+        Self {
+            _key_event_income: key_event_income,
+        }
+    }
+
+    pub fn handle(&mut self) {
+        let event = read().unwrap();
+
+        if let Event::Key(key) = event {
+            self._key_event_income.send_key_event(key);
+        }
+    }
+}
+
+pub struct UIOutput<'a> {
+    session: Arc<Mutex<Session>>,
+    client_flags: &'a mut ClientFlags,
+}
+
+impl<'a> UIOutput<'a> {
+    pub fn new(session: Arc<Mutex<Session>>, client_flags: &'a mut ClientFlags) -> Self {
+        Self {
+            session,
+            client_flags,
+        }
+    }
+
+    pub fn handle(&mut self, message: OutcomeMessageType) {
+        match message {
+            OutcomeMessageType::CharacterSelected(character) => {
+                self.session.lock().unwrap().me = Some(Player::from(character));
+                self.client_flags.set(ClientFlags::IN_FROZEN_MODE, false);
+            },
+            OutcomeMessageType::RealmSelected(realm) => {
+                self.session.lock().unwrap().selected_realm = Some(realm);
+                self.client_flags.set(ClientFlags::IN_FROZEN_MODE, false);
+            },
+        };
     }
 }

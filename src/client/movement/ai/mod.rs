@@ -9,7 +9,7 @@ use crate::client::movement::parsers::types::Position;
 use crate::client::{MovementFlags, MovementFlagsExtra, UnitMoveType};
 use crate::client::opcodes::Opcode;
 use crate::network::packet::OutcomePacket;
-use crate::network::session::types::ActionFlags;
+use crate::ipc::session::types::ActionFlags;
 use crate::types::AIManagerInput;
 use crate::utils::pack_guid;
 
@@ -27,13 +27,14 @@ impl AI {
     }
 
     pub async fn manage(&mut self, input: AIManagerInput) {
-        let session = &mut *input.session.lock().await;
-        let data_storage = &mut *input.data_storage.lock().await;
-        let output_queue = &mut *input.output_queue.lock().await;
+        let mut output_queue = input.output_queue.lock().unwrap();
+        let mut session = input.session.lock().unwrap();
+        let data_storage = input.data_storage.lock().unwrap();
 
-        if let Some(me) = session.me.as_mut() {
+        if session.me.is_some() {
             if session.action_flags.contains(ActionFlags::IS_FOLLOWING) {
                 let target_guid = session.follow_target.unwrap();
+                let me = session.me.as_mut().unwrap();
 
                 if let Some(target) = data_storage.players_map.get(&target_guid) {
                     let mut source_position = me.position.unwrap();
@@ -55,8 +56,6 @@ impl AI {
                                 source_position.x += velocity.x;
                                 source_position.y += velocity.y;
                                 source_position.z += velocity.z;
-
-                                // println!("CURRENT POS: {:?}", me.position);
 
                                 if !self.is_moving_started {
                                     self.is_moving_started = true;
@@ -157,8 +156,6 @@ impl AI {
     fn calculate_orientation(from: Position, to: Position) -> f32 {
         let dx = to.x - from.x;
         let dy = to.y - from.y;
-        // let dx = from.x - to.x;
-        // let dy = from.y - to.y;
         let angle = dy.atan2(dx);
 
         if angle >= 0.0 { angle } else { 2.0 * PI + angle }

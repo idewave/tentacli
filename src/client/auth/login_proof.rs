@@ -9,7 +9,8 @@ use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
 use crate::utils::random_range;
 
 pub fn handler(input: &mut HandlerInput) -> HandlerResult {
-    let config = input.session.get_config().unwrap();
+    let mut session = input.session.lock().unwrap();
+    let config = session.get_config().unwrap();
 
     let mut reader = Cursor::new(input.data.as_ref().unwrap()[3..].to_vec());
 
@@ -42,10 +43,10 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
     body.write_u8(0)?; // number of keys
     body.write_u8(0)?; // security flags
 
-    input.session.session_key = Some(srp_client.session_key());
+    session.session_key = Some(srp_client.session_key());
 
-    input.message_sender.send_debug_message(String::from("Session key created"));
-    input.message_sender.send_client_message(String::from("LOGIN_PROOF"));
+    input.message_income.send_debug_message(String::from("Session key created"));
+    input.message_income.send_client_message(String::from("LOGIN_PROOF"));
 
     Ok(HandlerOutput::Data((Opcode::LOGIN_PROOF as u32, header, body)))
 }

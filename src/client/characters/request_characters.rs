@@ -8,7 +8,7 @@ use crate::types::{
 
 
 pub fn handler(input: &mut HandlerInput) -> HandlerResult {
-    input.message_sender.send_client_message(String::from("CMSG_CHAR_ENUM"));
+    input.message_income.send_client_message(String::from("CMSG_CHAR_ENUM"));
 
     Ok(HandlerOutput::Data(OutcomePacket::from(Opcode::CMSG_CHAR_ENUM, None)))
 }

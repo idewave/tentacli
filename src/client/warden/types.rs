@@ -1,5 +1,4 @@
-use std::fs::File;
-use std::io::{Cursor, Read, Write};
+use std::io::{Cursor, Read};
 use byteorder::{LittleEndian, ReadBytesExt};
 // use flate2::write::ZlibDecoder;
 
