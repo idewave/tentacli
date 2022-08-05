@@ -1,9 +1,8 @@
 use std::io::{Cursor, Error, ErrorKind};
 use std::sync::{Arc, Mutex as SyncMutex};
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::{AsyncWriteExt};
 use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
-use tokio::sync::Mutex;
 use crate::client::Opcode;
 
 use crate::crypto::decryptor::{Decryptor, INCOMING_HEADER_LENGTH, INCOMING_OPCODE_LENGTH};

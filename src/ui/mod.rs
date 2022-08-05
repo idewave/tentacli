@@ -1,14 +1,10 @@
-use std::io::Stdout;
 use std::process::exit;
-use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 use crossterm::{
     event::{
         DisableMouseCapture,
         EnableMouseCapture,
         Event,
-        EventStream,
         KeyCode,
         KeyModifiers,
         read
@@ -21,8 +17,7 @@ use crossterm::{
         LeaveAlternateScreen
     }
 };
-use futures::{FutureExt, StreamExt};
-use tui::backend::{Backend, CrosstermBackend};
+use tui::backend::{Backend};
 use tui::layout::{Constraint, Direction, Layout};
 use tui::Terminal;
 
@@ -46,7 +41,6 @@ use crate::ui::title::Title;
 use crate::ui::types::{UIOutputOptions, UIRenderOptions, UIStateFlags};
 
 pub const MARGIN: u16 = 1;
-const UI_INPUT_TICK_RATE: u64 = 500;
 
 pub struct UI<'a, B: Backend> {
     _terminal: Terminal<B>,
@@ -166,6 +160,8 @@ impl<'a, B: Backend> UI<'a, B> {
             },
             KeyCode::Char('c') if modifiers.contains(KeyModifiers::CONTROL) => {
                 // TODO: probably need exit from app in different way
+                disable_raw_mode().unwrap();
+                execute!(std::io::stdout(), LeaveAlternateScreen, DisableMouseCapture).unwrap();
                 exit(0);
             },
             _ => {},

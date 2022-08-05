@@ -2,7 +2,6 @@ use tui::backend::Backend;
 use tui::Frame;
 use tui::layout::{Alignment, Rect};
 use tui::style::{Color, Style};
-use tui::text::{Spans};
 use tui::widgets::{Block, Borders, BorderType, Paragraph, Wrap};
 
 use crate::types::traits::UIComponent;

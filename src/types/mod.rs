@@ -1,7 +1,6 @@
 use std::collections::VecDeque;
 use std::io::Error;
 use std::sync::{Arc, Mutex as SyncMutex};
-use tokio::sync::Mutex;
 
 pub mod traits;
 

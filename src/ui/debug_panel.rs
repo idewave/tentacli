@@ -28,9 +28,6 @@ impl<'a> DebugPanel<'a> {
 
     fn generate_message(output: LoggerOutput) -> Span<'a> {
         match output {
-            LoggerOutput::Info(data) if !data.is_empty() => Span::styled(
-                format!("[INFO]: {}\n", data), Style::default().fg(Color::Gray)
-            ),
             LoggerOutput::Debug(data) if !data.is_empty() => Span::styled(
                 format!("[DEBUG]: {}\n", data), Style::default().fg(Color::DarkGray)
             ),

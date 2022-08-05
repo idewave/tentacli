@@ -1,14 +1,14 @@
 use std::io::{BufRead, Cursor};
 use byteorder::{LittleEndian, ReadBytesExt};
-use crate::client::movement::parsers::types::Position;
-use crate::client::Player;
 
-use super::types::Character;
+use crate::client::movement::parsers::types::Position;
 use crate::types::{
     HandlerInput,
     HandlerOutput,
     HandlerResult,
 };
+
+use super::types::Character;
 
 pub fn handler(input: &mut HandlerInput) -> HandlerResult {
     let session = input.session.lock().unwrap();

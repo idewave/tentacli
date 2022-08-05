@@ -5,9 +5,8 @@ use tui::style::{Color, Modifier, Style};
 use tui::text::{Span, Spans};
 use tui::widgets::{Block, Borders, BorderType, Clear, List, ListItem, ListState};
 
-use crate::client::{Character, Realm};
+use crate::client::{Realm};
 use crate::types::traits::UIComponent;
-use crate::ui::MARGIN;
 
 const PANEL_TITLE: &str = "SELECT REALM";
 

@@ -14,10 +14,6 @@ impl MessageIncome {
         }
     }
 
-    pub fn send_info_message(&mut self, message: String) {
-        self._sender.send(IncomeMessageType::Message(LoggerOutput::Info(message))).unwrap();
-    }
-
     pub fn send_debug_message(&mut self, message: String) {
         self._sender.send(IncomeMessageType::Message(LoggerOutput::Debug(message))).unwrap();
     }

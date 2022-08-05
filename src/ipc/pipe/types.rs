@@ -19,7 +19,6 @@ pub enum OutcomeMessageType {
 
 #[derive(Debug)]
 pub enum LoggerOutput {
-    Info(String),
     Debug(String),
     Error(String),
     Success(String),

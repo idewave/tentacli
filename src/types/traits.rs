@@ -2,7 +2,7 @@ use tui::backend::Backend;
 use tui::Frame;
 use tui::layout::Rect;
 
-use crate::types::{HandlerFunction, HandlerInput, HandlerResult, ProcessorResult};
+use crate::types::{HandlerInput, ProcessorResult};
 
 pub trait Processor {
     fn process_input(input: &mut HandlerInput) -> ProcessorResult;

@@ -1,5 +1,5 @@
 use std::collections::{VecDeque};
-use std::io::{Error, Stdout};
+use std::io::{Error};
 use std::sync::{Arc, Mutex as SyncMutex};
 use std::time::Duration;
 use tokio::sync::{Mutex};
@@ -59,7 +59,6 @@ use crate::types::{
     HandlerOutput,
     HandlerFunction,
     ProcessorFunction,
-    ProcessorResult,
     State
 };
 use crate::UI;

@@ -7,7 +7,6 @@ use tui::widgets::{Block, Borders, BorderType, Clear, List, ListItem, ListState}
 
 use crate::client::Character;
 use crate::types::traits::UIComponent;
-use crate::ui::MARGIN;
 
 const PANEL_TITLE: &str = "SELECT CHARACTER";
 

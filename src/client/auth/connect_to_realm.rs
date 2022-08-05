@@ -1,9 +1,5 @@
-use std::io::{BufRead, Cursor, Error, ErrorKind};
 use std::str::FromStr;
-use byteorder::{LittleEndian, ReadBytesExt};
-use regex::Regex;
 
-use crate::client::realm::types::Realm;
 use crate::types::{
     HandlerInput,
     HandlerOutput,

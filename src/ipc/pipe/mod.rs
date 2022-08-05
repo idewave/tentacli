@@ -1,4 +1,4 @@
-use std::sync::mpsc::{self, Receiver, RecvError, Sender};
+use std::sync::mpsc::{self, Receiver, RecvError};
 
 pub mod dialog;
 pub mod key_event;

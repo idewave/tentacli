@@ -1,5 +1,4 @@
-use std::io::{BufRead, Cursor, Error, ErrorKind};
-use std::str::FromStr;
+use std::io::{BufRead, Cursor};
 use byteorder::{LittleEndian, ReadBytesExt};
 
 use crate::client::realm::types::Realm;
