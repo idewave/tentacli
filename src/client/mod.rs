@@ -1,12 +1,13 @@
 use std::collections::{VecDeque};
 use std::io::{Error};
-use std::sync::{Arc};
+use std::sync::{Arc, Mutex as SyncMutex};
 use std::time::Duration;
 use tokio::sync::{Mutex};
 use tokio::net::TcpStream;
 use tokio::task::{JoinHandle};
 use tokio::time::{sleep};
 use futures::future::join_all;
+use tui::backend::CrosstermBackend;
 
 mod auth;
 mod characters;
@@ -17,7 +18,7 @@ mod player;
 mod realm;
 mod spell;
 mod trade;
-mod types;
+pub mod types;
 mod warden;
 
 pub use characters::types::{Character};
@@ -43,37 +44,42 @@ use movement::ai::AI as MovementAI;
 
 // TODO: REMOVE THIS ! (need to think how better refactor this part)
 use auth::login_challenge;
-pub use crate::client::opcodes::Opcode;
 
+pub use crate::client::opcodes::Opcode;
 use crate::client::types::ClientFlags;
 use crate::crypto::warden_crypt::WardenCrypt;
-use crate::data_storage::DataStorage;
-use crate::message_pipe::MessagePipe;
-use crate::network::session::Session;
+use crate::ipc::pipe::{IncomeMessagePipe, OutcomeMessagePipe};
+use crate::ipc::storage::DataStorage;
+use crate::ipc::session::Session;
 use crate::network::stream::{Reader, Writer};
-
-use crate::traits::Processor;
-use crate::types::{AIManagerInput, HandlerInput, HandlerOutput, HandlerResult, ProcessorFunction, ProcessorResult, State};
+use crate::types::traits::Processor;
+use crate::types::{
+    AIManagerInput,
+    HandlerInput,
+    HandlerOutput,
+    HandlerFunction,
+    ProcessorFunction,
+    State
+};
 use crate::UI;
-use crate::ui::types::UIOptions;
+use crate::ui::types::{UIOutputOptions, UIRenderOptions};
+use crate::ui::{UIInput, UIOutput};
 
-// for each server need to play with this values
-// for local server values can be much less then for external server
-// for me it seems this values are related to ping, need to investigate this in future
 const READ_TIMEOUT: u64 = 50;
 const WRITE_TIMEOUT: u64 = 1;
 
 pub struct Client {
     _reader: Arc<Mutex<Option<Reader>>>,
     _writer: Arc<Mutex<Option<Writer>>>,
-    _warden_crypt: Arc<Mutex<Option<WardenCrypt>>>,
-    _input_queue: Arc<Mutex<VecDeque<Vec<Vec<u8>>>>>,
-    _output_queue: Arc<Mutex<VecDeque<Vec<u8>>>>,
-    _flags: Arc<Mutex<ClientFlags>>,
-    _message_pipe: Arc<Mutex<MessagePipe>>,
+    _warden_crypt: Arc<SyncMutex<Option<WardenCrypt>>>,
+    _input_queue: Arc<SyncMutex<VecDeque<Vec<Vec<u8>>>>>,
+    _output_queue: Arc<SyncMutex<VecDeque<Vec<u8>>>>,
+    _income_message_pipe: Arc<SyncMutex<IncomeMessagePipe>>,
+    _outcome_message_pipe: Arc<SyncMutex<OutcomeMessagePipe>>,
 
-    session: Arc<Mutex<Session>>,
-    data_storage: Arc<Mutex<DataStorage>>,
+    session: Arc<SyncMutex<Session>>,
+    data_storage: Arc<SyncMutex<DataStorage>>,
+    client_flags: Arc<SyncMutex<ClientFlags>>,
 }
 
 impl Client {
@@ -81,30 +87,34 @@ impl Client {
         Self {
             _reader: Arc::new(Mutex::new(None)),
             _writer: Arc::new(Mutex::new(None)),
-            _warden_crypt: Arc::new(Mutex::new(None)),
-            _input_queue: Arc::new(Mutex::new(VecDeque::new())),
-            _output_queue: Arc::new(Mutex::new(VecDeque::new())),
-            _flags: Arc::new(Mutex::new(ClientFlags::NONE)),
-            _message_pipe: Arc::new(Mutex::new(MessagePipe::new())),
+            _warden_crypt: Arc::new(SyncMutex::new(None)),
+            _input_queue: Arc::new(SyncMutex::new(VecDeque::new())),
+            _output_queue: Arc::new(SyncMutex::new(VecDeque::new())),
+            _income_message_pipe: Arc::new(SyncMutex::new(IncomeMessagePipe::new())),
+            _outcome_message_pipe: Arc::new(SyncMutex::new(OutcomeMessagePipe::new())),
 
-            session: Arc::new(Mutex::new(Session::new())),
-            data_storage: Arc::new(Mutex::new(DataStorage::new())),
+            session: Arc::new(SyncMutex::new(Session::new())),
+            data_storage: Arc::new(SyncMutex::new(DataStorage::new())),
+            client_flags: Arc::new(SyncMutex::new(ClientFlags::NONE)),
         }
     }
 
     pub async fn connect(&mut self, host: &str, port: u16) -> Result<(), Error> {
+        let mut income_pipe = self._income_message_pipe.lock().unwrap();
+
         return match Self::connect_inner(host, port).await {
             Ok(stream) => {
                 Self::set_stream_halves(stream, &self._reader, &self._writer).await;
-                self.session.lock().await.set_config(host);
-                self._message_pipe.lock().await.message_sender.send_success_message(
+                self.session.lock().unwrap().set_config(host);
+
+                income_pipe.message_income.send_success_message(
                     format!("Connected to {}:{}", host, port)
                 );
 
                 Ok(())
             },
             Err(err) => {
-                self._message_pipe.lock().await.message_sender.send_error_message(
+                income_pipe.message_income.send_error_message(
                     format!("Cannot connect: {}", err.to_string())
                 );
 
@@ -136,20 +146,25 @@ impl Client {
 
     pub async fn handle_connection(&mut self) {
         // TODO: remove this part after in favor of manual packet sending
-        match self.session.lock().await.get_config() {
+        match self.session.lock().unwrap().get_config() {
             Some(config) => {
                 let username = &config.connection_data.username;
-                self._message_pipe.lock().await.message_sender.send_client_message(
+
+                let mut income_pipe = self._income_message_pipe.lock().unwrap();
+                income_pipe.message_income.send_client_message(
                     format!("LOGIN_CHALLENGE as {}", username)
                 );
 
-                self._output_queue.lock().await.push_back(login_challenge(username));
+                let mut output_queue = self._output_queue.lock().unwrap();
+                output_queue.push_back(login_challenge(username));
             },
             None => {},
         }
 
         join_all(vec![
-            self.handle_ui().await,
+            self.handle_ui_render().await,
+            self.handle_ui_input().await,
+            self.handle_ui_output().await,
             self.handle_ai().await,
             self.handle_queue().await,
             self.handle_read().await,
@@ -157,18 +172,53 @@ impl Client {
         ]).await;
     }
 
-    async fn handle_ui(&mut self) -> JoinHandle<()> {
-        let message_pipe = Arc::clone(&self._message_pipe);
+    async fn handle_ui_input(&mut self) -> JoinHandle<()> {
+        let income_pipe = self._income_message_pipe.lock().unwrap();
+        let key_event_income = income_pipe.key_event_income.clone();
 
-        tokio::spawn(async move {
-            let mut ui = UI::new();
+        tokio::task::spawn_blocking(move || {
+            let mut ui_input = UIInput::new(key_event_income);
 
             loop {
-                ui.render(UIOptions {
-                    message: message_pipe.lock().await.recv(),
-                });
+                ui_input.handle();
+            }
+        })
+    }
 
-                sleep(Duration::from_millis(WRITE_TIMEOUT)).await;
+    async fn handle_ui_render(&mut self) -> JoinHandle<()> {
+        let income_message_pipe = Arc::clone(&self._income_message_pipe);
+        let pipe = self._outcome_message_pipe.lock().unwrap();
+        let dialog_outcome = pipe.dialog_outcome.clone();
+
+        tokio::task::spawn_blocking(move || {
+            let mut ui = UI::new(
+                CrosstermBackend::new(std::io::stdout()),
+                UIOutputOptions {
+                    dialog_outcome,
+                },
+            );
+
+            loop {
+                ui.render(UIRenderOptions {
+                    message: income_message_pipe.lock().unwrap().recv(),
+                });
+            }
+        })
+    }
+
+    async fn handle_ui_output(&mut self) -> JoinHandle<()> {
+        let outcome_message_pipe = Arc::clone(&self._outcome_message_pipe);
+        let session = Arc::clone(&self.session);
+        let client_flags = Arc::clone(&self.client_flags);
+
+        tokio::task::spawn_blocking(move || {
+            loop {
+                if let Ok(message) = outcome_message_pipe.lock().unwrap().recv() {
+                    let client_flags = &mut *client_flags.lock().unwrap();
+
+                    let mut ui_output = UIOutput::new(Arc::clone(&session), client_flags);
+                    ui_output.handle(message);
+                }
             }
         })
     }
@@ -200,56 +250,61 @@ impl Client {
         let reader = Arc::clone(&self._reader);
         let writer = Arc::clone(&self._writer);
         let warden_crypt = Arc::clone(&self._warden_crypt);
-        let client_flags = Arc::clone(&self._flags);
+        let client_flags = Arc::clone(&self.client_flags);
         let data_storage = Arc::clone(&self.data_storage);
-        let mut message_sender = self._message_pipe.lock().await.message_sender.clone();
+
+        let income_pipe = self._income_message_pipe.lock().unwrap();
+        let mut message_income = income_pipe.message_income.clone();
+        let dialog_income = income_pipe.dialog_income.clone();
 
         tokio::spawn(async move {
             loop {
-                let connected_to_realm = client_flags.lock().await.contains(
+                let connected_to_realm = client_flags.lock().unwrap().contains(
                     ClientFlags::IS_CONNECTED_TO_REALM
                 );
 
-                if let Some(packets) = input_queue.lock().await.pop_front() {
-                    for packet in packets {
+                let packets = input_queue.lock().unwrap().pop_front();
+
+                if packets.is_some() {
+                    for packet in packets.unwrap() {
                         let processors = match connected_to_realm {
                             true => Self::get_realm_processors(),
                             false => Self::get_login_processors(),
                         };
 
-                        let session = &mut *session.lock().await;
-                        let data_storage = &mut *data_storage.lock().await;
-                        let result_list = processors
-                            .iter()
-                            .map(|processor| {
-                                processor(HandlerInput {
-                                    session,
-                                    // packet: size + opcode + body, need to parse separately
-                                    data: Some(&packet),
-                                    data_storage,
-                                    message_sender: message_sender.clone(),
-                                })
-                            })
-                            .flatten()
-                            .collect::<Vec<HandlerResult>>();
+                        let mut handler_input = HandlerInput {
+                            session: Arc::clone(&session),
+                            // packet: size + opcode + body, need to parse separately
+                            data: Some(&packet),
+                            data_storage: Arc::clone(&data_storage),
+                            message_income: message_income.clone(),
+                            dialog_income: dialog_income.clone(),
+                        };
 
-                        for result in result_list {
-                            match result {
+                        let handler_list = processors
+                            .iter()
+                            .map(|processor| processor(&mut handler_input))
+                            .flatten()
+                            .collect::<Vec<HandlerFunction>>();
+
+                        for mut handler in handler_list {
+                            match handler(&mut handler_input) {
                                 Ok(output) => {
                                     match output {
                                         HandlerOutput::Data((opcode, header, body)) => {
-                                            let packet = match opcode {
+                                            let body = match opcode {
                                                 Opcode::CMSG_WARDEN_DATA => {
-                                                    let warden_crypt =
-                                                        &mut *warden_crypt.lock().await;
-                                                    [header, warden_crypt
-                                                        .as_mut().unwrap().encrypt(&body)
-                                                    ].concat()
+                                                    let mut warden_crypt = warden_crypt
+                                                        .lock()
+                                                        .unwrap();
+
+                                                    warden_crypt.as_mut().unwrap().encrypt(&body)
                                                 },
-                                                _ => [header, body].concat(),
+                                                _ => body,
                                             };
 
-                                            output_queue.lock().await.push_back(packet);
+                                            let packet = [header, body].concat();
+                                            output_queue.lock().unwrap().push_back(packet);
                                         },
                                         HandlerOutput::ConnectionRequest(host, port) => {
                                             match Self::connect_inner(&host, port).await {
@@ -262,11 +317,11 @@ impl Client {
                                                         stream, &reader, &writer
                                                     ).await;
 
-                                                    message_sender.send_success_message(message);
+                                                    message_income.send_success_message(message);
 
                                                 },
                                                 Err(err) => {
-                                                    message_sender.send_error_message(
+                                                    message_income.send_error_message(
                                                         err.to_string()
                                                     );
                                                 }
@@ -275,9 +330,9 @@ impl Client {
                                         HandlerOutput::UpdateState(state) => {
                                             match state {
                                                 State::SetEncryption(session_key) => {
-                                                    *warden_crypt.lock().await = Some(
-                                                        WardenCrypt::new(&session_key)
-                                                    );
+                                                    // let warden_crypt = warden_crypt.lock().unwrap();
+                                                    *warden_crypt.lock().unwrap() =
+                                                        Some(WardenCrypt::new(&session_key));
 
                                                     if let Some(reader) = &mut *reader.lock().await
                                                     {
@@ -293,18 +348,37 @@ impl Client {
                                                     }
                                                 },
                                                 State::SetConnectedToRealm(is_authorized) => {
-                                                    client_flags.lock().await.set(
+                                                    client_flags.lock().unwrap().set(
                                                         ClientFlags::IS_CONNECTED_TO_REALM,
                                                         is_authorized
                                                     );
                                                 },
                                             }
                                         },
+                                        HandlerOutput::Freeze => {
+                                            client_flags.lock().unwrap().set(
+                                                ClientFlags::IN_FROZEN_MODE,
+                                                true
+                                            );
+
+                                            loop {
+                                                let frozen_mode = client_flags
+                                                    .lock()
+                                                    .unwrap()
+                                                    .contains(ClientFlags::IN_FROZEN_MODE);
+
+                                                if !frozen_mode {
+                                                    break;
+                                                }
+
+                                                sleep(Duration::from_millis(WRITE_TIMEOUT)).await;
+                                            }
+                                        },
                                         HandlerOutput::Void => {},
                                     };
                                 },
                                 Err(err) => {
-                                    message_sender.send_error_message(err.to_string());
+                                    message_income.send_error_message(err.to_string());
                                 },
                             };
 
@@ -321,31 +395,36 @@ impl Client {
     async fn handle_write(&mut self) -> JoinHandle<()> {
         let output_queue = Arc::clone(&self._output_queue);
         let writer = Arc::clone(&self._writer);
-        let mut message_sender = self._message_pipe.lock().await.message_sender.clone();
+
+        let mut message_income = self._income_message_pipe.lock().unwrap().message_income.clone();
 
         tokio::spawn(async move {
             loop {
-                if let Some(packet) = output_queue.lock().await.pop_front() {
-                    if !packet.is_empty() {
-                        match &mut *writer.lock().await {
-                            Some(writer) => {
+                match &mut *writer.lock().await {
+                    Some(writer) => {
+                        let packet = output_queue.lock().unwrap().pop_front();
+                        if packet.is_some() {
+                            let packet = packet.unwrap();
+                            if !packet.is_empty() {
                                 match writer.write(&packet).await {
-                                    Ok(_) => {
-                                        // ...
+                                    Ok(bytes_amount) => {
+                                        message_income.send_debug_message(
+                                            format!("{} bytes sent", bytes_amount)
+                                        );
                                     },
                                     Err(err) => {
-                                        message_sender.send_error_message(err.to_string());
+                                        message_income.send_error_message(err.to_string());
                                     }
                                 };
-                            },
-                            None => {
-                                message_sender.send_error_message(
-                                    String::from("Not connected to TCP")
-                                );
-                            },
-                        };
-                    }
-                }
+                            }
+                        }
+                    },
+                    None => {
+                        message_income.send_error_message(
+                            String::from("Not connected to TCP")
+                        );
+                    },
+                };
 
                 sleep(Duration::from_millis(WRITE_TIMEOUT)).await;
             }
@@ -355,18 +434,19 @@ impl Client {
     async fn handle_read(&mut self) -> JoinHandle<()> {
         let input_queue = Arc::clone(&self._input_queue);
         let reader = Arc::clone(&self._reader);
-        let mut message_sender = self._message_pipe.lock().await.message_sender.clone();
+
+        let mut message_income = self._income_message_pipe.lock().unwrap().message_income.clone();
 
         tokio::spawn(async move {
             loop {
                 match &mut *reader.lock().await {
                     Some(reader) => {
-                        if let Some(packets) = reader.read().await.ok() {
-                            input_queue.lock().await.push_back(packets);
+                        if let Some(packets) = reader.read().ok() {
+                            input_queue.lock().unwrap().push_back(packets);
                         }
                     },
                     None => {
-                        message_sender.send_error_message(String::from("Not connected to TCP"));
+                        message_income.send_error_message(String::from("Not connected to TCP"));
                     },
                 };
 
@@ -375,13 +455,13 @@ impl Client {
         })
     }
 
-    fn get_login_processors<'a>() -> Vec<ProcessorFunction<'a>> {
+    fn get_login_processors() -> Vec<ProcessorFunction> {
         return vec![
             Box::new(AuthProcessor::process_input),
         ];
     }
 
-    fn get_realm_processors<'a>() -> Vec<ProcessorFunction<'a>> {
+    fn get_realm_processors() -> Vec<ProcessorFunction> {
         return vec![
             Box::new(CharactersProcessor::process_input),
             Box::new(ChatProcessor::process_input),
@@ -396,11 +476,16 @@ impl Client {
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+    use futures::FutureExt;
+    use futures::future::join_all;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::TcpListener;
+
     use crate::Client;
     use crate::client::types::ClientFlags;
-    use crate::network::session::types::{ActionFlags, StateFlags};
+    use crate::client::WRITE_TIMEOUT;
+    use crate::ipc::session::types::{ActionFlags, StateFlags};
 
     const HOST: &str = "127.0.0.1";
     // https://users.rust-lang.org/t/async-tests-sometimes-fails/78451
@@ -420,28 +505,28 @@ mod tests {
         let writer = &mut *client._writer.lock().await;
         assert!(writer.is_none());
 
-        let warden_crypt = &mut *client._warden_crypt.lock().await;
+        let warden_crypt = &mut *client._warden_crypt.lock().unwrap();
         assert!(warden_crypt.is_none());
 
-        let client_flags = &mut *client._flags.lock().await;
+        let client_flags = &mut *client.client_flags.lock().unwrap();
         assert_eq!(ClientFlags::NONE, *client_flags);
 
-        let input_queue = &mut *client._input_queue.lock().await;
+        let input_queue = &mut *client._input_queue.lock().unwrap();
         assert!(input_queue.is_empty());
 
-        let output_queue = &mut *client._output_queue.lock().await;
+        let output_queue = &mut *client._output_queue.lock().unwrap();
         assert!(output_queue.is_empty());
 
-        let data_storage = &mut *client.data_storage.lock().await;
+        let data_storage = &mut *client.data_storage.lock().unwrap();
         assert!(data_storage.players_map.is_empty());
 
-        let session = &mut *client.session.lock().await;
+        let session = &mut *client.session.lock().unwrap();
         assert!(session.session_key.is_none());
         assert!(session.me.is_none());
         assert!(session.warden_module_info.is_none());
         assert!(session.config.is_none());
         assert!(session.follow_target.is_none());
-        assert!(session.server_id.is_none());
+        assert!(session.selected_realm.is_none());
         assert!(session.party.is_empty());
         assert_eq!(ActionFlags::NONE, session.action_flags);
         assert_eq!(StateFlags::NONE, session.state_flags);
@@ -483,13 +568,23 @@ mod tests {
             if let Some((mut stream, _)) = listener.accept().await.ok() {
                 stream.write(&PACKET).await.unwrap();
                 stream.flush().await.unwrap();
-                client.handle_read().await;
 
-                loop {
-                    if let Some(packet) = client._input_queue.lock().await.pop_front() {
-                        assert_eq!(PACKET.to_vec(), packet[0]);
-                        break;
+                let read_task = client.handle_read().await;
+
+                let test_task = tokio::spawn(async move {
+                    loop {
+                        let packet = client._input_queue.lock().unwrap().pop_front();
+                        if packet.is_some() {
+                            assert_eq!(PACKET.to_vec(), packet.unwrap()[0]);
+                            break;
+                        }
+                        tokio::time::sleep(Duration::from_millis(WRITE_TIMEOUT)).await;
                     }
+                });
+
+                tokio::select! {
+                    _ = read_task.fuse() => {},
+                    _ = test_task.fuse() => {},
                 }
             }
         }
@@ -501,7 +596,7 @@ mod tests {
         if let Some(listener) = TcpListener::bind(format!("{}:{}", HOST, PORT)).await.ok() {
             let local_addr = listener.local_addr().unwrap();
             client.connect(HOST, local_addr.port()).await.ok();
-            client._output_queue.lock().await.push_back(PACKET.to_vec());
+            client._output_queue.lock().unwrap().push_back(PACKET.to_vec());
 
             if let Some((stream, _)) = listener.accept().await.ok() {
                 let buffer_size = PACKET.to_vec().len();

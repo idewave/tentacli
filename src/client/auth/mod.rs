@@ -1,6 +1,7 @@
 use std::io::{Cursor};
 use byteorder::{ReadBytesExt};
 
+mod connect_to_realm;
 mod get_realmlist;
 mod login_challenge;
 mod login_proof;
@@ -12,18 +13,14 @@ mod set_connected_to_realm;
 pub use login_challenge::handler as login_challenge;
 
 use crate::client::auth::opcodes::Opcode;
-use crate::traits::Processor;
-use crate::types::{
-    HandlerFunction,
-    HandlerInput,
-    ProcessorResult
-};
+use crate::types::traits::Processor;
+use crate::types::{HandlerFunction, HandlerInput, ProcessorResult};
 
 
 pub struct AuthProcessor;
 
 impl Processor for AuthProcessor {
-    fn process_input(mut input: HandlerInput) -> ProcessorResult {
+    fn process_input(input: &mut HandlerInput) -> ProcessorResult {
         let mut reader = Cursor::new(input.data.as_ref().unwrap());
         let opcode = reader.read_u8().unwrap();
 
@@ -42,14 +39,15 @@ impl Processor for AuthProcessor {
                 message = String::from("REALM_LIST");
                 vec![
                     Box::new(get_realmlist::handler),
-                    Box::new(set_connected_to_realm::handler)
+                    Box::new(connect_to_realm::handler),
+                    Box::new(set_connected_to_realm::handler),
                 ]
             }
             _ => vec![],
         };
 
-        input.message_sender.send_server_message(message);
+        input.message_income.send_server_message(message);
 
-        Self::collect_responses(handlers, input)
+        handlers
     }
 }
