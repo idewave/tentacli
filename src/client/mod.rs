@@ -189,18 +189,24 @@ impl Client {
         let income_message_pipe = Arc::clone(&self._income_message_pipe);
         let pipe = self._outcome_message_pipe.lock().unwrap();
         let dialog_outcome = pipe.dialog_outcome.clone();
+        let flag_outcome = pipe.flag_outcome.clone();
+        let client_flags = Arc::clone(&self.client_flags);
 
         tokio::task::spawn_blocking(move || {
             let mut ui = UI::new(
                 CrosstermBackend::new(std::io::stdout()),
                 UIOutputOptions {
                     dialog_outcome,
+                    flag_outcome,
                 },
             );
 
             loop {
+                let client_flags = &client_flags.lock().unwrap().clone();
+
                 ui.render(UIRenderOptions {
                     message: income_message_pipe.lock().unwrap().recv(),
+                    client_flags,
                 });
             }
         })

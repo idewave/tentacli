@@ -1,11 +1,13 @@
 use std::sync::mpsc::{self, Receiver, RecvError};
 
 pub mod dialog;
+pub mod flag;
 pub mod key_event;
 pub mod message;
 pub mod types;
 
 use crate::ipc::pipe::dialog::{DialogIncome, DialogOutcome};
+use crate::ipc::pipe::flag::FlagOutcome;
 use crate::ipc::pipe::key_event::KeyEventIncome;
 use crate::ipc::pipe::message::MessageIncome;
 use crate::ipc::pipe::types::{IncomeMessageType, OutcomeMessageType};
@@ -38,6 +40,7 @@ impl IncomeMessagePipe {
 
 pub struct OutcomeMessagePipe {
     pub dialog_outcome: DialogOutcome,
+    pub flag_outcome: FlagOutcome,
     _receiver: Receiver<OutcomeMessageType>,
 }
 
@@ -47,6 +50,7 @@ impl OutcomeMessagePipe {
 
         Self {
             dialog_outcome: DialogOutcome::new(output_tx.clone()),
+            flag_outcome: FlagOutcome::new(output_tx.clone()),
             _receiver: output_rx,
         }
     }

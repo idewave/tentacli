@@ -1,3 +1,4 @@
+use crossterm::event::{KeyCode, KeyModifiers};
 use tui::backend::Backend;
 use tui::Frame;
 use tui::layout::{Alignment, Rect};
@@ -6,11 +7,14 @@ use tui::text::{Span, Spans};
 use tui::widgets::{Block, Borders, BorderType, Clear, List, ListItem, ListState};
 
 use crate::client::{Realm};
+use crate::ipc::pipe::dialog::DialogOutcome;
 use crate::types::traits::UIComponent;
+use crate::ui::types::{UIComponentOptions, UIStateFlags};
 
 const PANEL_TITLE: &str = "SELECT REALM";
 
 pub struct RealmModal<'a> {
+    dialog_outcome: DialogOutcome,
     items: Vec<ListItem<'a>>,
     state: ListState,
     realms: Vec<Realm>,
@@ -70,14 +74,43 @@ impl<'a> RealmModal<'a> {
 
         self.realms.remove(index)
     }
+
+    pub fn handle_key_event(
+        &mut self,
+        _: KeyModifiers,
+        key_code: KeyCode,
+        state_flags: &mut UIStateFlags
+    ) {
+        match key_code {
+            KeyCode::Up => {
+                if state_flags.contains(UIStateFlags::IS_REALM_MODAL_OPENED) {
+                    self.prev();
+                }
+            },
+            KeyCode::Down => {
+                if state_flags.contains(UIStateFlags::IS_REALM_MODAL_OPENED) {
+                    self.next();
+                }
+            },
+            KeyCode::Enter => {
+                if state_flags.contains(UIStateFlags::IS_REALM_MODAL_OPENED) {
+                    state_flags.set(UIStateFlags::IS_REALM_MODAL_OPENED, false);
+                    let selected = self.get_selected();
+                    self.dialog_outcome.send_selected_realm(selected);
+                }
+            },
+            _ => {},
+        }
+    }
 }
 
 impl<'a> UIComponent for RealmModal<'a> {
-    fn new() -> Self {
+    fn new(options: UIComponentOptions) -> Self {
         Self {
             items: vec![],
             state: ListState::default(),
             realms: vec![],
+            dialog_outcome: options.output_options.dialog_outcome,
         }
     }
 

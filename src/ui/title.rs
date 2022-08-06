@@ -5,13 +5,14 @@ use tui::style::{Color, Style};
 use tui::widgets::{Block, Borders, BorderType, Paragraph, Wrap};
 
 use crate::types::traits::UIComponent;
+use crate::ui::types::{UIComponentOptions};
 
 const APP_NAME: &str = "Idewave CLI";
 
 pub struct Title;
 
 impl UIComponent for Title {
-    fn new() -> Self {
+    fn new(_: UIComponentOptions) -> Self {
         Self
     }
 
