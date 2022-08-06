@@ -174,10 +174,10 @@ impl Client {
 
     async fn handle_ui_input(&mut self) -> JoinHandle<()> {
         let income_pipe = self._income_message_pipe.lock().unwrap();
-        let key_event_income = income_pipe.key_event_income.clone();
+        let event_income = income_pipe.event_income.clone();
 
         tokio::task::spawn_blocking(move || {
-            let mut ui_input = UIInput::new(key_event_income);
+            let mut ui_input = UIInput::new(event_income);
 
             loop {
                 ui_input.handle();
