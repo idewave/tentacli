@@ -10,6 +10,7 @@ pub enum IncomeMessageType {
     ChooseCharacter(Vec<Character>),
     Message(LoggerOutput),
     KeyEvent(KeyModifiers, KeyCode),
+    ResizeEvent,
 }
 
 // messages from UI to client

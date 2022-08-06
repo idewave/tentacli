@@ -32,7 +32,7 @@ use crate::client::Player;
 use crate::client::types::ClientFlags;
 use crate::ipc::pipe::dialog::DialogOutcome;
 use crate::ipc::pipe::flag::FlagOutcome;
-use crate::ipc::pipe::key_event::KeyEventIncome;
+use crate::ipc::pipe::event::EventIncome;
 use crate::ipc::pipe::types::{IncomeMessageType, OutcomeMessageType};
 use crate::ipc::session::Session;
 use crate::types::traits::UIComponent;
@@ -112,6 +112,9 @@ impl<'a, B: Backend> UI<'a, B> {
             IncomeMessageType::KeyEvent(modifiers, key_code) => {
                 self.handle_key_event(modifiers, key_code);
             },
+            IncomeMessageType::ResizeEvent => {
+                self._terminal.autoresize().unwrap();
+            }
         }
 
         self._terminal.draw(|frame| {
@@ -166,13 +169,13 @@ impl<'a, B: Backend> UI<'a, B> {
 }
 
 pub struct UIInput {
-    _key_event_income: KeyEventIncome,
+    _event_income: EventIncome,
 }
 
 impl UIInput {
-    pub fn new(key_event_income: KeyEventIncome) -> Self {
+    pub fn new(event_income: EventIncome) -> Self {
         Self {
-            _key_event_income: key_event_income,
+            _event_income: event_income,
         }
     }
 
@@ -180,7 +183,11 @@ impl UIInput {
         let event = read().unwrap();
 
         if let Event::Key(key) = event {
-            self._key_event_income.send_key_event(key);
+            self._event_income.send_key_event(key);
+        }
+
+        if let Event::Resize(_, _) = event {
+            self._event_income.send_resize_event();
         }
     }
 }
