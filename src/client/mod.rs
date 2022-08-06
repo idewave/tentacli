@@ -105,7 +105,12 @@ impl Client {
         return match Self::connect_inner(host, port).await {
             Ok(stream) => {
                 Self::set_stream_halves(stream, &self._reader, &self._writer).await;
-                self.session.lock().unwrap().set_config(host);
+                match self.session.lock().unwrap().set_config(host) {
+                    Ok(_) => {},
+                    Err(err) => {
+                        income_pipe.message_income.send_error_message(err.to_string());
+                    }
+                }
 
                 income_pipe.message_income.send_success_message(
                     format!("Connected to {}:{}", host, port)
@@ -484,7 +489,6 @@ impl Client {
 mod tests {
     use std::time::Duration;
     use futures::FutureExt;
-    use futures::future::join_all;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::TcpListener;
 

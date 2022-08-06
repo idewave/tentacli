@@ -1,4 +1,5 @@
 use std::fmt::{Debug, Formatter};
+use std::io::Error;
 
 pub mod types;
 
@@ -37,14 +38,24 @@ impl Session {
         self.config.as_ref()
     }
 
-    pub fn set_config(&mut self, host: &str) {
+    pub fn set_config(&mut self, host: &str) -> Result<(), Error> {
         if self.config.is_none() {
-            let config = Config::new(ConfigParams {
+            let result = Config::new(ConfigParams {
                 host,
-            }).unwrap();
+            });
 
-            self.config = Some(config);
+            return match result {
+                Ok(config) => {
+                    self.config = Some(config);
+                    Ok(())
+                },
+                Err(err) => {
+                    Err(err)
+                },
+            }
         }
+
+        Ok(())
     }
 }
 
