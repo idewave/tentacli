@@ -11,13 +11,13 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
     let (guid, position) = read_packed_guid(RefCell::clone(&reader));
     reader.borrow_mut().set_position(position);
 
-    if input.session.me.as_ref().unwrap().guid == guid {
-        println!("CURRENT PLAYER MOVE!");
-    }
+    // if input.session.me.as_ref().unwrap().guid == guid {
+    //     println!("CURRENT PLAYER MOVE!");
+    // }
 
     let (movement_info, _) = MovementParser::parse(RefCell::clone(&reader));
 
-    input.data_storage.players_map.entry(guid).and_modify(|p| {
+    input.data_storage.lock().unwrap().players_map.entry(guid).and_modify(|p| {
         p.position = Some(movement_info.position);
     });
 

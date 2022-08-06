@@ -3,7 +3,7 @@ use std::io::{Cursor};
 use byteorder::{LittleEndian, ReadBytesExt};
 
 use crate::client::opcodes::Opcode;
-use crate::network::session::types::{StateFlags};
+use crate::ipc::session::types::{StateFlags};
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
 use crate::utils::{read_packed_guid};
 
@@ -14,12 +14,12 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
     let (target_guid, position) = read_packed_guid(RefCell::clone(&reader));
     reader.borrow_mut().set_position(position);
 
-    if let Some(follow_guid) = input.session.follow_target {
+    if let Some(follow_guid) = input.session.lock().unwrap().follow_target {
         if follow_guid != target_guid {
             return Ok(HandlerOutput::Void);
         }
 
-        input.session.state_flags.set(
+        input.session.lock().unwrap().state_flags.set(
             StateFlags::IS_MOVEMENT_STARTED,
             opcode == Opcode::MSG_MOVE_STOP
                 || opcode == Opcode::MSG_MOVE_STOP_TURN

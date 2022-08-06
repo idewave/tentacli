@@ -1,9 +1,8 @@
 use std::io::{Cursor, Error, ErrorKind};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex as SyncMutex};
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::{AsyncWriteExt};
 use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
-use tokio::sync::Mutex;
 use crate::client::Opcode;
 
 use crate::crypto::decryptor::{Decryptor, INCOMING_HEADER_LENGTH, INCOMING_OPCODE_LENGTH};
@@ -13,7 +12,7 @@ use crate::crypto::warden_crypt::WardenCrypt;
 pub struct Reader {
     stream: OwnedReadHalf,
     decryptor: Option<Decryptor>,
-    warden_crypt: Arc<Mutex<Option<WardenCrypt>>>
+    warden_crypt: Arc<SyncMutex<Option<WardenCrypt>>>
 }
 
 impl Reader {
@@ -21,23 +20,23 @@ impl Reader {
         Self {
             stream: reader,
             decryptor: None,
-            warden_crypt: Arc::new(Mutex::new(None))
+            warden_crypt: Arc::new(SyncMutex::new(None))
         }
     }
 
-    pub fn init(&mut self, session_key: &[u8], warden_crypt: Arc<Mutex<Option<WardenCrypt>>>) {
+    pub fn init(&mut self, session_key: &[u8], warden_crypt: Arc<SyncMutex<Option<WardenCrypt>>>) {
         self.decryptor = Some(Decryptor::new(session_key));
         self.warden_crypt = warden_crypt;
     }
 
-    pub async fn read(&mut self) -> Result<Vec<Vec<u8>>, Error> {
+    pub fn read(&mut self) -> Result<Vec<Vec<u8>>, Error> {
         let mut buffer = [0u8; 65536];
 
-        match self.stream.read(&mut buffer).await {
+        match self.stream.try_read(&mut buffer) {
             Ok(bytes_count) => {
                 let result = match self.decryptor.as_mut() {
                     Some(decryptor) => {
-                        let warden_crypt = &mut *self.warden_crypt.lock().await;
+                        let mut warden_crypt = self.warden_crypt.lock().unwrap();
 
                         Self::parse_packets(
                             buffer[..bytes_count].to_vec(),
@@ -62,7 +61,6 @@ impl Reader {
                     panic!("[CRITICAL ERROR] on read: {:?}", err.to_string());
                 }
 
-                println!("[ERROR] on read: {:?}", err.to_string());
                 Err(Error::new(ErrorKind::NotFound, "No data read"))
             },
         }
@@ -85,7 +83,8 @@ impl Reader {
             let opcode = ReadBytesExt::read_u16::<LittleEndian>(&mut header_reader).unwrap();
 
             let mut body = vec![0u8; (size - INCOMING_OPCODE_LENGTH) as usize];
-            std::io::Read::read_exact(&mut reader, &mut body).unwrap_or_else(
+            // TODO: need to refactor this function to return Result and forward error to UI
+            std::io::Read::read_exact(&mut reader, &mut body) .unwrap_or_else(
                 |_| panic!("Cannot read raw data for opcode {} and size {}", opcode, size)
             );
 
@@ -132,19 +131,18 @@ impl Writer {
         self.encryptor = Some(Encryptor::new(session_key));
     }
 
-    pub async fn write(&mut self, packet: &[u8]) {
+    pub async fn write(&mut self, packet: &[u8]) -> Result<usize, Error> {
         let packet = match self.encryptor.as_mut() {
             Some(encryptor) => encryptor.encrypt(packet),
             _ => packet.to_vec(),
         };
 
-        match self.stream.write(&packet).await {
-            Ok(_) => {
+        return match self.stream.write(&packet).await {
+            Ok(bytes_amount) => {
                 let _ = &self.stream.flush().await.unwrap();
+                Ok(bytes_amount)
             },
-            Err(err) => {
-                println!("Error on write: {:?}", err.to_string());
-            },
+            Err(err) => Err(err),
         }
     }
 }

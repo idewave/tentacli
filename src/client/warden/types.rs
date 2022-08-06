@@ -1,4 +1,3 @@
-// use std::fs::File;
 use std::io::{Cursor, Read};
 use byteorder::{LittleEndian, ReadBytesExt};
 // use flate2::write::ZlibDecoder;
@@ -43,14 +42,13 @@ impl WardenModuleInfo {
         let decoded_binary = self.decoder.encrypt(&self.binary);
 
         let mut reader = Cursor::new(&decoded_binary);
-        let module_size = reader.read_u32::<LittleEndian>().unwrap();
+        let _module_size = reader.read_u32::<LittleEndian>().unwrap();
 
         let mut compressed_module = Vec::new();
         reader.read_to_end(&mut compressed_module).unwrap();
 
-        let decompressed_data = decompress(&compressed_module);
-        let module_name = format!("{}.mod", encode_hex(&self.md5));
-        println!("{:?}, {:?}, {:?}", module_size, decompressed_data, module_name);
+        let _decompressed_data = decompress(&compressed_module);
+        let _module_name = format!("{}.mod", encode_hex(&self.md5));
 
         // let mut file = File::create(format!("./{}", module_name)).unwrap();
         // file.write_all(&decompressed_data).unwrap();

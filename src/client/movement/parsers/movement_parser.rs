@@ -2,9 +2,10 @@ use std::cell::RefCell;
 use std::io::Cursor;
 use byteorder::{LittleEndian, ReadBytesExt};
 
-use crate::client::movement::parsers::position_parser::PositionParser;
-use crate::client::movement::parsers::types::{JumpInfo, MovementInfo};
-
+use crate::client::movement::parsers::{
+    position_parser::PositionParser,
+    types::{JumpInfo, MovementInfo},
+};
 use crate::client::movement::types::{
     MovementFlags,
     MovementFlagsExtra,

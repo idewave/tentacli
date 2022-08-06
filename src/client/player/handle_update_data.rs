@@ -1,16 +1,12 @@
 use std::io::{Cursor, Error, ErrorKind};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use crate::client::{ObjectField, Player};
 
+use crate::client::{ObjectField, Player};
 use crate::client::opcodes::Opcode;
 use crate::crypto::decryptor::INCOMING_HEADER_LENGTH;
 use crate::network::packet::{OutcomePacket, ParsedUpdatePacket};
 use crate::network::packet::types::{ObjectTypeMask};
-use crate::types::{
-    HandlerInput,
-    HandlerOutput,
-    HandlerResult
-};
+use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
 
 pub fn handler(input: &mut HandlerInput) -> HandlerResult {
     // omit size
@@ -22,10 +18,13 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
     let parsed_packet: Result<ParsedUpdatePacket, Error> = match opcode {
         Opcode::SMSG_UPDATE_OBJECT => Ok(ParsedUpdatePacket::new(data)),
         Opcode::SMSG_COMPRESSED_UPDATE_OBJECT => Ok(ParsedUpdatePacket::from_compressed(data)),
-        _ => Err(Error::new(ErrorKind::InvalidInput, "Handler used with wrong opcode"))
+        _ => Err(Error::new(ErrorKind::InvalidInput, "Wrong opcode"))
     };
 
-    let me = input.session.me.as_mut().unwrap();
+    input.message_income.send_debug_message(String::from("Handling update packet"));
+
+    let mut session = input.session.lock().unwrap();
+    let me = session.me.as_mut().unwrap();
 
     for parsed_block in parsed_packet.unwrap().parsed_blocks {
         let guid = parsed_block.guid.unwrap();
@@ -35,13 +34,14 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
                 Some(type_mask) => {
                     match *type_mask {
                         ObjectTypeMask::IS_PLAYER => {
-                            if let Some(player) = input.data_storage.players_map.get(&guid) {
-                                println!("PLAYER: {:?}", player);
-                            } else {
+                            let data_storage = input.data_storage.lock().unwrap();
+                            let player = data_storage.players_map.get(&guid);
+                            if player.is_none() {
                                 let mut body = Vec::new();
                                 body.write_u64::<LittleEndian>(guid)?;
 
-                                let mut player = Player::new(guid, String::new(), 0, 0);
+                                let mut player = Player::default();
+                                player.guid = guid;
 
                                 if let Some(movement_data) = parsed_block.movement_data {
                                     if let Some(movement_info) = movement_data.movement_info {
@@ -57,7 +57,7 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
                                     player.fields = parsed_block.update_fields;
                                 }
 
-                                input.data_storage.players_map.insert(guid, player);
+                                input.data_storage.lock().unwrap().players_map.insert(guid, player);
 
                                 return Ok(
                                     HandlerOutput::Data(
@@ -71,7 +71,7 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
                     }
                 },
                 None => {
-                    if input.data_storage.players_map.get(&guid).is_none() {
+                    if input.data_storage.lock().unwrap().players_map.get(&guid).is_none() {
                         let mut body = Vec::new();
                         body.write_u64::<LittleEndian>(guid)?;
 
@@ -91,7 +91,7 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
                             player.fields = parsed_block.update_fields;
                         }
 
-                        input.data_storage.players_map.insert(guid, player);
+                        input.data_storage.lock().unwrap().players_map.insert(guid, player);
 
                         return Ok(
                             HandlerOutput::Data(
@@ -99,7 +99,7 @@ pub fn handler(input: &mut HandlerInput) -> HandlerResult {
                             )
                         );
                     } else {
-                        input.data_storage.players_map.entry(guid).and_modify(|p| {
+                        input.data_storage.lock().unwrap().players_map.entry(guid).and_modify(|p| {
                             if let Some(movement_data) = parsed_block.movement_data {
                                 if let Some(movement_info) = movement_data.movement_info {
                                     p.position = Some(movement_info.position);
