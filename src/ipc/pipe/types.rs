@@ -1,6 +1,7 @@
 use crossterm::event::{KeyCode, KeyModifiers};
 
 use crate::client::{Character, Realm};
+use crate::ui::types::UIModeFlags;
 
 // messages from client to UI
 #[derive(Debug)]
@@ -15,6 +16,7 @@ pub enum IncomeMessageType {
 pub enum OutcomeMessageType {
     RealmSelected(Realm),
     CharacterSelected(Character),
+    SetUIMode(UIModeFlags),
 }
 
 #[derive(Debug)]

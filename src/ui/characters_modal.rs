@@ -1,3 +1,4 @@
+use crossterm::event::{KeyCode, KeyModifiers};
 use tui::backend::Backend;
 use tui::Frame;
 use tui::layout::{Alignment, Rect};
@@ -6,11 +7,14 @@ use tui::text::{Span, Spans};
 use tui::widgets::{Block, Borders, BorderType, Clear, List, ListItem, ListState};
 
 use crate::client::Character;
+use crate::ipc::pipe::dialog::DialogOutcome;
 use crate::types::traits::UIComponent;
+use crate::ui::types::{UIComponentOptions, UIStateFlags};
 
 const PANEL_TITLE: &str = "SELECT CHARACTER";
 
 pub struct CharactersModal<'a> {
+    dialog_outcome: DialogOutcome,
     items: Vec<ListItem<'a>>,
     state: ListState,
     characters: Vec<Character>,
@@ -70,14 +74,43 @@ impl<'a> CharactersModal<'a> {
 
         self.characters.remove(index)
     }
+
+    pub fn handle_key_event(
+        &mut self,
+        _: KeyModifiers,
+        key_code: KeyCode,
+        state_flags: &mut UIStateFlags
+    ) {
+        match key_code {
+            KeyCode::Up => {
+                if state_flags.contains(UIStateFlags::IS_CHARACTERS_MODAL_OPENED) {
+                    self.prev();
+                }
+            },
+            KeyCode::Down => {
+                if state_flags.contains(UIStateFlags::IS_CHARACTERS_MODAL_OPENED) {
+                    self.next();
+                }
+            },
+            KeyCode::Enter => {
+                if state_flags.contains(UIStateFlags::IS_CHARACTERS_MODAL_OPENED) {
+                    state_flags.set(UIStateFlags::IS_CHARACTERS_MODAL_OPENED, false);
+                    let selected = self.get_selected();
+                    self.dialog_outcome.send_selected_character(selected);
+                }
+            },
+            _ => {},
+        }
+    }
 }
 
 impl<'a> UIComponent for CharactersModal<'a> {
-    fn new() -> Self {
+    fn new(options: UIComponentOptions) -> Self {
         Self {
             items: vec![],
             state: ListState::default(),
             characters: vec![],
+            dialog_outcome: options.output_options.dialog_outcome,
         }
     }
 

@@ -8,16 +8,23 @@ use tui::widgets::{Block, Borders, BorderType, Paragraph, Wrap};
 use crate::ipc::pipe::types::LoggerOutput;
 use crate::types::traits::UIComponent;
 use crate::ui::MARGIN;
+use crate::ui::types::{UIComponentOptions};
 
 const PANEL_TITLE: &str = "DEBUG";
 
 pub struct DebugPanel<'a> {
     items: Vec<Spans<'a>>,
+    debug_mode: bool,
 }
 
 impl<'a> DebugPanel<'a> {
+    pub fn set_mode(&mut self, debug_mode: bool) -> &mut Self {
+        self.debug_mode = debug_mode;
+        self
+    }
+
     pub fn add_item(&mut self, output: LoggerOutput) -> &mut Self {
-        let message = Self::generate_message(output);
+        let message = self.generate_message(output);
 
         if !message.content.is_empty() {
             self.items.push(Spans::from(message));
@@ -26,9 +33,9 @@ impl<'a> DebugPanel<'a> {
         self
     }
 
-    fn generate_message(output: LoggerOutput) -> Span<'a> {
+    fn generate_message(&mut self, output: LoggerOutput) -> Span<'a> {
         match output {
-            LoggerOutput::Debug(data) if !data.is_empty() => Span::styled(
+            LoggerOutput::Debug(data) if !data.is_empty() && self.debug_mode => Span::styled(
                 format!("[DEBUG]: {}\n", data), Style::default().fg(Color::DarkGray)
             ),
             LoggerOutput::Error(data) if !data.is_empty() => Span::styled(
@@ -49,9 +56,10 @@ impl<'a> DebugPanel<'a> {
 }
 
 impl<'a> UIComponent for DebugPanel<'a> {
-    fn new() -> Self {
+    fn new(_: UIComponentOptions) -> Self {
         Self {
             items: vec![],
+            debug_mode: false,
         }
     }
 
