@@ -21,6 +21,7 @@ Then just run:
 3. Examples of chat/movement handling
 4. Incomplete warden part
 5. Support of yml config
+6. Added UI with keyboard interaction
 
 *Unfortunately, I have no experience with reverse engineering*. 
 If somebody can help to finish warden part I would appreciate it.
