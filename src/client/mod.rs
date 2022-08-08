@@ -167,17 +167,17 @@ impl Client {
         }
 
         join_all(vec![
-            self.handle_ui_render().await,
-            self.handle_ui_input().await,
-            self.handle_ui_output().await,
-            self.handle_ai().await,
-            self.handle_queue().await,
-            self.handle_read().await,
-            self.handle_write().await,
+            self.handle_ui_render(),
+            self.handle_ui_input(),
+            self.handle_ui_output(),
+            self.handle_ai(),
+            self.handle_queue(),
+            self.handle_read(),
+            self.handle_write(),
         ]).await;
     }
 
-    async fn handle_ui_input(&mut self) -> JoinHandle<()> {
+    fn handle_ui_input(&mut self) -> JoinHandle<()> {
         let income_pipe = self._income_message_pipe.lock().unwrap();
         let event_income = income_pipe.event_income.clone();
 
@@ -190,7 +190,7 @@ impl Client {
         })
     }
 
-    async fn handle_ui_render(&mut self) -> JoinHandle<()> {
+    fn handle_ui_render(&mut self) -> JoinHandle<()> {
         let income_message_pipe = Arc::clone(&self._income_message_pipe);
         let pipe = self._outcome_message_pipe.lock().unwrap();
         let dialog_outcome = pipe.dialog_outcome.clone();
@@ -217,7 +217,7 @@ impl Client {
         })
     }
 
-    async fn handle_ui_output(&mut self) -> JoinHandle<()> {
+    fn handle_ui_output(&mut self) -> JoinHandle<()> {
         let outcome_message_pipe = Arc::clone(&self._outcome_message_pipe);
         let session = Arc::clone(&self.session);
         let client_flags = Arc::clone(&self.client_flags);
@@ -234,7 +234,7 @@ impl Client {
         })
     }
 
-    async fn handle_ai(&mut self) -> JoinHandle<()> {
+    fn handle_ai(&mut self) -> JoinHandle<()> {
         let session = Arc::clone(&self.session);
         let data_storage = Arc::clone(&self.data_storage);
         let output_queue = Arc::clone(&self._output_queue);
@@ -254,7 +254,7 @@ impl Client {
         })
     }
 
-    async fn handle_queue(&mut self) -> JoinHandle<()> {
+    fn handle_queue(&mut self) -> JoinHandle<()> {
         let input_queue = Arc::clone(&self._input_queue);
         let output_queue = Arc::clone(&self._output_queue);
         let session = Arc::clone(&self.session);
@@ -403,7 +403,7 @@ impl Client {
         })
     }
 
-    async fn handle_write(&mut self) -> JoinHandle<()> {
+    fn handle_write(&mut self) -> JoinHandle<()> {
         let output_queue = Arc::clone(&self._output_queue);
         let writer = Arc::clone(&self._writer);
 
@@ -442,7 +442,7 @@ impl Client {
         })
     }
 
-    async fn handle_read(&mut self) -> JoinHandle<()> {
+    fn handle_read(&mut self) -> JoinHandle<()> {
         let input_queue = Arc::clone(&self._input_queue);
         let reader = Arc::clone(&self._reader);
 
@@ -579,7 +579,7 @@ mod tests {
                 stream.write(&PACKET).await.unwrap();
                 stream.flush().await.unwrap();
 
-                let read_task = client.handle_read().await;
+                let read_task = client.handle_read();
 
                 let test_task = tokio::spawn(async move {
                     loop {
@@ -612,7 +612,7 @@ mod tests {
                 let buffer_size = PACKET.to_vec().len();
                 let mut buffer = Vec::with_capacity(buffer_size);
 
-                client.handle_write().await;
+                client.handle_write();
                 stream.take(buffer_size as u64).read_to_end(&mut buffer).await.unwrap();
 
                 assert_eq!(PACKET.to_vec(), buffer);
