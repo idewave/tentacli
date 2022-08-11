@@ -8,8 +8,9 @@ In case of automatic interaction you just define any amount of handlers and bind
 In case of manual interaction you can define special manager (see **movement/ai** as example) where you decide by yourself when to send packets (or do another actions).
 
 ### How to start
-Rename **Config.yml.dist** into **Config.yml**, then edit it according to your preferences.
-Please notice regex currently supported only for `realm_name` param (see no case why to support somewhere else).
+Rename **Config.yml.dist** into **Config.yml**, then edit it according to your preferences. 
+
+Since v1.0.0 `realm_name` param temporary not supported (will be supported in future with autoconnect to realm feature).
 
 Then just run:
 
