@@ -59,7 +59,7 @@ impl AI {
                 let initial_position = {
                     let guard = input.session.lock().unwrap();
                     let position = guard.me.as_ref().unwrap().position.unwrap();
-                    position.clone()
+                    position
                 };
 
                 if let Some(target_position) = target.position {

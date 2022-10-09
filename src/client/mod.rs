@@ -231,8 +231,7 @@ impl Client {
 
             loop {
                 let client_flags = {
-                    let guard = client_flags.lock().unwrap();
-                    guard.clone()
+                    client_flags.lock().unwrap().clone()
                 };
 
                 ui.render(UIRenderOptions {
@@ -420,9 +419,7 @@ impl Client {
 
         tokio::spawn(async move {
             loop {
-                let packet = output_receiver.recv().await;
-                if packet.is_some() {
-                    let packet = packet.unwrap();
+                if let Some(packet) = output_receiver.recv().await {
                     if !packet.is_empty() {
                         let result = Self::write_packet(&writer, packet).await;
 
@@ -495,19 +492,16 @@ impl Client {
     ) -> Result<usize, Error> {
         let mut error = Error::new(ErrorKind::NotFound, "Not connected to TCP");
 
-        match &mut *writer.lock().await {
-            Some(writer) => {
-                match writer.write(&packet).await {
-                    Ok(bytes_sent) => {
-                        return Ok(bytes_sent);
-                    },
-                    Err(err) => {
-                        error = err;
-                    }
-                };
-            },
-            _ => {},
-        };
+        if let Some(writer) = &mut *writer.lock().await {
+            match writer.write(&packet).await {
+                Ok(bytes_sent) => {
+                    return Ok(bytes_sent);
+                },
+                Err(err) => {
+                    error = err;
+                }
+            };
+        }
 
         Err(error)
     }
@@ -533,7 +527,6 @@ impl Client {
 
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
     use futures::FutureExt;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::TcpListener;
@@ -541,7 +534,6 @@ mod tests {
 
     use crate::Client;
     use crate::client::types::ClientFlags;
-    use crate::ipc::pipe::dialog::DialogIncome;
     use crate::ipc::pipe::message::MessageIncome;
     use crate::ipc::pipe::types::{IncomeMessageType, Signal};
     use crate::ipc::session::types::{ActionFlags, StateFlags};
@@ -618,13 +610,11 @@ mod tests {
             let local_addr = listener.local_addr().unwrap();
             client.connect(HOST, local_addr.port()).await.ok();
 
-            let (signal_sender, signal_receiver) = mpsc::channel::<Signal>(1);
+            let (_, signal_receiver) = mpsc::channel::<Signal>(1);
             let (input_sender, mut input_receiver) = mpsc::channel::<Vec<u8>>(1);
-            let (output_sender, output_receiver) = mpsc::channel::<Vec<u8>>(1);
-            let (input_tx, input_rx) = std::sync::mpsc::channel::<IncomeMessageType>();
+            let (input_tx, _) = std::sync::mpsc::channel::<IncomeMessageType>();
 
             let message_income = MessageIncome::new(input_tx.clone());
-            let dialog_income = DialogIncome::new(input_tx.clone());
 
             if let Some((mut stream, _)) = listener.accept().await.ok() {
                 stream.write(&PACKET).await.unwrap();
@@ -634,9 +624,8 @@ mod tests {
 
                 let test_task = tokio::spawn(async move {
                     loop {
-                        let packet = input_receiver.recv().await;
-                        if packet.is_some() {
-                            assert_eq!(PACKET.to_vec(), packet.unwrap());
+                        if let Some(packet) = input_receiver.recv().await {
+                            assert_eq!(PACKET.to_vec(), packet);
                             break;
                         }
                     }
@@ -657,12 +646,10 @@ mod tests {
             let local_addr = listener.local_addr().unwrap();
             client.connect(HOST, local_addr.port()).await.ok();
 
-            let (signal_sender, signal_receiver) = mpsc::channel::<Signal>(1);
-            let (mut output_sender, output_receiver) = mpsc::channel::<Vec<u8>>(1);
-            let (input_tx, input_rx) = std::sync::mpsc::channel::<IncomeMessageType>();
+            let (output_sender, output_receiver) = mpsc::channel::<Vec<u8>>(1);
+            let (input_tx, _) = std::sync::mpsc::channel::<IncomeMessageType>();
 
             let message_income = MessageIncome::new(input_tx.clone());
-            let dialog_income = DialogIncome::new(input_tx.clone());
 
             output_sender.send(PACKET.to_vec()).await.unwrap();
 

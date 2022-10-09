@@ -43,8 +43,10 @@ impl PacketHandler for Handler {
                                     let mut body = Vec::new();
                                     body.write_u64::<LittleEndian>(guid)?;
 
-                                    let mut player = Player::default();
-                                    player.guid = guid;
+                                    let mut player = Player {
+                                        guid,
+                                        .. Player::default()
+                                    };
 
                                     if let Some(movement_data) = parsed_block.movement_data {
                                         if let Some(movement_info) = movement_data.movement_info {
