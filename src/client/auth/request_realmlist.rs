@@ -1,19 +1,20 @@
 use byteorder::{LittleEndian, WriteBytesExt};
-
-use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
+use async_trait::async_trait;
 
 use super::opcodes::Opcode;
+use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
+use crate::types::traits::PacketHandler;
 
-pub fn handler(input: &mut HandlerInput) -> HandlerResult {
-    let mut header = Vec::new();
-    header.write_u8(Opcode::REALM_LIST)?;
+pub struct Handler;
+#[async_trait]
+impl PacketHandler for Handler {
+    async fn handle(&mut self, _: &mut HandlerInput) -> HandlerResult {
+        let mut header = Vec::new();
+        header.write_u8(Opcode::REALM_LIST)?;
 
-    let mut body = Vec::new();
-    body.write_i32::<LittleEndian>(0)?;
+        let mut body = Vec::new();
+        body.write_i32::<LittleEndian>(0)?;
 
-    input.message_income.send_client_message(
-        String::from("REALM_LIST")
-    );
-
-    Ok(HandlerOutput::Data((Opcode::REALM_LIST as u32, header, body)))
+        Ok(HandlerOutput::Data((Opcode::REALM_LIST as u32, header, body)))
+    }
 }

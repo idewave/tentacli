@@ -3,11 +3,13 @@ use byteorder::{LittleEndian, ReadBytesExt};
 
 mod handle_emote;
 mod handle_order;
+mod log_chat_message;
+mod query_unknown_player;
 pub mod types;
 
 use crate::client::opcodes::Opcode;
-use crate::types::traits::Processor;
-use crate::types::{HandlerFunction, HandlerInput, ProcessorResult};
+use crate::types::traits::{Processor};
+use crate::types::{HandlerInput, ProcessorResult};
 
 pub struct ChatProcessor;
 
@@ -18,14 +20,20 @@ impl Processor for ChatProcessor {
 
         let mut message = String::new();
 
-        let handlers: Vec<HandlerFunction> = match opcode {
+        let handlers: ProcessorResult = match opcode {
             Opcode::SMSG_MESSAGECHAT => {
                 message = String::from("SMSG_MESSAGECHAT");
-                vec![Box::new(handle_order::handler)]
+                vec![
+                    Box::new(query_unknown_player::Handler),
+                    Box::new(handle_order::Handler),
+                    Box::new(log_chat_message::Handler),
+                ]
             },
             Opcode::SMSG_TEXT_EMOTE => {
                 message = String::from("SMSG_TEXT_EMOTE");
-                vec![Box::new(handle_emote::handler)]
+                vec![
+                    Box::new(handle_emote::Handler),
+                ]
             },
             _ => vec![]
         };

@@ -10,8 +10,12 @@ use crate::client::{
     SplineFlags,
     UnitMoveType
 };
-use crate::network::packet::parsers::types::{MovementData, ParsedBlock};
-use crate::network::packet::types::{ObjectUpdateFlags, ObjectUpdateType};
+use crate::network::packet::parsers::types::{
+    MovementData,
+    ObjectUpdateFlags,
+    ObjectUpdateType,
+    ParsedBlock
+};
 use crate::utils::read_packed_guid;
 
 const MOVE_TYPES: [u8; 9] = [

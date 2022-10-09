@@ -1,13 +1,13 @@
 use std::io::Cursor;
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
+use crate::client::Opcode;
 
 mod opcodes;
 mod send_data;
 pub mod types;
 
-use crate::client::opcodes::Opcode;
-use crate::types::traits::Processor;
-use crate::types::{HandlerFunction, HandlerInput, ProcessorResult};
+use crate::types::traits::{Processor};
+use crate::types::{HandlerInput, ProcessorResult};
 
 pub struct WardenProcessor;
 
@@ -19,10 +19,10 @@ impl Processor for WardenProcessor {
         
         let mut message = String::new();
 
-        let handlers: Vec<HandlerFunction> = match opcode {
+        let handlers: ProcessorResult = match opcode {
             Opcode::SMSG_WARDEN_DATA => {
                 message = String::from("RECEIVE SMSG_WARDEN_DATA");
-                vec![Box::new(send_data::handler)]
+                vec![Box::new(send_data::Handler)]
             },
             _ => vec![],
         };

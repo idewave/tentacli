@@ -29,3 +29,8 @@ pub enum LoggerOutput {
     Server(String),
     Client(String),
 }
+
+#[derive(Debug, Clone)]
+pub enum Signal {
+    Reconnect,
+}

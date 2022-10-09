@@ -1,12 +1,13 @@
 use std::io::Cursor;
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
 
+mod handle_initial_spells;
 mod handle_spell_go;
 pub mod types;
 
 use crate::client::opcodes::Opcode;
-use crate::types::traits::Processor;
-use crate::types::{HandlerFunction, HandlerInput, ProcessorResult};
+use crate::types::traits::{Processor};
+use crate::types::{HandlerInput, ProcessorResult};
 
 pub struct SpellProcessor;
 
@@ -18,30 +19,16 @@ impl Processor for SpellProcessor {
 
         let mut message = String::new();
 
-        let handlers: Vec<HandlerFunction> = match opcode {
-            Opcode::SMSG_SPELL_START => {
-                message = String::from("SMSG_SPELL_START");
-                vec![]
-            },
+        let handlers: ProcessorResult = match opcode {
             Opcode::SMSG_SPELL_GO => {
                 message = String::from("SMSG_SPELL_GO");
-                vec![Box::new(handle_spell_go::handler)]
+                vec![Box::new(handle_spell_go::Handler)]
             },
-            Opcode::SMSG_SPELL_FAILURE => {
-                message = String::from("SMSG_SPELL_FAILURE");
-                vec![]
-            },
-            Opcode::SMSG_SPELL_FAILED_OTHER => {
-                message = String::from("SMSG_SPELL_FAILED_OTHER");
-                vec![]
-            },
-            Opcode::SMSG_SPELL_DELAYED => {
-                message = String::from("SMSG_SPELL_DELAYED");
-                vec![]
-            },
-            Opcode::SMSG_SPELLHEALLOG => {
-                message = String::from("SMSG_SPELLHEALLOG");
-                vec![]
+            Opcode::SMSG_INITIAL_SPELLS => {
+                message = String::from("SMSG_INITIAL_SPELLS");
+                vec![
+                    Box::new(handle_initial_spells::Handler),
+                ]
             },
             _ => vec![]
         };

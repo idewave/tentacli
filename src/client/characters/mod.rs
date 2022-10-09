@@ -3,12 +3,11 @@ use byteorder::{LittleEndian, ReadBytesExt};
 
 mod get_characters_list;
 mod player_login;
-pub mod request_characters;
 pub mod types;
 
 use crate::client::opcodes::Opcode;
-use crate::types::traits::Processor;
-use crate::types::{HandlerFunction, HandlerInput, ProcessorResult};
+use crate::types::traits::{Processor};
+use crate::types::{HandlerInput, ProcessorResult};
 
 pub struct CharactersProcessor;
 
@@ -19,12 +18,12 @@ impl Processor for CharactersProcessor {
 
         let mut message = String::new();
 
-        let handlers: Vec<HandlerFunction> = match opcode {
+        let handlers: ProcessorResult = match opcode {
             Opcode::SMSG_CHAR_ENUM => {
                 message = String::from("SMSG_CHAR_ENUM");
                 vec![
-                    Box::new(get_characters_list::handler),
-                    Box::new(player_login::handler),
+                    Box::new(get_characters_list::Handler),
+                    Box::new(player_login::Handler),
                 ]
             },
             _ => vec![],
