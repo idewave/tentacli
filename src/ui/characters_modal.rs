@@ -67,11 +67,7 @@ impl<'a> CharactersModal<'a> {
     }
 
     pub fn get_selected(&mut self) -> Character {
-        let index = match self.state.selected() {
-            Some(i) => i,
-            None => 0,
-        };
-
+        let index = self.state.selected().unwrap_or(0);
         self.characters.remove(index)
     }
 

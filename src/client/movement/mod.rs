@@ -9,8 +9,8 @@ pub mod parsers;
 pub mod types;
 
 use crate::client::opcodes::Opcode;
-use crate::types::traits::Processor;
-use crate::types::{HandlerFunction, HandlerInput, ProcessorResult};
+use crate::types::traits::{Processor};
+use crate::types::{HandlerInput, ProcessorResult};
 
 pub struct MovementProcessor;
 
@@ -19,14 +19,14 @@ impl Processor for MovementProcessor {
         let mut reader = Cursor::new(input.data.as_ref().unwrap()[2..].to_vec());
         let opcode = reader.read_u16::<LittleEndian>().unwrap();
 
-        let handlers: Vec<HandlerFunction> = vec![
-            Box::new(detect_motion::handler),
-            Box::new(handle_follow::handler),
+        let handlers: ProcessorResult = vec![
+            Box::new(detect_motion::Handler),
+            Box::new(handle_follow::Handler),
         ];
 
         let mut message = String::new();
 
-        let handlers: Vec<HandlerFunction> = match opcode {
+        let handlers: ProcessorResult = match opcode {
             Opcode::MSG_MOVE_START_FORWARD => {
                 message = String::from("MSG_MOVE_START_FORWARD");
                 handlers

@@ -67,11 +67,7 @@ impl<'a> RealmModal<'a> {
     }
 
     pub fn get_selected(&mut self) -> Realm {
-        let index = match self.state.selected() {
-            Some(i) => i,
-            None => 0,
-        };
-
+        let index = self.state.selected().unwrap_or(0);
         self.realms.remove(index)
     }
 

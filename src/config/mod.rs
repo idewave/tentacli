@@ -4,7 +4,7 @@ use yaml_rust::{Yaml, YamlLoader};
 
 mod types;
 
-use crate::config::types::{AddonInfo, BotChat, ConnectionData};
+use crate::config::types::{AddonInfo, BotChat, Channels, ConnectionData};
 
 pub struct ConfigParams<'a> {
     pub host: &'a str,
@@ -14,6 +14,7 @@ pub struct Config {
     pub connection_data: ConnectionData,
     pub addons: Vec<AddonInfo>,
     pub bot_chat: BotChat,
+    pub channels: Channels,
 }
 
 impl Config {
@@ -26,11 +27,13 @@ impl Config {
             );
             let addons = Self::parse_addons(&docs[0]["addons"]);
             let bot_chat = Self::parse_chat_config(&docs[0]["bot_chat"]);
+            let channels = Self::parse_channels_data(&docs[0]["channels"]);
 
             return Ok(Self {
                 connection_data,
                 addons,
                 bot_chat,
+                channels,
             });
         }
 
@@ -88,6 +91,14 @@ impl Config {
                 .iter()
                 .map(|msg| msg.as_str().unwrap().to_string())
                 .collect::<Vec<String>>(),
+        }
+    }
+
+    fn parse_channels_data(config: &Yaml) -> Channels {
+        return Channels {
+            lfg: config["lfg"].as_str().unwrap().to_string(),
+            common: config["common"].as_str().unwrap().to_string(),
+            trade: config["trade"].as_str().unwrap().to_string(),
         }
     }
 }

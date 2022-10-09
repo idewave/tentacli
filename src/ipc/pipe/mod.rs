@@ -27,7 +27,7 @@ impl IncomeMessagePipe {
         Self {
             dialog_income: DialogIncome::new(input_tx.clone()),
             message_income: MessageIncome::new(input_tx.clone()),
-            event_income: EventIncome::new(input_tx.clone()),
+            event_income: EventIncome::new(input_tx),
 
             _receiver: input_rx,
         }
@@ -50,7 +50,7 @@ impl OutcomeMessagePipe {
 
         Self {
             dialog_outcome: DialogOutcome::new(output_tx.clone()),
-            flag_outcome: FlagOutcome::new(output_tx.clone()),
+            flag_outcome: FlagOutcome::new(output_tx),
             _receiver: output_rx,
         }
     }

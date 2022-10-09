@@ -20,13 +20,9 @@ pub struct ModePanel {
 impl ModePanel {
     pub fn toggle_flag(&mut self, number: u8) {
         let flag_outcome = self._flag_outcome.as_mut().unwrap();
-
-        match number {
-            1 => {
-                self.mode_flags.toggle(UIModeFlags::DEBUG_MODE);
-                flag_outcome.send_toggle_flag(UIModeFlags::DEBUG_MODE);
-            },
-            _ => {},
+        if number == 1 {
+            self.mode_flags.toggle(UIModeFlags::DEBUG_MODE);
+            flag_outcome.send_toggle_flag(UIModeFlags::DEBUG_MODE);
         }
     }
 
@@ -36,13 +32,10 @@ impl ModePanel {
         key_code: KeyCode,
         _: &mut UIStateFlags
     ) {
-        match key_code {
-            KeyCode::Char('1') => {
-                if key_modifiers.contains(KeyModifiers::CONTROL) {
-                    self.toggle_flag(1);
-                }
-            },
-            _ => {},
+        if key_code == KeyCode::Char('1') {
+            if key_modifiers.contains(KeyModifiers::CONTROL) {
+                self.toggle_flag(1);
+            }
         }
     }
 }
