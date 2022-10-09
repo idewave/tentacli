@@ -25,9 +25,6 @@ impl PacketHandler for Handler {
             p.position = Some(movement_info.position);
         });
 
-        // println!("TARGET POS: {:?}", movement_info.position);
-        // println!("BOT POS: {:?}", input.session.me.as_ref().unwrap().position);
-
         if input.session.lock().unwrap().me.as_ref().unwrap().guid != guid {
             let players_map = &mut input.data_storage.lock().unwrap().players_map;
             let player = players_map.get(&guid);
