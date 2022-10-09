@@ -1,11 +1,11 @@
 [package]
 edition = "2021"
 name = "idewave-cli"
-version = "1.0.1"
+version = "2.0.0"
 authors = ["Sergio Ivanuzzo <sergio.ivanuzzo@gmail.com>"]
 description = "Smart wow-client (cli)"
 readme = "README.md"
-keywords = ["wow", "wowcli", "idewave", "wowclient", "cli"]
+keywords = ["wow", "wowcli", "idewave", "wowclient", "cli", "idewave-cli"]
 license-file = "LICENSE"
 repository = "https://github.com/idewave/idewave-cli"
 
