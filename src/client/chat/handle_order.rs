@@ -1,53 +1,66 @@
-use std::io::{Cursor, Read};
-use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
+use std::io::{BufRead, Cursor, Read};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use async_trait::async_trait;
 
-use crate::client::chat::types::{EmoteType};
+use crate::client::chat::types::{EmoteType, MessageType};
 use crate::client::opcodes::Opcode;
-use crate::ipc::session::types::ActionFlags;
+use crate::ipc::session::types::{ActionFlags};
 use crate::network::packet::OutcomePacket;
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
+use crate::types::traits::PacketHandler;
 
-pub fn handler(input: &mut HandlerInput) -> HandlerResult {
-    let mut session = input.session.lock().unwrap();
-    let config = session.get_config().unwrap();
-    let bot_chat = &config.bot_chat;
+pub struct Handler;
+#[async_trait]
+impl PacketHandler for Handler {
+    async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
+        let bot_chat = {
+            let guard = input.session.lock().unwrap();
+            let config = guard.get_config().unwrap();
+            config.bot_chat.clone()
+        };
 
-    let mut reader = Cursor::new(input.data.as_ref().unwrap()[4..].to_vec());
+        let mut reader = Cursor::new(input.data.as_ref().unwrap()[4..].to_vec());
 
-    let _message_type = reader.read_u8()?;
-    let _language = reader.read_u32::<LittleEndian>()?;
-    let sender_guid = reader.read_u64::<LittleEndian>()?;
+        let message_type = reader.read_u8()?;
+        let _language = reader.read_u32::<LittleEndian>()?;
+        let sender_guid = reader.read_u64::<LittleEndian>()?;
 
-    // omit last byte (null terminator)
-    reader.read_u8()?;
+        reader.read_u32::<LittleEndian>()?;
 
-    let _target_guid = reader.read_u64::<LittleEndian>()?;
-    let size = reader.read_u32::<BigEndian>()?;
+        let mut channel_name = Vec::new();
+        if message_type == MessageType::CHANNEL {
+            reader.read_until(0, &mut channel_name)?;
+        }
 
-    let mut message = vec![0u8; (size + 2) as usize];
-    reader.read_exact(&mut message)?;
+        let _target_guid = reader.read_u64::<LittleEndian>()?;
+        let size = reader.read_u32::<LittleEndian>()?;
 
-    let message = String::from_utf8_lossy(&message);
+        let mut message = vec![0u8; (size - 1) as usize];
+        reader.read_exact(&mut message)?;
 
-    return match message.trim_matches(char::from(0)) {
-        greet if bot_chat.greet.contains(&greet.to_string()) => {
-            let mut body: Vec<u8> = Vec::new();
-            body.write_u32::<LittleEndian>(EmoteType::ONESHOT_WAVE as u32)?;
+        let message = String::from_utf8_lossy(&message);
 
-            Ok(HandlerOutput::Data(OutcomePacket::from(Opcode::CMSG_EMOTE, Some(body))))
-        },
-        follow_invite if bot_chat.follow_invite.contains(&follow_invite.to_string()) => {
-            let mut body: Vec<u8> = Vec::new();
-            body.write_u64::<LittleEndian>(sender_guid)?;
+        return match message.trim_matches(char::from(0)) {
+            greet if bot_chat.greet.contains(&greet.to_string()) => {
+                let mut body: Vec<u8> = Vec::new();
+                body.write_u32::<LittleEndian>(EmoteType::ONESHOT_WAVE as u32)?;
 
-            session.follow_target = Some(sender_guid);
-            session.action_flags.set(ActionFlags::IS_FOLLOWING, true);
+                Ok(HandlerOutput::Data(OutcomePacket::from(Opcode::CMSG_EMOTE, Some(body))))
+            },
+            follow_invite if bot_chat.follow_invite.contains(&follow_invite.to_string()) => {
+                input.message_income.send_debug_message(format!("FOLLOW {}", &sender_guid));
 
-            Ok(HandlerOutput::Data(OutcomePacket::from(Opcode::CMSG_SET_SELECTION, Some(body))))
-        },
-        "logout" => {
-            Ok(HandlerOutput::Data(OutcomePacket::from(Opcode::CMSG_LOGOUT_REQUEST, None)))
-        },
-        _ => Ok(HandlerOutput::Void)
+                let mut body: Vec<u8> = Vec::new();
+                body.write_u64::<LittleEndian>(sender_guid)?;
+
+                let mut guard = input.session.lock().unwrap();
+                guard.follow_target = Some(sender_guid);
+                guard.action_flags.set(ActionFlags::IS_FOLLOWING, true);
+
+                // Ok(HandlerOutput::Data(OutcomePacket::from(Opcode::CMSG_SET_SELECTION, Some(body))))
+                Ok(HandlerOutput::Void)
+            },
+            _ => Ok(HandlerOutput::Void)
+        }
     }
 }

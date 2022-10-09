@@ -7,15 +7,13 @@ mod login_challenge;
 mod login_proof;
 mod opcodes;
 mod request_realmlist;
-mod set_connected_to_realm;
 
 // TODO: remove this (need to think how better refactor this part)
 pub use login_challenge::handler as login_challenge;
 
 use crate::client::auth::opcodes::Opcode;
-use crate::types::traits::Processor;
-use crate::types::{HandlerFunction, HandlerInput, ProcessorResult};
-
+use crate::types::traits::{Processor};
+use crate::types::{HandlerInput, ProcessorResult};
 
 pub struct AuthProcessor;
 
@@ -26,21 +24,20 @@ impl Processor for AuthProcessor {
 
         let mut message = String::new();
 
-        let handlers: Vec<HandlerFunction> = match opcode {
+        let handlers: ProcessorResult = match opcode {
             Opcode::LOGIN_CHALLENGE => {
                 message = String::from("LOGIN_CHALLENGE");
-                vec![Box::new(login_proof::handler)]
+                vec![Box::new(login_proof::Handler)]
             },
             Opcode::LOGIN_PROOF => {
                 message = String::from("LOGIN_PROOF");
-                vec![Box::new(request_realmlist::handler)]
+                vec![Box::new(request_realmlist::Handler)]
             },
             Opcode::REALM_LIST => {
                 message = String::from("REALM_LIST");
                 vec![
-                    Box::new(get_realmlist::handler),
-                    Box::new(connect_to_realm::handler),
-                    Box::new(set_connected_to_realm::handler),
+                    Box::new(get_realmlist::Handler),
+                    Box::new(connect_to_realm::Handler),
                 ]
             }
             _ => vec![],

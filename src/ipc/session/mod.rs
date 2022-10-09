@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fmt::{Debug, Formatter};
 use std::io::Error;
 
@@ -17,6 +18,7 @@ pub struct Session {
     pub action_flags: ActionFlags,
     pub state_flags: StateFlags,
     pub party: Vec<Player>,
+    pub spells_map: HashSet<u32>,
 }
 
 impl Session {
@@ -31,6 +33,7 @@ impl Session {
             action_flags: ActionFlags::NONE,
             state_flags: StateFlags::NONE,
             party: Vec::new(),
+            spells_map: HashSet::new(),
         }
     }
 

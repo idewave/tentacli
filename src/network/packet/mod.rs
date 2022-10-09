@@ -3,9 +3,9 @@ use flate2::read::DeflateDecoder;
 use byteorder::{BigEndian, LittleEndian, WriteBytesExt};
 
 mod parsers;
-pub mod types;
 
 use parsers::update_packet_parser::UpdatePacketParser;
+pub use parsers::types::ObjectTypeMask;
 
 use crate::crypto::encryptor::OUTCOMING_OPCODE_LENGTH;
 use crate::network::packet::parsers::types::ParsedBlock;

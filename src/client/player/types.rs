@@ -1,8 +1,10 @@
 use std::collections::BTreeMap;
 use std::fmt::{Debug, Formatter};
+
 use crate::client::Character;
 use crate::client::movement::parsers::types::Position;
 
+#[derive(Clone)]
 pub struct Player {
     pub guid: u64,
     pub name: String,

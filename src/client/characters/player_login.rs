@@ -1,25 +1,29 @@
 use std::io::{Error, ErrorKind};
 use byteorder::{LittleEndian, WriteBytesExt};
+use async_trait::async_trait;
 
 use crate::client::opcodes::Opcode;
 use crate::network::packet::OutcomePacket;
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
+use crate::types::traits::PacketHandler;
 
-pub fn handler(input: &mut HandlerInput) -> HandlerResult {
-    let session = input.session.lock().unwrap();
-    if session.me.is_none() {
-        return Err(Error::new(
-            ErrorKind::NotFound,
-            "No character selected ! Seems like char list is empty !"
-        ));
+pub struct Handler;
+#[async_trait]
+impl PacketHandler for Handler {
+    async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
+        let me_exists = input.session.lock().unwrap().me.is_some();
+        if !me_exists {
+            return Err(Error::new(
+                ErrorKind::NotFound,
+                "No character selected ! Seems like char list is empty !"
+            ));
+        }
+
+        let my_guid = input.session.lock().unwrap().me.as_ref().unwrap().guid;
+
+        let mut body = Vec::new();
+        body.write_u64::<LittleEndian>(my_guid)?;
+
+        Ok(HandlerOutput::Data(OutcomePacket::from(Opcode::CMSG_PLAYER_LOGIN, Some(body))))
     }
-
-    let me = session.me.as_ref().unwrap();
-
-    let mut body = Vec::new();
-    body.write_u64::<LittleEndian>(me.guid)?;
-
-    input.message_income.send_client_message(String::from("CMSG_PLAYER_LOGIN"));
-
-    Ok(HandlerOutput::Data(OutcomePacket::from(Opcode::CMSG_PLAYER_LOGIN, Some(body))))
 }

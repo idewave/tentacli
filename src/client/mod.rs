@@ -1,12 +1,10 @@
-use std::collections::{VecDeque};
-use std::io::{Error};
+use std::io::{Error, ErrorKind};
 use std::sync::{Arc, Mutex as SyncMutex};
-use std::time::Duration;
-use tokio::sync::{Mutex};
+use tokio::sync::{Mutex, mpsc};
 use tokio::net::TcpStream;
 use tokio::task::{JoinHandle};
-use tokio::time::{sleep};
 use futures::future::join_all;
+use tokio::sync::mpsc::{Receiver, Sender};
 use tui::backend::CrosstermBackend;
 
 mod auth;
@@ -49,31 +47,24 @@ pub use crate::client::opcodes::Opcode;
 use crate::client::types::ClientFlags;
 use crate::crypto::warden_crypt::WardenCrypt;
 use crate::ipc::pipe::{IncomeMessagePipe, OutcomeMessagePipe};
+use crate::ipc::pipe::dialog::DialogIncome;
+use crate::ipc::pipe::message::MessageIncome;
+use crate::ipc::pipe::types::Signal;
 use crate::ipc::storage::DataStorage;
 use crate::ipc::session::Session;
 use crate::network::stream::{Reader, Writer};
 use crate::types::traits::Processor;
-use crate::types::{
-    AIManagerInput,
-    HandlerInput,
-    HandlerOutput,
-    HandlerFunction,
-    ProcessorFunction,
-    State
-};
+use crate::types::{AIManagerInput, HandlerInput, HandlerOutput, ProcessorFunction, ProcessorResult};
 use crate::UI;
 use crate::ui::types::{UIOutputOptions, UIRenderOptions};
 use crate::ui::{UIInput, UIOutput};
 
-const READ_TIMEOUT: u64 = 50;
 const WRITE_TIMEOUT: u64 = 1;
 
 pub struct Client {
     _reader: Arc<Mutex<Option<Reader>>>,
     _writer: Arc<Mutex<Option<Writer>>>,
     _warden_crypt: Arc<SyncMutex<Option<WardenCrypt>>>,
-    _input_queue: Arc<SyncMutex<VecDeque<Vec<Vec<u8>>>>>,
-    _output_queue: Arc<SyncMutex<VecDeque<Vec<u8>>>>,
     _income_message_pipe: Arc<SyncMutex<IncomeMessagePipe>>,
     _outcome_message_pipe: Arc<SyncMutex<OutcomeMessagePipe>>,
 
@@ -88,8 +79,6 @@ impl Client {
             _reader: Arc::new(Mutex::new(None)),
             _writer: Arc::new(Mutex::new(None)),
             _warden_crypt: Arc::new(SyncMutex::new(None)),
-            _input_queue: Arc::new(SyncMutex::new(VecDeque::new())),
-            _output_queue: Arc::new(SyncMutex::new(VecDeque::new())),
             _income_message_pipe: Arc::new(SyncMutex::new(IncomeMessagePipe::new())),
             _outcome_message_pipe: Arc::new(SyncMutex::new(OutcomeMessagePipe::new())),
 
@@ -104,7 +93,14 @@ impl Client {
 
         return match Self::connect_inner(host, port).await {
             Ok(stream) => {
-                Self::set_stream_halves(stream, &self._reader, &self._writer).await;
+                Self::set_stream_halves(
+                    stream,
+                    Arc::clone(&self._reader),
+                    Arc::clone(&self._writer),
+                    None,
+                    Arc::clone(&self._warden_crypt),
+                ).await;
+
                 match self.session.lock().unwrap().set_config(host) {
                     Ok(_) => {},
                     Err(err) => {
@@ -138,48 +134,75 @@ impl Client {
 
     async fn set_stream_halves(
         stream: TcpStream,
-        reader: &Arc<Mutex<Option<Reader>>>,
-        writer: &Arc<Mutex<Option<Writer>>>
+        reader: Arc<Mutex<Option<Reader>>>,
+        writer: Arc<Mutex<Option<Writer>>>,
+        session_key: Option<Vec<u8>>,
+        warden_crypt: Arc<SyncMutex<Option<WardenCrypt>>>,
     ) {
         let (rx, tx) = stream.into_split();
 
-        let mut reader = reader.lock().await;
-        *reader = Some(Reader::new(rx));
-        let mut writer = writer.lock().await;
-        *writer = Some(Writer::new(tx));
+        if session_key.is_none() {
+            *reader.lock().await = Some(Reader::new(rx));
+            *writer.lock().await = Some(Writer::new(tx));
+        } else {
+            let session_key = session_key.unwrap();
+            *warden_crypt.lock().unwrap() = Some(WardenCrypt::new(&session_key));
+
+            let mut _reader = Reader::new(rx);
+            _reader.init(&session_key, Arc::clone(&warden_crypt));
+            *reader.lock().await = Some(_reader);
+
+            let mut _writer = Writer::new(tx);
+            _writer.init(&session_key);
+            *writer.lock().await = Some(_writer);
+        }
     }
 
-    pub async fn handle_connection(&mut self) {
-        // TODO: remove this part after in favor of manual packet sending
-        match self.session.lock().unwrap().get_config() {
-            Some(config) => {
-                let username = &config.connection_data.username;
+    pub async fn run(&mut self) {
+        const BUFFER_SIZE: usize = 50;
 
-                let mut income_pipe = self._income_message_pipe.lock().unwrap();
-                income_pipe.message_income.send_client_message(
-                    format!("LOGIN_CHALLENGE as {}", username)
-                );
+        let (signal_sender, signal_receiver) = mpsc::channel::<Signal>(1);
+        let (input_sender, input_receiver) = mpsc::channel::<Vec<u8>>(BUFFER_SIZE);
+        let (output_sender, output_receiver) = mpsc::channel::<Vec<u8>>(BUFFER_SIZE);
 
-                let mut output_queue = self._output_queue.lock().unwrap();
-                output_queue.push_back(login_challenge(username));
-            },
-            None => {},
+        let message_income = self._income_message_pipe.lock().unwrap().message_income.clone();
+        let dialog_income = self._income_message_pipe.lock().unwrap().dialog_income.clone();
+
+        let username = {
+            let guard = self.session.lock().unwrap();
+            let config = guard.get_config().unwrap();
+
+            config.connection_data.username.clone()
+        };
+
+        {
+            let mut guard = self._income_message_pipe.lock().unwrap();
+            guard.message_income.send_client_message(
+                format!("LOGIN_CHALLENGE as {}", &username)
+            );
         }
+
+        output_sender.send(login_challenge(&username)).await.unwrap();
 
         join_all(vec![
             self.handle_ui_render(),
             self.handle_ui_input(),
             self.handle_ui_output(),
-            self.handle_ai(),
-            self.handle_queue(),
-            self.handle_read(),
-            self.handle_write(),
+            self.handle_ai(output_sender.clone(), message_income.clone()),
+            self.handle_read(input_sender.clone(), signal_receiver, message_income.clone()),
+            self.handle_write(output_receiver, message_income.clone()),
+            self.handle_packets(
+                input_receiver,
+                signal_sender.clone(),
+                output_sender.clone(),
+                message_income.clone(),
+                dialog_income.clone(),
+            ),
         ]).await;
     }
 
     fn handle_ui_input(&mut self) -> JoinHandle<()> {
-        let income_pipe = self._income_message_pipe.lock().unwrap();
-        let event_income = income_pipe.event_income.clone();
+        let event_income = self._income_message_pipe.lock().unwrap().event_income.clone();
 
         tokio::task::spawn_blocking(move || {
             let mut ui_input = UIInput::new(event_income);
@@ -192,9 +215,8 @@ impl Client {
 
     fn handle_ui_render(&mut self) -> JoinHandle<()> {
         let income_message_pipe = Arc::clone(&self._income_message_pipe);
-        let pipe = self._outcome_message_pipe.lock().unwrap();
-        let dialog_outcome = pipe.dialog_outcome.clone();
-        let flag_outcome = pipe.flag_outcome.clone();
+        let dialog_outcome = self._outcome_message_pipe.lock().unwrap().dialog_outcome.clone();
+        let flag_outcome = self._outcome_message_pipe.lock().unwrap().flag_outcome.clone();
         let client_flags = Arc::clone(&self.client_flags);
 
         tokio::task::spawn_blocking(move || {
@@ -207,11 +229,14 @@ impl Client {
             );
 
             loop {
-                let client_flags = &client_flags.lock().unwrap().clone();
+                let client_flags = {
+                    let guard = client_flags.lock().unwrap();
+                    guard.clone()
+                };
 
                 ui.render(UIRenderOptions {
                     message: income_message_pipe.lock().unwrap().recv(),
-                    client_flags,
+                    client_flags: &client_flags,
                 });
             }
         })
@@ -234,29 +259,38 @@ impl Client {
         })
     }
 
-    fn handle_ai(&mut self) -> JoinHandle<()> {
+    fn handle_ai(
+        &mut self,
+        mut output_sender: Sender<Vec<u8>>,
+        mut message_income: MessageIncome,
+    ) -> JoinHandle<()> {
         let session = Arc::clone(&self.session);
         let data_storage = Arc::clone(&self.data_storage);
-        let output_queue = Arc::clone(&self._output_queue);
 
         let mut movement_ai = MovementAI::new();
 
         tokio::spawn(async move {
             loop {
-                movement_ai.manage(AIManagerInput {
+                let input = AIManagerInput {
                     session: Arc::clone(&session),
                     data_storage: Arc::clone(&data_storage),
-                    output_queue: Arc::clone(&output_queue),
-                }).await;
+                    output_sender: output_sender.clone(),
+                    message_income: message_income.clone(),
+                };
 
-                sleep(Duration::from_millis(WRITE_TIMEOUT)).await;
+                movement_ai.manage(input).await;
             }
         })
     }
 
-    fn handle_queue(&mut self) -> JoinHandle<()> {
-        let input_queue = Arc::clone(&self._input_queue);
-        let output_queue = Arc::clone(&self._output_queue);
+    fn handle_packets(
+        &mut self,
+        mut input_receiver: Receiver<Vec<u8>>,
+        mut signal_sender: Sender<Signal>,
+        mut output_sender: Sender<Vec<u8>>,
+        mut message_income: MessageIncome,
+        mut dialog_income: DialogIncome,
+    ) -> JoinHandle<()> {
         let session = Arc::clone(&self.session);
         let reader = Arc::clone(&self._reader);
         let writer = Arc::clone(&self._writer);
@@ -264,206 +298,221 @@ impl Client {
         let client_flags = Arc::clone(&self.client_flags);
         let data_storage = Arc::clone(&self.data_storage);
 
-        let income_pipe = self._income_message_pipe.lock().unwrap();
-        let mut message_income = income_pipe.message_income.clone();
-        let dialog_income = income_pipe.dialog_income.clone();
-
         tokio::spawn(async move {
             loop {
-                let connected_to_realm = client_flags.lock().unwrap().contains(
-                    ClientFlags::IS_CONNECTED_TO_REALM
-                );
+                let packet = input_receiver.recv().await;
+                if packet.is_some() {
+                    let packet = packet.unwrap();
 
-                let packets = input_queue.lock().unwrap().pop_front();
+                    let processors = {
+                        let guard = client_flags.lock().unwrap();
+                        let connected_to_realm = guard.contains(ClientFlags::IS_CONNECTED_TO_REALM);
 
-                if packets.is_some() {
-                    for packet in packets.unwrap() {
-                        let processors = match connected_to_realm {
+                        match connected_to_realm {
                             true => Self::get_realm_processors(),
                             false => Self::get_login_processors(),
-                        };
+                        }
+                    };
 
-                        let mut handler_input = HandlerInput {
-                            session: Arc::clone(&session),
-                            // packet: size + opcode + body, need to parse separately
-                            data: Some(&packet),
-                            data_storage: Arc::clone(&data_storage),
-                            message_income: message_income.clone(),
-                            dialog_income: dialog_income.clone(),
-                        };
+                    let session_key = {
+                        let guard = session.lock().unwrap();
+                        guard.session_key.clone()
+                    };
 
-                        let handler_list = processors
-                            .iter()
-                            .map(|processor| processor(&mut handler_input))
-                            .flatten()
-                            .collect::<Vec<HandlerFunction>>();
+                    let mut input = HandlerInput {
+                        session: Arc::clone(&session),
+                        // packet: size + opcode + body, need to parse separately
+                        data: Some(&packet),
+                        data_storage: Arc::clone(&data_storage),
+                        message_income: message_income.clone(),
+                        dialog_income: dialog_income.clone(),
+                    };
 
-                        for mut handler in handler_list {
-                            match handler(&mut handler_input) {
-                                Ok(output) => {
-                                    match output {
-                                        HandlerOutput::Data((opcode, header, body)) => {
-                                            let body = match opcode {
-                                                Opcode::CMSG_WARDEN_DATA => {
-                                                    let mut warden_crypt = warden_crypt
-                                                        .lock()
-                                                        .unwrap();
+                    let handler_list = processors
+                        .iter()
+                        .map(|processor| processor(&mut input))
+                        .flatten()
+                        .collect::<ProcessorResult>();
 
-                                                    warden_crypt.as_mut().unwrap().encrypt(&body)
-                                                },
-                                                _ => body,
-                                            };
+                    for mut handler in handler_list {
+                        let response = handler.handle(&mut input).await;
+                        match response {
+                            Ok(output) => {
+                                match output {
+                                    HandlerOutput::Data((opcode, header, body)) => {
+                                        message_income.send_client_message(
+                                            Opcode::get_opcode_name(opcode)
+                                        );
+                                        let body = match opcode {
+                                            Opcode::CMSG_WARDEN_DATA => {
+                                                warden_crypt.lock().unwrap().as_mut().unwrap().encrypt(&body)
+                                            },
+                                            _ => body,
+                                        };
 
-                                            let packet = [header, body].concat();
-                                            output_queue.lock().unwrap().push_back(packet);
-                                        },
-                                        HandlerOutput::ConnectionRequest(host, port) => {
-                                            match Self::connect_inner(&host, port).await {
-                                                Ok(stream) => {
-                                                    let message = format!(
-                                                        "Connected to {}:{}", host, port
-                                                    );
+                                        let packet = [header, body].concat();
+                                        output_sender.send(packet).await.unwrap();
+                                    },
+                                    HandlerOutput::ConnectionRequest(host, port) => {
+                                        match Self::connect_inner(&host, port).await {
+                                            Ok(stream) => {
+                                                signal_sender.send(Signal::Reconnect).await;
 
-                                                    Self::set_stream_halves(
-                                                        stream, &reader, &writer
-                                                    ).await;
+                                                Self::set_stream_halves(
+                                                    stream,
+                                                    Arc::clone(&reader),
+                                                    Arc::clone(&writer),
+                                                    session_key.clone(),
+                                                    Arc::clone(&warden_crypt),
+                                                ).await;
 
-                                                    message_income.send_success_message(message);
+                                                message_income.send_success_message(
+                                                    format!("Connected to {}:{}", host, port)
+                                                );
 
-                                                },
-                                                Err(err) => {
-                                                    message_income.send_error_message(
-                                                        err.to_string()
-                                                    );
-                                                }
+                                                client_flags.lock().unwrap().set(
+                                                    ClientFlags::IS_CONNECTED_TO_REALM,
+                                                    true,
+                                                );
+                                            },
+                                            Err(err) => {
+                                                message_income.send_error_message(
+                                                    err.to_string()
+                                                );
                                             }
-                                        },
-                                        HandlerOutput::UpdateState(state) => {
-                                            match state {
-                                                State::SetEncryption(session_key) => {
-                                                    // let warden_crypt = warden_crypt.lock().unwrap();
-                                                    *warden_crypt.lock().unwrap() =
-                                                        Some(WardenCrypt::new(&session_key));
-
-                                                    if let Some(reader) = &mut *reader.lock().await
-                                                    {
-                                                        reader.init(
-                                                            &session_key,
-                                                            Arc::clone(&warden_crypt)
-                                                        );
-                                                    }
-
-                                                    if let Some(writer) = &mut *writer.lock().await
-                                                    {
-                                                        writer.init(&session_key);
-                                                    }
-                                                },
-                                                State::SetConnectedToRealm(is_authorized) => {
-                                                    client_flags.lock().unwrap().set(
-                                                        ClientFlags::IS_CONNECTED_TO_REALM,
-                                                        is_authorized
-                                                    );
-                                                },
-                                            }
-                                        },
-                                        HandlerOutput::Freeze => {
+                                        }
+                                    },
+                                    HandlerOutput::Freeze => {
+                                        {
                                             client_flags.lock().unwrap().set(
                                                 ClientFlags::IN_FROZEN_MODE,
                                                 true
                                             );
+                                        }
 
-                                            loop {
-                                                let frozen_mode = client_flags
-                                                    .lock()
-                                                    .unwrap()
-                                                    .contains(ClientFlags::IN_FROZEN_MODE);
+                                        loop {
+                                            let frozen_mode = client_flags
+                                                .lock()
+                                                .unwrap()
+                                                .contains(ClientFlags::IN_FROZEN_MODE);
 
-                                                if !frozen_mode {
-                                                    break;
-                                                }
-
-                                                sleep(Duration::from_millis(WRITE_TIMEOUT)).await;
+                                            if !frozen_mode {
+                                                break;
                                             }
-                                        },
-                                        HandlerOutput::Void => {},
-                                    };
-                                },
-                                Err(err) => {
-                                    message_income.send_error_message(err.to_string());
-                                },
-                            };
-
-                            sleep(Duration::from_millis(WRITE_TIMEOUT)).await;
-                        }
+                                        }
+                                    },
+                                    HandlerOutput::Void => {},
+                                };
+                            },
+                            Err(err) => {
+                                message_income.send_error_message(err.to_string());
+                            },
+                        };
                     }
-                } else {
-                    sleep(Duration::from_millis(WRITE_TIMEOUT)).await;
                 }
             }
         })
     }
 
-    fn handle_write(&mut self) -> JoinHandle<()> {
-        let output_queue = Arc::clone(&self._output_queue);
+    fn handle_write(
+        &mut self,
+        mut output_receiver: Receiver<Vec<u8>>,
+        mut message_income: MessageIncome,
+    ) -> JoinHandle<()> {
         let writer = Arc::clone(&self._writer);
-
-        let mut message_income = self._income_message_pipe.lock().unwrap().message_income.clone();
 
         tokio::spawn(async move {
             loop {
-                match &mut *writer.lock().await {
-                    Some(writer) => {
-                        let packet = output_queue.lock().unwrap().pop_front();
-                        if packet.is_some() {
-                            let packet = packet.unwrap();
-                            if !packet.is_empty() {
-                                match writer.write(&packet).await {
-                                    Ok(bytes_amount) => {
-                                        message_income.send_debug_message(
-                                            format!("{} bytes sent", bytes_amount)
-                                        );
-                                    },
-                                    Err(err) => {
-                                        message_income.send_error_message(err.to_string());
-                                    }
-                                };
+                let packet = output_receiver.recv().await;
+                if packet.is_some() {
+                    let packet = packet.unwrap();
+                    if !packet.is_empty() {
+                        let result = Self::write_packet(&writer, packet).await;
+
+                        match result {
+                            Ok(bytes_sent) => {
+                                message_income.send_debug_message(
+                                    format!("{} bytes sent", bytes_sent)
+                                );
+                            },
+                            Err(err) => {
+                                message_income.send_client_message(err.to_string());
                             }
                         }
-                    },
-                    None => {
-                        message_income.send_error_message(
-                            String::from("Not connected to TCP")
-                        );
-                    },
-                };
-
-                sleep(Duration::from_millis(WRITE_TIMEOUT)).await;
+                    }
+                }
             }
         })
     }
 
-    fn handle_read(&mut self) -> JoinHandle<()> {
-        let input_queue = Arc::clone(&self._input_queue);
+    fn handle_read(
+        &mut self,
+        mut input_sender: Sender<Vec<u8>>,
+        mut signal_receiver: Receiver<Signal>,
+        mut message_income: MessageIncome,
+    ) -> JoinHandle<()> {
         let reader = Arc::clone(&self._reader);
-
-        let mut message_income = self._income_message_pipe.lock().unwrap().message_income.clone();
 
         tokio::spawn(async move {
             loop {
-                match &mut *reader.lock().await {
-                    Some(reader) => {
-                        if let Some(packets) = reader.read().ok() {
-                            input_queue.lock().unwrap().push_back(packets);
+                tokio::select! {
+                    signal = signal_receiver.recv() => {},
+                    result = Self::read_packet(&reader) => {
+                        match result {
+                            Ok(packets) => {
+                                input_sender.send(packets).await;
+                            },
+                            Err(err) => {
+                                message_income.send_error_message(err.to_string());
+                            }
                         }
                     },
-                    None => {
-                        message_income.send_error_message(String::from("Not connected to TCP"));
-                    },
                 };
-
-                sleep(Duration::from_millis(READ_TIMEOUT)).await;
             }
         })
+    }
+
+    async fn read_packet(reader: &Arc<Mutex<Option<Reader>>>) -> Result<Vec<u8>, Error> {
+        let mut error = Error::new(ErrorKind::NotFound, "Not connected to TCP");
+
+        if let Some(reader) = &mut *reader.lock().await {
+            let result = reader.read().await;
+            match result {
+                Ok(packet) => {
+                    if !packet.is_empty() {
+                        return Ok(packet);
+                    }
+                }
+                Err(err) => {
+                    error = err;
+                },
+            }
+        }
+
+        Err(error)
+    }
+
+    async fn write_packet(
+        writer: &Arc<Mutex<Option<Writer>>>,
+        packet: Vec<u8>
+    ) -> Result<usize, Error> {
+        let mut error = Error::new(ErrorKind::NotFound, "Not connected to TCP");
+
+        match &mut *writer.lock().await {
+            Some(writer) => {
+                match writer.write(&packet).await {
+                    Ok(bytes_sent) => {
+                        return Ok(bytes_sent);
+                    },
+                    Err(err) => {
+                        error = err;
+                    }
+                };
+            },
+            _ => {},
+        };
+
+        Err(error)
     }
 
     fn get_login_processors() -> Vec<ProcessorFunction> {
@@ -491,11 +540,16 @@ mod tests {
     use futures::FutureExt;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::TcpListener;
+    use tokio::sync::mpsc;
 
     use crate::Client;
     use crate::client::types::ClientFlags;
     use crate::client::WRITE_TIMEOUT;
+    use crate::ipc::pipe::dialog::DialogIncome;
+    use crate::ipc::pipe::message::MessageIncome;
+    use crate::ipc::pipe::types::{IncomeMessageType, Signal};
     use crate::ipc::session::types::{ActionFlags, StateFlags};
+    use crate::types::PacketList;
 
     const HOST: &str = "127.0.0.1";
     // https://users.rust-lang.org/t/async-tests-sometimes-fails/78451
@@ -520,12 +574,6 @@ mod tests {
 
         let client_flags = &mut *client.client_flags.lock().unwrap();
         assert_eq!(ClientFlags::NONE, *client_flags);
-
-        let input_queue = &mut *client._input_queue.lock().unwrap();
-        assert!(input_queue.is_empty());
-
-        let output_queue = &mut *client._output_queue.lock().unwrap();
-        assert!(output_queue.is_empty());
 
         let data_storage = &mut *client.data_storage.lock().unwrap();
         assert!(data_storage.players_map.is_empty());
@@ -575,17 +623,26 @@ mod tests {
             let local_addr = listener.local_addr().unwrap();
             client.connect(HOST, local_addr.port()).await.ok();
 
+            let (signal_sender, signal_receiver) = mpsc::channel::<Signal>(1);
+            let (input_sender, mut input_receiver) = mpsc::channel::<Vec<u8>>(1);
+            let (output_sender, output_receiver) = mpsc::channel::<Vec<u8>>(1);
+            let (input_tx, input_rx) = std::sync::mpsc::channel::<IncomeMessageType>();
+
+            let message_income = MessageIncome::new(input_tx.clone());
+            let dialog_income = DialogIncome::new(input_tx.clone());
+
             if let Some((mut stream, _)) = listener.accept().await.ok() {
                 stream.write(&PACKET).await.unwrap();
                 stream.flush().await.unwrap();
 
-                let read_task = client.handle_read();
+                let read_task = client.handle_read(input_sender, signal_receiver, message_income);
 
                 let test_task = tokio::spawn(async move {
                     loop {
-                        let packet = client._input_queue.lock().unwrap().pop_front();
+                        // let packet = client._input_queue.lock().unwrap().pop_front();
+                        let packet = input_receiver.recv().await;
                         if packet.is_some() {
-                            assert_eq!(PACKET.to_vec(), packet.unwrap()[0]);
+                            assert_eq!(PACKET.to_vec(), packet.unwrap());
                             break;
                         }
                         tokio::time::sleep(Duration::from_millis(WRITE_TIMEOUT)).await;
@@ -606,13 +663,23 @@ mod tests {
         if let Some(listener) = TcpListener::bind(format!("{}:{}", HOST, PORT)).await.ok() {
             let local_addr = listener.local_addr().unwrap();
             client.connect(HOST, local_addr.port()).await.ok();
-            client._output_queue.lock().unwrap().push_back(PACKET.to_vec());
+            // client._output_queue.lock().unwrap().push_back(PACKET.to_vec());
+
+            let (signal_sender, signal_receiver) = mpsc::channel::<Signal>(1);
+            let (input_sender, mut input_receiver) = mpsc::channel::<PacketList>(1);
+            let (mut output_sender, output_receiver) = mpsc::channel::<Vec<u8>>(1);
+            let (input_tx, input_rx) = std::sync::mpsc::channel::<IncomeMessageType>();
+
+            let message_income = MessageIncome::new(input_tx.clone());
+            let dialog_income = DialogIncome::new(input_tx.clone());
+
+            output_sender.send(PACKET.to_vec()).await.unwrap();
 
             if let Some((stream, _)) = listener.accept().await.ok() {
                 let buffer_size = PACKET.to_vec().len();
                 let mut buffer = Vec::with_capacity(buffer_size);
 
-                client.handle_write();
+                client.handle_write(output_receiver, message_income);
                 stream.take(buffer_size as u64).read_to_end(&mut buffer).await.unwrap();
 
                 assert_eq!(PACKET.to_vec(), buffer);
