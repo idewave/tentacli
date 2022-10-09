@@ -4,7 +4,7 @@ use std::fmt::{Debug, Formatter};
 use crate::client::Character;
 use crate::client::movement::parsers::types::Position;
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Player {
     pub guid: u64,
     pub name: String,
@@ -63,20 +63,6 @@ impl Debug for Player {
             self.fields,
             self.movement_speed,
         )
-    }
-}
-
-impl Default for Player {
-    fn default() -> Self {
-        Self {
-            guid: 0,
-            name: String::new(),
-            race: 0,
-            class: 0,
-            fields: BTreeMap::new(),
-            movement_speed: BTreeMap::new(),
-            position: None,
-        }
     }
 }
 

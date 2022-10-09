@@ -11,11 +11,6 @@ use crate::ipc::session::Session;
 use crate::types::traits::PacketHandler;
 
 #[derive(Debug)]
-pub enum State {
-    SetConnectedToRealm(bool),
-}
-
-#[derive(Debug)]
 pub struct HandlerInput<'a> {
     pub session: Arc<SyncMutex<Session>>,
     pub data: Option<&'a [u8]>,
@@ -45,5 +40,3 @@ pub type HandlerResult = Result<HandlerOutput, Error>;
 pub type ProcessorResult = Vec<Box<dyn PacketHandler + Send>>;
 
 pub type ProcessorFunction = Box<dyn Fn(&mut HandlerInput) -> ProcessorResult + Send>;
-
-pub type PacketList = Vec<Vec<u8>>;

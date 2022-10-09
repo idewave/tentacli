@@ -59,8 +59,6 @@ use crate::UI;
 use crate::ui::types::{UIOutputOptions, UIRenderOptions};
 use crate::ui::{UIInput, UIOutput};
 
-const WRITE_TIMEOUT: u64 = 1;
-
 pub struct Client {
     _reader: Arc<Mutex<Option<Reader>>>,
     _writer: Arc<Mutex<Option<Writer>>>,
@@ -89,7 +87,10 @@ impl Client {
     }
 
     pub async fn connect(&mut self, host: &str, port: u16) -> Result<(), Error> {
-        let mut income_pipe = self._income_message_pipe.lock().unwrap();
+        let mut message_income = {
+            let guard = self._income_message_pipe.lock().unwrap();
+            guard.message_income.clone()
+        };
 
         return match Self::connect_inner(host, port).await {
             Ok(stream) => {
@@ -104,19 +105,19 @@ impl Client {
                 match self.session.lock().unwrap().set_config(host) {
                     Ok(_) => {},
                     Err(err) => {
-                        income_pipe.message_income.send_error_message(err.to_string());
+                        message_income.send_error_message(err.to_string());
                     }
                 }
 
-                income_pipe.message_income.send_success_message(
+                message_income.send_success_message(
                     format!("Connected to {}:{}", host, port)
                 );
 
                 Ok(())
             },
             Err(err) => {
-                income_pipe.message_income.send_error_message(
-                    format!("Cannot connect: {}", err.to_string())
+                message_income.send_error_message(
+                    format!("Cannot connect: {}", err)
                 );
 
                 Err(err)
@@ -261,8 +262,8 @@ impl Client {
 
     fn handle_ai(
         &mut self,
-        mut output_sender: Sender<Vec<u8>>,
-        mut message_income: MessageIncome,
+        output_sender: Sender<Vec<u8>>,
+        message_income: MessageIncome,
     ) -> JoinHandle<()> {
         let session = Arc::clone(&self.session);
         let data_storage = Arc::clone(&self.data_storage);
@@ -286,10 +287,10 @@ impl Client {
     fn handle_packets(
         &mut self,
         mut input_receiver: Receiver<Vec<u8>>,
-        mut signal_sender: Sender<Signal>,
-        mut output_sender: Sender<Vec<u8>>,
+        signal_sender: Sender<Signal>,
+        output_sender: Sender<Vec<u8>>,
         mut message_income: MessageIncome,
-        mut dialog_income: DialogIncome,
+        dialog_income: DialogIncome,
     ) -> JoinHandle<()> {
         let session = Arc::clone(&self.session);
         let reader = Arc::clone(&self._reader);
@@ -300,10 +301,7 @@ impl Client {
 
         tokio::spawn(async move {
             loop {
-                let packet = input_receiver.recv().await;
-                if packet.is_some() {
-                    let packet = packet.unwrap();
-
+                if let Some(packet) = input_receiver.recv().await {
                     let processors = {
                         let guard = client_flags.lock().unwrap();
                         let connected_to_realm = guard.contains(ClientFlags::IS_CONNECTED_TO_REALM);
@@ -330,8 +328,7 @@ impl Client {
 
                     let handler_list = processors
                         .iter()
-                        .map(|processor| processor(&mut input))
-                        .flatten()
+                        .flat_map(|processor| processor(&mut input))
                         .collect::<ProcessorResult>();
 
                     for mut handler in handler_list {
@@ -356,7 +353,7 @@ impl Client {
                                     HandlerOutput::ConnectionRequest(host, port) => {
                                         match Self::connect_inner(&host, port).await {
                                             Ok(stream) => {
-                                                signal_sender.send(Signal::Reconnect).await;
+                                                signal_sender.send(Signal::Reconnect).await.unwrap();
 
                                                 Self::set_stream_halves(
                                                     stream,
@@ -447,7 +444,7 @@ impl Client {
 
     fn handle_read(
         &mut self,
-        mut input_sender: Sender<Vec<u8>>,
+        input_sender: Sender<Vec<u8>>,
         mut signal_receiver: Receiver<Signal>,
         mut message_income: MessageIncome,
     ) -> JoinHandle<()> {
@@ -456,11 +453,11 @@ impl Client {
         tokio::spawn(async move {
             loop {
                 tokio::select! {
-                    signal = signal_receiver.recv() => {},
+                    _ = signal_receiver.recv() => {},
                     result = Self::read_packet(&reader) => {
                         match result {
                             Ok(packets) => {
-                                input_sender.send(packets).await;
+                                input_sender.send(packets).await.unwrap();
                             },
                             Err(err) => {
                                 message_income.send_error_message(err.to_string());
@@ -516,13 +513,13 @@ impl Client {
     }
 
     fn get_login_processors() -> Vec<ProcessorFunction> {
-        return vec![
+        vec![
             Box::new(AuthProcessor::process_input),
-        ];
+        ]
     }
 
     fn get_realm_processors() -> Vec<ProcessorFunction> {
-        return vec![
+        vec![
             Box::new(CharactersProcessor::process_input),
             Box::new(ChatProcessor::process_input),
             Box::new(MovementProcessor::process_input),
@@ -530,7 +527,7 @@ impl Client {
             Box::new(RealmProcessor::process_input),
             Box::new(SpellProcessor::process_input),
             Box::new(WardenProcessor::process_input),
-        ];
+        ]
     }
 }
 
@@ -544,12 +541,10 @@ mod tests {
 
     use crate::Client;
     use crate::client::types::ClientFlags;
-    use crate::client::WRITE_TIMEOUT;
     use crate::ipc::pipe::dialog::DialogIncome;
     use crate::ipc::pipe::message::MessageIncome;
     use crate::ipc::pipe::types::{IncomeMessageType, Signal};
     use crate::ipc::session::types::{ActionFlags, StateFlags};
-    use crate::types::PacketList;
 
     const HOST: &str = "127.0.0.1";
     // https://users.rust-lang.org/t/async-tests-sometimes-fails/78451
@@ -639,13 +634,11 @@ mod tests {
 
                 let test_task = tokio::spawn(async move {
                     loop {
-                        // let packet = client._input_queue.lock().unwrap().pop_front();
                         let packet = input_receiver.recv().await;
                         if packet.is_some() {
                             assert_eq!(PACKET.to_vec(), packet.unwrap());
                             break;
                         }
-                        tokio::time::sleep(Duration::from_millis(WRITE_TIMEOUT)).await;
                     }
                 });
 
@@ -663,10 +656,8 @@ mod tests {
         if let Some(listener) = TcpListener::bind(format!("{}:{}", HOST, PORT)).await.ok() {
             let local_addr = listener.local_addr().unwrap();
             client.connect(HOST, local_addr.port()).await.ok();
-            // client._output_queue.lock().unwrap().push_back(PACKET.to_vec());
 
             let (signal_sender, signal_receiver) = mpsc::channel::<Signal>(1);
-            let (input_sender, mut input_receiver) = mpsc::channel::<PacketList>(1);
             let (mut output_sender, output_receiver) = mpsc::channel::<Vec<u8>>(1);
             let (input_tx, input_rx) = std::sync::mpsc::channel::<IncomeMessageType>();
 

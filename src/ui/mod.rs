@@ -90,7 +90,7 @@ impl<'a, B: Backend> UI<'a, B> {
             _debug_panel: DebugPanel::new(component_options.clone()),
             _mode_panel: ModePanel::new(component_options.clone()),
             _realm_modal: RealmModal::new(component_options.clone()),
-            _title: Title::new(component_options.clone()),
+            _title: Title::new(component_options),
         }
     }
 
@@ -156,14 +156,13 @@ impl<'a, B: Backend> UI<'a, B> {
         self._mode_panel.handle_key_event(modifiers, key_code, &mut self.state_flags);
         self._realm_modal.handle_key_event(modifiers, key_code, &mut self.state_flags);
 
-        match key_code {
-            KeyCode::Char('c') if modifiers.contains(KeyModifiers::CONTROL) => {
+        if key_code == KeyCode::Char('c') {
+            if modifiers.contains(KeyModifiers::CONTROL) {
                 // TODO: probably need exit from app in different way
                 disable_raw_mode().unwrap();
                 execute!(std::io::stdout(), LeaveAlternateScreen, DisableMouseCapture).unwrap();
                 exit(0);
-            },
-            _ => {},
+            }
         }
     }
 }

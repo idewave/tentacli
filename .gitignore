@@ -2,5 +2,7 @@
 /files
 
 .idea
+.vs
+.vscode
 Cargo.lock
 Config.yml
