@@ -1,3 +1,4 @@
+use std::sync::mpsc::Sender;
 use bitflags::bitflags;
 use crate::client::types::ClientFlags;
 
@@ -19,6 +20,7 @@ pub struct UIOutputOptions {
 #[derive(Clone)]
 pub struct UIComponentOptions {
     pub output_options: UIOutputOptions,
+    pub sender: Sender<String>,
 }
 
 bitflags! {
@@ -26,6 +28,7 @@ bitflags! {
         const NONE = 0x00000000;
         const IS_CHARACTERS_MODAL_OPENED = 0x00000001;
         const IS_REALM_MODAL_OPENED = 0x00000010;
+        const IS_EVENT_HANDLED = 0x00000100;
     }
 }
 

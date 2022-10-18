@@ -81,11 +81,13 @@ impl<'a> CharactersModal<'a> {
             KeyCode::Up => {
                 if state_flags.contains(UIStateFlags::IS_CHARACTERS_MODAL_OPENED) {
                     self.prev();
+                    state_flags.set(UIStateFlags::IS_EVENT_HANDLED, true);
                 }
             },
             KeyCode::Down => {
                 if state_flags.contains(UIStateFlags::IS_CHARACTERS_MODAL_OPENED) {
                     self.next();
+                    state_flags.set(UIStateFlags::IS_EVENT_HANDLED, true);
                 }
             },
             KeyCode::Enter => {
