@@ -192,7 +192,7 @@ impl Client {
             self.handle_ai(output_sender.clone(), message_income.clone()),
             self.handle_read(input_sender.clone(), signal_receiver, message_income.clone()),
             self.handle_write(output_receiver, message_income.clone()),
-            self.handle_packets(
+            self.handle_packet(
                 input_receiver,
                 signal_sender.clone(),
                 output_sender.clone(),
@@ -234,10 +234,17 @@ impl Client {
                     client_flags.lock().unwrap().clone()
                 };
 
+                let message = {
+                    let mut guard = income_message_pipe.lock().unwrap();
+                    guard.recv()
+                };
+
                 ui.render(UIRenderOptions {
-                    message: income_message_pipe.lock().unwrap().recv(),
+                    message,
                     client_flags: &client_flags,
                 });
+
+                ui.handle_debug_channel();
             }
         })
     }
@@ -283,7 +290,7 @@ impl Client {
         })
     }
 
-    fn handle_packets(
+    fn handle_packet(
         &mut self,
         mut input_receiver: Receiver<Vec<u8>>,
         signal_sender: Sender<Signal>,

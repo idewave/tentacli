@@ -1,5 +1,7 @@
 use std::process::exit;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, mpsc, Mutex};
+use std::sync::mpsc::Receiver;
+use std::thread;
 use crossterm::{
     event::{
         DisableMouseCapture,
@@ -25,6 +27,7 @@ mod characters_modal;
 mod debug_panel;
 mod mode_panel;
 mod realm_modal;
+mod debug_details_panel;
 pub mod types;
 mod title;
 
@@ -41,6 +44,7 @@ use crate::ui::debug_panel::DebugPanel;
 use crate::ui::mode_panel::ModePanel;
 use crate::ui::realm_modal::RealmModal;
 use crate::ui::title::Title;
+use crate::ui::debug_details_panel::DebugDetailsPanel;
 use crate::ui::types::{
     UIComponentOptions,
     UIModeFlags,
@@ -60,9 +64,11 @@ pub struct UI<'a, B: Backend> {
 
     _characters_modal: CharactersModal<'a>,
     _debug_panel: DebugPanel<'a>,
+    _debug_details_panel: DebugDetailsPanel<'a>,
     _mode_panel: ModePanel,
     _realm_modal: RealmModal<'a>,
     _title: Title,
+    _receiver: Receiver<String>,
 }
 
 impl<'a, B: Backend> UI<'a, B> {
@@ -70,12 +76,15 @@ impl<'a, B: Backend> UI<'a, B> {
         enable_raw_mode().unwrap();
         execute!(std::io::stdout(), EnterAlternateScreen, EnableMouseCapture).unwrap();
 
+        let (tx, rx) = mpsc::channel::<String>();
+
         let mut _terminal = Terminal::new(backend).unwrap();
         _terminal.clear().unwrap();
         _terminal.hide_cursor().unwrap();
 
         let component_options = UIComponentOptions {
             output_options: output_options.clone(),
+            sender: tx.clone(),
         };
 
         Self {
@@ -88,18 +97,26 @@ impl<'a, B: Backend> UI<'a, B> {
             // components
             _characters_modal: CharactersModal::new(component_options.clone()),
             _debug_panel: DebugPanel::new(component_options.clone()),
+            _debug_details_panel: DebugDetailsPanel::new(component_options.clone()),
             _mode_panel: ModePanel::new(component_options.clone()),
             _realm_modal: RealmModal::new(component_options.clone()),
             _title: Title::new(component_options),
+            _receiver: rx,
+        }
+    }
+
+    pub fn handle_debug_channel(&mut self) {
+        if let Ok(message) = self._receiver.try_recv() {
+            self._debug_details_panel.add_item(message);
         }
     }
 
     pub fn render(&mut self, options: UIRenderOptions) {
+        let in_debug_mode = options.client_flags.contains(ClientFlags::IN_DEBUG_MODE);
+
         match options.message {
             IncomeMessageType::Message(output) => {
-                self._debug_panel
-                    .set_mode(options.client_flags.contains(ClientFlags::IN_DEBUG_MODE))
-                    .add_item(output);
+                self._debug_panel.set_mode(in_debug_mode).add_item(output);
             },
             IncomeMessageType::ChooseCharacter(characters) => {
                 self.state_flags.set(UIStateFlags::IS_CHARACTERS_MODAL_OPENED, true);
@@ -114,7 +131,7 @@ impl<'a, B: Backend> UI<'a, B> {
             },
             IncomeMessageType::ResizeEvent => {
                 self._terminal.autoresize().unwrap();
-            }
+            },
         }
 
         self._terminal.draw(|frame| {
@@ -129,16 +146,29 @@ impl<'a, B: Backend> UI<'a, B> {
                 ])
                 .split(frame.size());
 
+            let constraints = match in_debug_mode {
+                true => vec![
+                    Constraint::Percentage(70),
+                    Constraint::Percentage(30),
+                ],
+                false => vec![
+                    Constraint::Percentage(100),
+                ],
+            };
+
             let output_panels = Layout::default()
                 .direction(Direction::Horizontal)
-                .constraints([
-                    Constraint::Percentage(100),
-                ])
+                .constraints(constraints)
                 .split(chunks[2]);
 
             self._title.render(frame, chunks[0]);
             self._mode_panel.render(frame, chunks[1]);
             self._debug_panel.render(frame, output_panels[0]);
+            if in_debug_mode {
+                // set per_page value equals to height of block where debug panel rendered
+                self._debug_panel.set_pagination(output_panels[0].height);
+                self._debug_details_panel.render(frame, output_panels[1]);
+            }
 
             if self.state_flags.contains(UIStateFlags::IS_CHARACTERS_MODAL_OPENED) {
                 self._characters_modal.render(frame, chunks[2])
@@ -152,9 +182,11 @@ impl<'a, B: Backend> UI<'a, B> {
     }
 
     fn handle_key_event(&mut self, modifiers: KeyModifiers, key_code: KeyCode) {
+        self.state_flags.set(UIStateFlags::IS_EVENT_HANDLED, false);
         self._characters_modal.handle_key_event(modifiers, key_code, &mut self.state_flags);
         self._mode_panel.handle_key_event(modifiers, key_code, &mut self.state_flags);
         self._realm_modal.handle_key_event(modifiers, key_code, &mut self.state_flags);
+        self._debug_panel.handle_key_event(modifiers, key_code, &mut self.state_flags);
 
         if key_code == KeyCode::Char('c') {
             if modifiers.contains(KeyModifiers::CONTROL) {

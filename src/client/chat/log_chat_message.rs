@@ -11,13 +11,13 @@ pub struct Handler;
 #[async_trait]
 impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
-        let players_map = &mut input.data_storage.lock().unwrap().players_map;
+        // let players_map = &mut input.data_storage.lock().unwrap().players_map;
 
         let mut reader = Cursor::new(input.data.as_ref().unwrap()[4..].to_vec());
         let message_type = reader.read_u8()?;
         let _language = reader.read_u32::<LittleEndian>()?;
 
-        let sender_guid = reader.read_u64::<LittleEndian>()?;
+        // let sender_guid = reader.read_u64::<LittleEndian>()?;
 
         reader.read_u32::<LittleEndian>()?;
 
@@ -26,14 +26,14 @@ impl PacketHandler for Handler {
             reader.read_until(0, &mut channel_name)?;
         }
 
-        let channel_name = match channel_name.is_empty() {
-            true => String::new(),
-            false => {
-                String::from_utf8(
-                    channel_name[..(channel_name.len() - 1) as usize].to_owned()
-                ).unwrap()
-            },
-        };
+        // let channel_name = match channel_name.is_empty() {
+        //     true => String::new(),
+        //     false => {
+        //         String::from_utf8(
+        //             channel_name[..(channel_name.len() - 1) as usize].to_owned()
+        //         ).unwrap()
+        //     },
+        // };
 
         let _target_guid = reader.read_u64::<LittleEndian>()?;
 
@@ -43,16 +43,12 @@ impl PacketHandler for Handler {
 
         reader.read_exact(&mut message)?;
 
-        let message = String::from_utf8_lossy(&message);
-
-        let sender_name = match players_map.get(&sender_guid) {
-            Some(player) => player.name.to_string(),
-            None => String::from("UNKNOWN"),
-        };
-
-        input.message_income.send_debug_message(
-            format!("[MSG] [{}] {} ({}): {}", channel_name, sender_name, sender_guid, &message)
-        );
+        // let message = String::from_utf8_lossy(&message);
+        //
+        // let sender_name = match players_map.get(&sender_guid) {
+        //     Some(player) => player.name.to_string(),
+        //     None => String::from("UNKNOWN"),
+        // };
 
         Ok(HandlerOutput::Void)
     }
