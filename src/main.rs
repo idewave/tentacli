@@ -1,3 +1,4 @@
+extern crate chrono;
 extern crate core;
 extern crate yaml_rust;
 
