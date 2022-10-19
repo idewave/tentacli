@@ -1,4 +1,5 @@
 use std::sync::mpsc::Sender;
+use chrono::Local;
 use crossterm::event::{KeyCode, KeyModifiers};
 use serde_json::Value;
 use tui::backend::Backend;
@@ -35,57 +36,83 @@ impl<'a> DebugPanel<'a> {
     pub fn add_item(&mut self, output: LoggerOutput) -> &mut Self {
         let message = self.generate_message(output);
 
-        if !message.content.is_empty() {
-            self.items.push(ListItem::new(Spans::from(message)));
+        if message.is_some() {
+            self.items.push(ListItem::new(message.unwrap()));
         }
 
         self
     }
 
-    fn generate_message(&mut self, output: LoggerOutput) -> Span<'a> {
-        match output {
+    fn generate_message(&mut self, output: LoggerOutput) -> Option<Spans<'a>> {
+        let time_block = Self::generate_time_block();
+
+        let message = match output {
             LoggerOutput::Debug(data) if !data.is_empty() => {
                 let (message, details) = Self::parse_input(data);
                 self.details.push(details);
 
-                Span::styled(
-                    format!("[DEBUG]: {}", message), Style::default().fg(Color::DarkGray)
-                )
+                Spans::from(vec![
+                    time_block,
+                    Span::styled(
+                        format!("[DEBUG]: {}", message),
+                        Style::default().fg(Color::DarkGray),
+                    ),
+                ])
             },
             LoggerOutput::Error(data) if !data.is_empty() => {
                 let (message, details) = Self::parse_input(data);
                 self.details.push(details);
 
-                Span::styled(
-                    format!("[ERROR]: {}", message), Style::default().fg(Color::Red)
-                )
+                Spans::from(vec![
+                    time_block,
+                    Span::styled(
+                        format!("[ERROR]: {}", message),
+                        Style::default().fg(Color::Red),
+                    ),
+                ])
             },
             LoggerOutput::Success(data) if !data.is_empty() => {
                 let (message, details) = Self::parse_input(data);
                 self.details.push(details);
 
-                Span::styled(
-                    format!("[SUCCESS]: {}", message), Style::default().fg(Color::LightGreen)
-                )
+                Spans::from(vec![
+                    time_block,
+                    Span::styled(
+                        format!("[SUCCESS]: {}", message),
+                        Style::default().fg(Color::LightGreen),
+                    ),
+                ])
             },
             LoggerOutput::Server(data) if !data.is_empty() => {
                 let (message, details) = Self::parse_input(data);
                 self.details.push(details);
 
-                Span::styled(
-                    format!("[SERVER]: {}", message), Style::default().fg(Color::LightMagenta)
-                )
+                Spans::from(vec![
+                    time_block,
+                    Span::styled(
+                        format!("[SERVER]: {}", message),
+                        Style::default().fg(Color::LightMagenta),
+                    ),
+                ])
             },
             LoggerOutput::Client(data) if !data.is_empty() => {
                 let (message, details) = Self::parse_input(data);
                 self.details.push(details);
 
-                Span::styled(
-                    format!("[CLIENT]: {}", message), Style::default().fg(Color::LightBlue)
-                )
+                Spans::from(vec![
+                    time_block,
+                    Span::styled(
+                        format!("[CLIENT]: {}", message),
+                        Style::default().fg(Color::LightBlue),
+                    ),
+                ])
             },
-            _ => Span::raw(""),
-        }
+            _ => {
+                return None;
+            },
+        };
+
+        Some(message)
     }
 
     pub fn prev(&mut self) {
@@ -164,6 +191,15 @@ impl<'a> DebugPanel<'a> {
         }
 
         (message, details)
+    }
+
+    fn generate_time_block() -> Span<'a> {
+        let local_time = Local::now();
+
+        Span::styled(
+            format!("{} ", local_time.format("[%H:%M:%S]")),
+            Style::default().fg(Color::LightYellow),
+        )
     }
 }
 
