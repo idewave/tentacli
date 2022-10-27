@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::fmt::{Debug, Formatter};
 
 use crate::client::Character;
-use crate::client::movement::parsers::types::Position;
+use crate::parsers::position_parser::types::Position;
 
 #[derive(Clone, Default)]
 pub struct Player {

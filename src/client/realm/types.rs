@@ -1,5 +1,6 @@
 use std::fmt::{Debug, Formatter};
 
+#[derive(Clone, Default)]
 pub struct Realm {
     pub icon: u16,
     pub flags: u8,

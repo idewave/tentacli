@@ -1,6 +1,7 @@
 use std::fmt::{Debug, Formatter};
-use crate::client::movement::parsers::types::Position;
+use crate::parsers::position_parser::types::Position;
 
+#[derive(Clone, Default)]
 pub struct Character {
     pub guid: u64,
     pub name: String,

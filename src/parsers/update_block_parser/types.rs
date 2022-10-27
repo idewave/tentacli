@@ -2,8 +2,9 @@ use std::collections::BTreeMap;
 use std::fmt::{Debug, Formatter};
 use bitflags::bitflags;
 
-use crate::client::MovementInfo;
+use crate::parsers::movement_parser::types::MovementInfo;
 
+#[derive(Clone, Default, Debug)]
 pub struct MovementData {
     pub movement_info: Option<MovementInfo>,
     pub high_guid: Option<u32>,
@@ -24,6 +25,7 @@ impl MovementData {
     }
 }
 
+#[derive(Clone, Default)]
 pub struct ParsedBlock {
     pub guid: Option<u64>,
     pub update_fields: BTreeMap<u32, u32>,

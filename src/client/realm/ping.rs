@@ -1,19 +1,23 @@
-use byteorder::{LittleEndian, WriteBytesExt};
 use async_trait::async_trait;
 
+use crate::packet;
 use crate::client::opcodes::Opcode;
-use crate::network::packet::OutcomePacket;
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
-use crate::types::traits::PacketHandler;
+use crate::traits::packet_handler::PacketHandler;
+
+packet! {
+    struct Outcome {
+        ping: u32,
+        latency: u32,
+    }
+}
 
 pub struct Handler;
 #[async_trait]
 impl PacketHandler for Handler {
     async fn handle(&mut self, _: &mut HandlerInput) -> HandlerResult {
-        let mut body = Vec::new();
-        body.write_u32::<LittleEndian>(0)?;
-        body.write_u32::<LittleEndian>(0)?;
+        let packet = Outcome::default().to_binary();
 
-        Ok(HandlerOutput::Data(OutcomePacket::from(Opcode::CMSG_PING, Some(body))))
+        Ok(HandlerOutput::Data((Opcode::CMSG_PING, packet)))
     }
 }

@@ -1,13 +1,14 @@
 use std::io::Cursor;
 use byteorder::{LittleEndian, ReadBytesExt};
 
+pub mod globals;
 mod handle_name_query_response;
 mod handle_update_data;
 mod party_invite;
 pub mod types;
 
 use crate::client::opcodes::Opcode;
-use crate::types::traits::{Processor};
+use crate::traits::processor::Processor;
 use crate::types::{HandlerInput, ProcessorResult};
 
 pub struct PlayerProcessor;

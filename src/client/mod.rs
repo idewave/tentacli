@@ -22,12 +22,10 @@ mod warden;
 pub use characters::types::{Character};
 pub use player::types::{Player, ObjectField, UnitField, PlayerField};
 pub use realm::types::{Realm};
+pub use spell::types::{Spell, CooldownInfo};
 pub use warden::types::{WardenModuleInfo};
 
 pub use movement::types::{MovementFlags, MovementFlagsExtra, SplineFlags, UnitMoveType};
-pub use movement::parsers::position_parser::{PositionParser};
-pub use movement::parsers::movement_parser::{MovementParser};
-pub use movement::parsers::types::{MovementInfo};
 
 use auth::AuthProcessor;
 use characters::CharactersProcessor;
@@ -53,8 +51,11 @@ use crate::ipc::pipe::types::Signal;
 use crate::ipc::storage::DataStorage;
 use crate::ipc::session::Session;
 use crate::network::stream::{Reader, Writer};
-use crate::types::traits::Processor;
-use crate::types::{AIManagerInput, HandlerInput, HandlerOutput, ProcessorFunction, ProcessorResult};
+use crate::traits::processor::Processor;
+use crate::types::{
+    AIManagerInput, HandlerInput, HandlerOutput,
+    PacketOutcome, ProcessorFunction, ProcessorResult
+};
 use crate::UI;
 use crate::ui::types::{UIOutputOptions, UIRenderOptions};
 use crate::ui::{UIInput, UIOutput};
@@ -164,26 +165,26 @@ impl Client {
 
         let (signal_sender, signal_receiver) = mpsc::channel::<Signal>(1);
         let (input_sender, input_receiver) = mpsc::channel::<Vec<u8>>(BUFFER_SIZE);
-        let (output_sender, output_receiver) = mpsc::channel::<Vec<u8>>(BUFFER_SIZE);
+        let (output_sender, output_receiver) = mpsc::channel::<PacketOutcome>(BUFFER_SIZE);
 
         let message_income = self._income_message_pipe.lock().unwrap().message_income.clone();
         let dialog_income = self._income_message_pipe.lock().unwrap().dialog_income.clone();
 
-        let username = {
+        let account = {
             let guard = self.session.lock().unwrap();
             let config = guard.get_config().unwrap();
 
-            config.connection_data.username.clone()
+            config.connection_data.account.clone()
         };
 
         {
             let mut guard = self._income_message_pipe.lock().unwrap();
             guard.message_income.send_client_message(
-                format!("LOGIN_CHALLENGE as {}", &username)
+                format!("LOGIN_CHALLENGE as {}", &account)
             );
         }
 
-        output_sender.send(login_challenge(&username)).await.unwrap();
+        output_sender.send(login_challenge(&account)).await.unwrap();
 
         join_all(vec![
             self.handle_ui_render(),
@@ -268,7 +269,7 @@ impl Client {
 
     fn handle_ai(
         &mut self,
-        output_sender: Sender<Vec<u8>>,
+        output_sender: Sender<PacketOutcome>,
         message_income: MessageIncome,
     ) -> JoinHandle<()> {
         let session = Arc::clone(&self.session);
@@ -294,7 +295,7 @@ impl Client {
         &mut self,
         mut input_receiver: Receiver<Vec<u8>>,
         signal_sender: Sender<Signal>,
-        output_sender: Sender<Vec<u8>>,
+        output_sender: Sender<PacketOutcome>,
         mut message_income: MessageIncome,
         dialog_income: DialogIncome,
     ) -> JoinHandle<()> {
@@ -326,7 +327,7 @@ impl Client {
                     let mut input = HandlerInput {
                         session: Arc::clone(&session),
                         // packet: size + opcode + body, need to parse separately
-                        data: Some(&packet),
+                        data: Some(packet),
                         data_storage: Arc::clone(&data_storage),
                         message_income: message_income.clone(),
                         dialog_income: dialog_income.clone(),
@@ -342,19 +343,18 @@ impl Client {
                         match response {
                             Ok(output) => {
                                 match output {
-                                    HandlerOutput::Data((opcode, header, body)) => {
-                                        message_income.send_client_message(
-                                            Opcode::get_opcode_name(opcode)
-                                        );
-                                        let body = match opcode {
+                                    HandlerOutput::Data((opcode, packet)) => {
+                                        let packet = match opcode {
                                             Opcode::CMSG_WARDEN_DATA => {
-                                                warden_crypt.lock().unwrap().as_mut().unwrap().encrypt(&body)
+                                                warden_crypt.lock()
+                                                    .unwrap().as_mut()
+                                                    .unwrap().encrypt(&packet)
                                             },
-                                            _ => body,
+                                            _ => packet,
                                         };
 
-                                        let packet = [header, body].concat();
-                                        output_sender.send(packet).await.unwrap();
+                                        // let packet = [header, body].concat();
+                                        output_sender.send((opcode, packet)).await.unwrap();
                                     },
                                     HandlerOutput::ConnectionRequest(host, port) => {
                                         match Self::connect_inner(&host, port).await {
@@ -419,21 +419,25 @@ impl Client {
 
     fn handle_write(
         &mut self,
-        mut output_receiver: Receiver<Vec<u8>>,
+        mut output_receiver: Receiver<PacketOutcome>,
         mut message_income: MessageIncome,
     ) -> JoinHandle<()> {
         let writer = Arc::clone(&self._writer);
 
         tokio::spawn(async move {
             loop {
-                if let Some(packet) = output_receiver.recv().await {
+                if let Some((opcode, packet)) = output_receiver.recv().await {
                     if !packet.is_empty() {
                         let result = Self::write_packet(&writer, packet).await;
 
                         match result {
                             Ok(bytes_sent) => {
-                                message_income.send_debug_message(
-                                    format!("{} bytes sent", bytes_sent)
+                                message_income.send_client_message(
+                                    format!(
+                                        "{}: {} bytes sent",
+                                        Opcode::get_opcode_name(opcode),
+                                        bytes_sent,
+                                    ),
                                 );
                             },
                             Err(err) => {
@@ -464,7 +468,7 @@ impl Client {
                                 input_sender.send(packets).await.unwrap();
                             },
                             Err(err) => {
-                                message_income.send_error_message(err.to_string());
+                                // message_income.send_error_message(err.to_string());
                             }
                         }
                     },
@@ -544,6 +548,7 @@ mod tests {
     use crate::ipc::pipe::message::MessageIncome;
     use crate::ipc::pipe::types::{IncomeMessageType, Signal};
     use crate::ipc::session::types::{ActionFlags, StateFlags};
+    use crate::types::PacketOutcome;
 
     const HOST: &str = "127.0.0.1";
     // https://users.rust-lang.org/t/async-tests-sometimes-fails/78451
@@ -653,12 +658,12 @@ mod tests {
             let local_addr = listener.local_addr().unwrap();
             client.connect(HOST, local_addr.port()).await.ok();
 
-            let (output_sender, output_receiver) = mpsc::channel::<Vec<u8>>(1);
+            let (output_sender, output_receiver) = mpsc::channel::<PacketOutcome>(1);
             let (input_tx, _) = std::sync::mpsc::channel::<IncomeMessageType>();
 
             let message_income = MessageIncome::new(input_tx.clone());
 
-            output_sender.send(PACKET.to_vec()).await.unwrap();
+            output_sender.send((0, PACKET.to_vec())).await.unwrap();
 
             if let Some((stream, _)) = listener.accept().await.ok() {
                 let buffer_size = PACKET.to_vec().len();

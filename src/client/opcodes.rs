@@ -3,6 +3,10 @@ pub struct Opcode;
 
 #[allow(dead_code)]
 impl Opcode {
+    pub const LOGIN_CHALLENGE: u32 = 0;
+    pub const LOGIN_PROOF: u32 = 1;
+    pub const REALM_LIST: u32 = 16;
+
     pub const CMSG_CHAR_ENUM: u32 = 55;
     pub const CMSG_PLAYER_LOGIN: u32 = 61;
     pub const CMSG_LOGOUT_REQUEST: u32 = 75;
@@ -129,6 +133,9 @@ impl Opcode {
 
     pub fn get_opcode_name(opcode: u32) -> String {
         match opcode {
+            Opcode::LOGIN_CHALLENGE => String::from("LOGIN_CHALLENGE"),
+            Opcode::LOGIN_PROOF => String::from("LOGIN_PROOF"),
+            Opcode::REALM_LIST => String::from("REALM_LIST"),
             Opcode::CMSG_CHAR_ENUM => String::from("CMSG_CHAR_ENUM"),
             Opcode::CMSG_PLAYER_LOGIN => String::from("CMSG_PLAYER_LOGIN"),
             Opcode::CMSG_LOGOUT_REQUEST => String::from("CMSG_LOGOUT_REQUEST"),
@@ -168,7 +175,7 @@ impl Opcode {
             Opcode::CMSG_QUESTGIVER_STATUS_MULTIPLE_QUERY => String::from("CMSG_QUESTGIVER_STATUS_MULTIPLE_QUERY"),
             Opcode::CMSG_GAMEOBJ_REPORT_USE => String::from("CMSG_GAMEOBJ_REPORT_USE"),
             Opcode::CMSG_READY_FOR_ACCOUNT_DATA_TIMES => String::from("CMSG_READY_FOR_ACCOUNT_DATA_TIMES"),
-            _ => String::new(),
+            _ => format!("{}", opcode),
         }
     }
 }

@@ -8,8 +8,8 @@ const ENCRYPTION_KEY: [u8; 16] = [
     0xC2, 0xB3, 0x72, 0x3C, 0xC6, 0xAE, 0xD9, 0xB5, 0x34, 0x3C, 0x53, 0xEE, 0x2F, 0x43, 0x67, 0xCE
 ];
 
-const OUTCOMING_HEADER_LENGTH: u8 = 6;
-pub const OUTCOMING_OPCODE_LENGTH: u16 = 4;
+pub const OUTCOMING_HEADER_LENGTH: usize = 6;
+pub const OUTCOMING_OPCODE_LENGTH: usize = 4;
 
 pub struct Encryptor {
     instance: RC4,
@@ -31,8 +31,8 @@ impl Encryptor {
     }
 
     pub fn encrypt(&mut self, data: &[u8]) -> Vec<u8> {
-        let header = self.instance.encrypt(&data[..(OUTCOMING_HEADER_LENGTH as usize)]);
-        [header, data[(OUTCOMING_HEADER_LENGTH as usize)..].to_vec()].concat().to_vec()
+        let header = self.instance.encrypt(&data[..OUTCOMING_HEADER_LENGTH]);
+        [header, data[OUTCOMING_HEADER_LENGTH..].to_vec()].concat().to_vec()
     }
 }
 

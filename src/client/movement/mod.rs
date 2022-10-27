@@ -5,11 +5,10 @@ pub mod ai;
 
 mod detect_motion;
 mod handle_follow;
-pub mod parsers;
 pub mod types;
 
 use crate::client::opcodes::Opcode;
-use crate::types::traits::{Processor};
+use crate::traits::processor::Processor;
 use crate::types::{HandlerInput, ProcessorResult};
 
 pub struct MovementProcessor;

@@ -1,15 +1,13 @@
-use crossterm::event::{KeyCode, KeyModifiers};
 use tui::backend::Backend;
 use tui::Frame;
 use tui::layout::{Alignment, Rect};
-use tui::style::{Color, Modifier, Style};
-use tui::text::{Span, Spans};
-use tui::widgets::{Block, Borders, BorderType, Clear, List, ListItem, ListState, Paragraph, Wrap};
+use tui::style::{Color, Style};
+use tui::text::{Spans};
+use tui::widgets::{Block, Borders, BorderType, ListState, Paragraph, Wrap};
 
-use crate::ipc::pipe::types::LoggerOutput;
-use crate::types::traits::UIComponent;
+use crate::traits::ui_component::UIComponent;
 use crate::ui::MARGIN;
-use crate::ui::types::{UIComponentOptions, UIStateFlags};
+use crate::ui::types::{UIComponentOptions};
 
 const PANEL_TITLE: &str = "DEBUG DETAILS";
 

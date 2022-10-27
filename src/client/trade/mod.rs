@@ -3,7 +3,7 @@ use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
 
 pub mod types;
 
-use crate::types::traits::{Processor};
+use crate::traits::processor::Processor;
 use crate::types::{HandlerInput, ProcessorResult};
 
 pub struct TradeProcessor;

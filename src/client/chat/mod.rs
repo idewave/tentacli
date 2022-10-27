@@ -1,6 +1,7 @@
 use std::io::Cursor;
 use byteorder::{LittleEndian, ReadBytesExt};
 
+pub mod globals;
 mod handle_emote;
 mod handle_order;
 mod log_chat_message;
@@ -8,7 +9,7 @@ mod query_unknown_player;
 pub mod types;
 
 use crate::client::opcodes::Opcode;
-use crate::types::traits::{Processor};
+use crate::traits::processor::Processor;
 use crate::types::{HandlerInput, ProcessorResult};
 
 pub struct ChatProcessor;

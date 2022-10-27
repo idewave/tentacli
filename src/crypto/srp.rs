@@ -1,8 +1,6 @@
 use num_bigint::{BigInt, Sign, ToBigInt};
 use sha1::{Digest};
 
-use crate::utils::random_range;
-
 pub struct Srp {
     modulus: BigInt,
     generator: BigInt,
@@ -15,7 +13,7 @@ pub struct Srp {
 // public methods
 impl Srp {
     pub fn new(n: Vec<u8>, g: Vec<u8>, server_ephemeral: Vec<u8>) -> Self {
-        let private_ephemeral = random_range(19);
+        let private_ephemeral: [u8; 19] = rand::random();
 
         let modulus = BigInt::from_bytes_le(Sign::Plus, &n);
         let generator = BigInt::from_bytes_le(Sign::Plus, &g);
@@ -45,21 +43,21 @@ impl Srp {
 
     pub fn calculate_proof<D>(
         &mut self,
-        username: &str,
+        account: &str,
         password: &str,
         salt: &[u8]
     ) -> Vec<u8>
     where
         D: Digest,
     {
-        let username = username.to_uppercase();
+        let account = account.to_uppercase();
         let password = password.to_uppercase();
 
-        self.session_key = self.calculate_session_key::<D>(&username, &password, salt);
+        self.session_key = self.calculate_session_key::<D>(&account, &password, salt);
 
         D::new()
             .chain(self.calculate_xor_hash::<D>())
-            .chain(Self::calculate_username_hash::<D>(&username))
+            .chain(Self::calculate_account_hash::<D>(&account))
             .chain(&salt)
             .chain(&self.public_ephemeral.to_bytes_le().1)
             .chain(&self.server_ephemeral.to_bytes_le().1)
@@ -71,12 +69,12 @@ impl Srp {
 
 // private methods
 impl Srp {
-    fn calculate_username_hash<D>(username: &str) -> Vec<u8>
+    fn calculate_account_hash<D>(account: &str) -> Vec<u8>
     where
         D: Digest
     {
         D::new()
-            .chain(username.as_bytes())
+            .chain(account.as_bytes())
             .finalize()
             .to_vec()
     }
@@ -96,12 +94,12 @@ impl Srp {
         xor_hash
     }
 
-    fn calculate_x<D>(&mut self, username: &str, password: &str, salt: &[u8]) -> BigInt
+    fn calculate_x<D>(&mut self, account: &str, password: &str, salt: &[u8]) -> BigInt
     where
         D: Digest,
     {
         let identity_hash = D::new()
-            .chain(format!("{}:{}", username, password).as_bytes())
+            .chain(format!("{}:{}", account, password).as_bytes())
             .finalize()
             .to_vec();
 
@@ -141,11 +139,11 @@ impl Srp {
         s
     }
 
-    fn calculate_session_key<D>(&mut self, username: &str, password: &str, salt: &[u8]) -> Vec<u8>
+    fn calculate_session_key<D>(&mut self, account: &str, password: &str, salt: &[u8]) -> Vec<u8>
     where
         D: Digest,
     {
-        let x = self.calculate_x::<D>(username, password, salt);
+        let x = self.calculate_x::<D>(account, password, salt);
         let verifier = self.generator.modpow(
             &x,
             &self.modulus,

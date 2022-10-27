@@ -1,14 +1,20 @@
 use std::io::{Cursor, Read};
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt};
 use async_trait::async_trait;
 
-use super::opcodes::WardenOpcode;
-
+use crate::packet;
 use crate::client::opcodes::Opcode;
 use crate::client::WardenModuleInfo;
-use crate::network::packet::OutcomePacket;
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
-use crate::types::traits::PacketHandler;
+use crate::traits::packet_handler::PacketHandler;
+use super::opcodes::WardenOpcode;
+
+packet! {
+    @option[world_opcode=Opcode::CMSG_WARDEN_DATA]
+    struct Outcome {
+        warden_opcode: u8,
+    }
+}
 
 // I did this part mostly according to https://www.getmangos.eu/forums/topic/3409-warden/
 // unfortunately this topic incomplete and seems like TS will not finish it. In case somebody know
@@ -37,10 +43,9 @@ impl PacketHandler for Handler {
                 );
                 input.session.lock().unwrap().warden_module_info = Some(module_info);
 
-                let mut body = Vec::new();
-                body.write_u8(WardenOpcode::WARDEN_CMSG_MODULE_MISSING)?;
-
-                Ok(HandlerOutput::Data(OutcomePacket::from(Opcode::CMSG_WARDEN_DATA, Some(body))))
+                Ok(HandlerOutput::Data(Outcome {
+                    warden_opcode: WardenOpcode::WARDEN_CMSG_MODULE_MISSING,
+                }.unpack()))
             },
             WardenOpcode::WARDEN_SMSG_MODULE_CACHE => {
                 if let Some(module_info) = input.session.lock().unwrap().warden_module_info.as_mut() {
@@ -52,16 +57,13 @@ impl PacketHandler for Handler {
                     module_info.add_binary(partial);
 
                     if module_info.loaded() {
-                        let mut body = Vec::new();
-                        body.write_u8(WardenOpcode::WARDEN_CMSG_MODULE_OK)?;
-
                         // for now I do not know how to run this module,
                         // if somebody can help I would be appreciate it
                         module_info.assemble();
 
-                        return Ok(HandlerOutput::Data(
-                            OutcomePacket::from(Opcode::CMSG_WARDEN_DATA, Some(body))
-                        ));
+                        return Ok(HandlerOutput::Data(Outcome {
+                            warden_opcode: WardenOpcode::WARDEN_CMSG_MODULE_OK,
+                        }.unpack()));
                     }
                 }
 

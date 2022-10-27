@@ -12,7 +12,7 @@ mod request_realmlist;
 pub use login_challenge::handler as login_challenge;
 
 use crate::client::auth::opcodes::Opcode;
-use crate::types::traits::{Processor};
+use crate::traits::processor::Processor;
 use crate::types::{HandlerInput, ProcessorResult};
 
 pub struct AuthProcessor;

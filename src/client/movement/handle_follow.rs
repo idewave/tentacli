@@ -1,29 +1,34 @@
-use std::cell::RefCell;
-use std::io::{Cursor};
-use byteorder::{LittleEndian, ReadBytesExt};
 use async_trait::async_trait;
 
+use crate::packet;
 use crate::client::opcodes::Opcode;
 use crate::ipc::session::types::{StateFlags};
-use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
-use crate::types::traits::PacketHandler;
-use crate::utils::{read_packed_guid};
+use crate::types::{HandlerInput, HandlerOutput, HandlerResult, PackedGuid};
+use crate::traits::packet_handler::PacketHandler;
+
+packet! {
+    struct Income {
+        skip: u16,
+        opcode: u16,
+        target_guid: PackedGuid,
+    }
+}
 
 pub struct Handler;
 #[async_trait]
 impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
-        let reader = RefCell::new(Cursor::new(input.data.as_ref().unwrap()[2..].to_vec()));
-        let opcode = reader.borrow_mut().read_u16::<LittleEndian>()?;
+        let Income { opcode, target_guid, .. } = Income::from_binary(input.data.as_ref().unwrap());
 
-        let (target_guid, position) = read_packed_guid(RefCell::clone(&reader));
-        reader.borrow_mut().set_position(position);
-
-        if let Some(follow_guid) = input.session.lock().unwrap().follow_target {
-            if follow_guid != target_guid {
-                return Ok(HandlerOutput::Void);
+        let is_follow_me = {
+            if let Some(follow_guid) = input.session.lock().unwrap().follow_target {
+                follow_guid == target_guid
+            } else {
+                false
             }
+        };
 
+        if is_follow_me {
             input.session.lock().unwrap().state_flags.set(
                 StateFlags::IS_MOVEMENT_STARTED,
                 opcode == Opcode::MSG_MOVE_STOP

@@ -244,3 +244,17 @@ impl CastResult {
     pub const SPELL_NOT_FOUND: u8 = 254;
     pub const SPELL_CAST_OK: u8 = 255;
 }
+
+#[derive(Debug, Default, Clone)]
+pub struct Spell {
+    pub spell_id: u32,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct CooldownInfo {
+    pub spell_id: u32,
+    pub item_id: u16,
+    pub spell_category: u16,
+    pub cooldown_duration: u32,
+    pub cooldown_category: u32,
+}

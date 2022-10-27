@@ -1,7 +1,6 @@
 use std::process::exit;
 use std::sync::{Arc, mpsc, Mutex};
 use std::sync::mpsc::Receiver;
-use std::thread;
 use crossterm::{
     event::{
         DisableMouseCapture,
@@ -38,7 +37,7 @@ use crate::ipc::pipe::flag::FlagOutcome;
 use crate::ipc::pipe::event::EventIncome;
 use crate::ipc::pipe::types::{IncomeMessageType, OutcomeMessageType};
 use crate::ipc::session::Session;
-use crate::types::traits::UIComponent;
+use crate::traits::ui_component::UIComponent;
 use crate::ui::characters_modal::CharactersModal;
 use crate::ui::debug_panel::DebugPanel;
 use crate::ui::mode_panel::ModePanel;

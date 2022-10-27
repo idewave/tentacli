@@ -6,7 +6,7 @@ mod opcodes;
 mod send_data;
 pub mod types;
 
-use crate::types::traits::{Processor};
+use crate::traits::processor::Processor;
 use crate::types::{HandlerInput, ProcessorResult};
 
 pub struct WardenProcessor;

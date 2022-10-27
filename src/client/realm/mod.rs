@@ -14,7 +14,7 @@ mod set_in_world;
 pub mod types;
 
 use crate::client::opcodes::Opcode;
-use crate::types::traits::{Processor};
+use crate::traits::processor::Processor;
 use crate::types::{HandlerInput, ProcessorResult};
 
 pub struct RealmProcessor;

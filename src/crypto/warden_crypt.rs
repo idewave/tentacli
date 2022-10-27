@@ -1,4 +1,6 @@
 use sha1::{Digest, Sha1};
+
+use crate::crypto::encryptor::OUTCOMING_HEADER_LENGTH;
 use crate::crypto::rc4::RC4;
 
 const KEY_SIZE: usize = 16;
@@ -19,7 +21,7 @@ impl WardenCrypt {
     }
 
     pub fn encrypt(&mut self, data: &[u8]) -> Vec<u8> {
-        self.encryptor.encrypt(data)
+        self.encryptor.encrypt(&data[OUTCOMING_HEADER_LENGTH..])
     }
 
     pub fn decrypt(&mut self, data: &[u8]) -> Vec<u8> {

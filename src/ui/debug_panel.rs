@@ -4,13 +4,14 @@ use crossterm::event::{KeyCode, KeyModifiers};
 use serde_json::Value;
 use tui::backend::Backend;
 use tui::Frame;
-use tui::layout::{Alignment, Rect};
+use tui::layout::{Rect};
 use tui::style::{Color, Modifier, Style};
 use tui::text::{Span, Spans};
-use tui::widgets::{Block, Borders, BorderType, Clear, List, ListItem, ListState, Paragraph, Wrap};
+use tui::widgets::{Block, Borders, BorderType, Clear, List, ListItem, ListState};
 
 use crate::ipc::pipe::types::LoggerOutput;
-use crate::types::traits::{Pagination, UIComponent};
+use crate::traits::paginator::Paginator;
+use crate::traits::ui_component::UIComponent;
 use crate::ui::MARGIN;
 use crate::ui::types::{UIComponentOptions, UIStateFlags};
 
@@ -203,7 +204,7 @@ impl<'a> DebugPanel<'a> {
     }
 }
 
-impl<'a> Pagination for DebugPanel<'a> {}
+impl<'a> Paginator for DebugPanel<'a> {}
 impl<'a> UIComponent for DebugPanel<'a> {
     fn new(options: UIComponentOptions) -> Self {
         Self {

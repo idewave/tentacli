@@ -1,17 +1,21 @@
-use std::io::{BufRead, Cursor};
 use async_trait::async_trait;
 
+use crate::packet;
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
-use crate::types::traits::PacketHandler;
+use crate::traits::packet_handler::PacketHandler;
+
+packet! {
+    struct Income {
+        skip: u32,
+        message: String,
+    }
+}
 
 pub struct Handler;
 #[async_trait]
 impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
-        let mut reader = Cursor::new(input.data.as_ref().unwrap()[8..].to_vec());
-
-        let mut message = Vec::new();
-        reader.read_until(0, &mut message)?;
+        let Income { .. } = Income::from_binary(input.data.as_ref().unwrap());
 
         Ok(HandlerOutput::Void)
     }
