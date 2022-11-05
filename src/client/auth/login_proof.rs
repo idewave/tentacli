@@ -2,10 +2,10 @@ use sha1::{Sha1};
 use async_trait::async_trait;
 
 use crate::packet;
-use super::opcodes::Opcode;
 use crate::crypto::srp::Srp;
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
 use crate::traits::packet_handler::PacketHandler;
+use super::opcodes::Opcode;
 
 packet! {
     @option[login_opcode=Opcode::LOGIN_PROOF]
@@ -14,9 +14,9 @@ packet! {
         code: u8,
         server_ephemeral: [u8; 32],
         g_len: u8,
-        g: [u8; 32],
+        g: [u8; 1],
         n_len: u8,
-        n: [u8; 1],
+        n: [u8; 32],
         salt: [u8; 32],
     }
 }
@@ -43,11 +43,7 @@ impl PacketHandler for Handler {
         let mut session = input.session.lock().unwrap();
         let config = session.get_config().unwrap();
 
-        let mut srp_client = Srp::new(
-            n.to_vec(),
-            g.to_vec(),
-            server_ephemeral.to_vec()
-        );
+        let mut srp_client = Srp::new(&n, &g, &server_ephemeral);
         let proof = srp_client.calculate_proof::<Sha1>(
             &config.connection_data.account,
             &config.connection_data.password,

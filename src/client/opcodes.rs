@@ -3,6 +3,7 @@ pub struct Opcode;
 
 #[allow(dead_code)]
 impl Opcode {
+    // auth opcodes here are just for output (see get_opcode_name below)
     pub const LOGIN_CHALLENGE: u32 = 0;
     pub const LOGIN_PROOF: u32 = 1;
     pub const REALM_LIST: u32 = 16;

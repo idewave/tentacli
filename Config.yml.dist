@@ -9,6 +9,11 @@ connection_data:
     password: ""
     realm_name: "FULL REALM NAME"
 
+channels:
+  lfg: "lfg-channel-name"
+  common: "common-channel-name"
+  trade: "trade-channel-name"
+
 addons:
   - name: "Blizzard_AchievementUI"
     flags: 0

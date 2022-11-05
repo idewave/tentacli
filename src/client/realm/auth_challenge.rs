@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use crate::packet;
 use crate::client::opcodes::Opcode;
 use crate::config::types::AddonInfo;
-use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
+use crate::types::{HandlerInput, HandlerOutput, HandlerResult, TerminatedString};
 use crate::traits::packet_handler::PacketHandler;
 
 const CLIENT_SEED_SIZE: usize = 4;
@@ -25,13 +25,12 @@ packet! {
     struct Outcome {
         build: u32,
         unknown: u32,
-        account: String,
+        account: TerminatedString,
         unknown2: u32,
         client_seed: [u8; CLIENT_SEED_SIZE],
-        unknown3: u32,
+        unknown3: u64,
         server_id: u32,
-        unknown4: u32,
-        unknown5: u64,
+        unknown4: u64,
         digest: [u8; 20],
         addons_count: u32,
         addons: Vec<u8>,
@@ -73,13 +72,12 @@ impl PacketHandler for Handler {
         Ok(HandlerOutput::Data(Outcome {
             build: 12340,
             unknown: 0,
-            account,
+            account: TerminatedString::from(account),
             unknown2: 0,
             client_seed,
             unknown3: 0,
             server_id,
             unknown4: 0,
-            unknown5: 0,
             digest: digest.try_into().unwrap(),
             addons_count: addon_info.len() as u32,
             addons: encoder.finish().unwrap(),

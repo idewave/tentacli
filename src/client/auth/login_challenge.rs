@@ -2,8 +2,8 @@ use std::net::Ipv4Addr;
 
 use crate::packet;
 use crate::types::{PacketOutcome};
-use super::opcodes::Opcode;
 use crate::types::{TerminatedString};
+use super::opcodes::Opcode;
 
 packet! {
     @option[login_opcode=Opcode::LOGIN_CHALLENGE]
@@ -42,6 +42,6 @@ pub fn handler(account: &str) -> PacketOutcome {
         timezone: 0,
         ip: crate::types::IpAddr(Ipv4Addr::new(127, 0, 0, 1).into()),
         account_length,
-        account: account.to_uppercase(),
+        account: account.to_string(),
     }.unpack()
 }

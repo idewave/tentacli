@@ -1,14 +1,14 @@
 use async_trait::async_trait;
 
 use crate::packet;
-use super::opcodes::Opcode;
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
 use crate::traits::packet_handler::PacketHandler;
+use super::opcodes::Opcode;
 
 packet! {
     @option[login_opcode=Opcode::REALM_LIST]
     struct Outcome {
-        unknown: u32,
+        unknown: i32,
     }
 }
 

@@ -12,15 +12,15 @@ pub struct Srp {
 
 // public methods
 impl Srp {
-    pub fn new(n: Vec<u8>, g: Vec<u8>, server_ephemeral: Vec<u8>) -> Self {
+    pub fn new(n: &[u8; 32], g: &[u8; 1], server_ephemeral: &[u8; 32]) -> Self {
         let private_ephemeral: [u8; 19] = rand::random();
 
-        let modulus = BigInt::from_bytes_le(Sign::Plus, &n);
-        let generator = BigInt::from_bytes_le(Sign::Plus, &g);
+        let modulus = BigInt::from_bytes_le(Sign::Plus, n);
+        let generator = BigInt::from_bytes_le(Sign::Plus, g);
 
         let private_ephemeral = BigInt::from_bytes_le(Sign::Plus, &private_ephemeral);
         let public_ephemeral = generator.modpow(&private_ephemeral, &modulus);
-        let server_ephemeral = BigInt::from_bytes_le(Sign::Plus, &server_ephemeral);
+        let server_ephemeral = BigInt::from_bytes_le(Sign::Plus, server_ephemeral);
 
         Self {
             modulus,
@@ -37,7 +37,6 @@ impl Srp {
     }
 
     pub fn session_key(&mut self) -> Vec<u8> {
-        // I believe this can be optimized
         self.session_key.to_vec()
     }
 
@@ -50,9 +49,6 @@ impl Srp {
     where
         D: Digest,
     {
-        let account = account.to_uppercase();
-        let password = password.to_uppercase();
-
         self.session_key = self.calculate_session_key::<D>(&account, &password, salt);
 
         D::new()

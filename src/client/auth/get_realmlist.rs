@@ -1,7 +1,6 @@
 use async_trait::async_trait;
 
 use crate::packet;
-use super::opcodes::Opcode;
 use crate::client::Realm;
 use crate::traits::packet_handler::PacketHandler;
 use crate::types::{
@@ -9,6 +8,7 @@ use crate::types::{
     HandlerOutput,
     HandlerResult,
 };
+use super::opcodes::Opcode;
 
 packet! {
     @option[login_opcode=Opcode::REALM_LIST]

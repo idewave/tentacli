@@ -1,10 +1,12 @@
 use std::io::{Error, ErrorKind};
 use std::sync::{Arc, Mutex as SyncMutex};
+use std::time::Duration;
 use tokio::sync::{Mutex, mpsc};
 use tokio::net::TcpStream;
 use tokio::task::{JoinHandle};
 use futures::future::join_all;
 use tokio::sync::mpsc::{Receiver, Sender};
+use tokio::time::sleep;
 use tui::backend::CrosstermBackend;
 
 mod auth;
@@ -468,7 +470,8 @@ impl Client {
                                 input_sender.send(packets).await.unwrap();
                             },
                             Err(err) => {
-                                // message_income.send_error_message(err.to_string());
+                                message_income.send_error_message(err.to_string());
+                                sleep(Duration::from_secs(1)).await;
                             }
                         }
                     },

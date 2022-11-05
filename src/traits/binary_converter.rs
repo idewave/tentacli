@@ -53,6 +53,46 @@ impl BinaryConverter for u64 {
     }
 }
 
+impl BinaryConverter for i8 {
+    fn write_into(&mut self, buffer: &mut Vec<u8>) -> Result<(), Error> {
+        buffer.write_i8(*self)
+    }
+
+    fn read_from<R: BufRead>(mut reader: R) -> Result<Self, Error> {
+        reader.read_i8()
+    }
+}
+
+impl BinaryConverter for i16 {
+    fn write_into(&mut self, buffer: &mut Vec<u8>) -> Result<(), Error> {
+        buffer.write_i16::<LittleEndian>(*self)
+    }
+
+    fn read_from<R: BufRead>(mut reader: R) -> Result<Self, Error> {
+        reader.read_i16::<LittleEndian>()
+    }
+}
+
+impl BinaryConverter for i32 {
+    fn write_into(&mut self, buffer: &mut Vec<u8>) -> Result<(), Error> {
+        buffer.write_i32::<LittleEndian>(*self)
+    }
+
+    fn read_from<R: BufRead>(mut reader: R) -> Result<Self, Error> {
+        reader.read_i32::<LittleEndian>()
+    }
+}
+
+impl BinaryConverter for i64 {
+    fn write_into(&mut self, buffer: &mut Vec<u8>) -> Result<(), Error> {
+        buffer.write_i64::<LittleEndian>(*self)
+    }
+
+    fn read_from<R: BufRead>(mut reader: R) -> Result<Self, Error> {
+        reader.read_i64::<LittleEndian>()
+    }
+}
+
 impl BinaryConverter for f32 {
     fn write_into(&mut self, buffer: &mut Vec<u8>) -> Result<(), Error> {
         buffer.write_f32::<LittleEndian>(*self)
@@ -139,16 +179,16 @@ impl BinaryConverter for Vec<Realm> {
             let mut name = Vec::new();
             let mut address = Vec::new();
 
-            let icon = reader.read_u16::<LittleEndian>().unwrap();
-            let flags = reader.read_u8().unwrap();
+            let icon = reader.read_u16::<LittleEndian>()?;
+            let flags = reader.read_u8()?;
 
-            reader.read_until(0, &mut name).unwrap();
-            reader.read_until(0, &mut address).unwrap();
+            reader.read_until(0, &mut name)?;
+            reader.read_until(0, &mut address)?;
 
-            let population = reader.read_f32::<LittleEndian>().unwrap();
-            let characters = reader.read_u8().unwrap();
-            let timezone = reader.read_u8().unwrap();
-            let server_id = reader.read_u8().unwrap();
+            let population = reader.read_f32::<LittleEndian>()?;
+            let characters = reader.read_u8()?;
+            let timezone = reader.read_u8()?;
+            let server_id = reader.read_u8()?;
 
             realms.push(Realm {
                 icon,

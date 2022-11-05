@@ -62,15 +62,15 @@ macro_rules! packet {
 
             // outcome
             pub fn to_binary(&mut self) -> Vec<u8> {
-                let mut packet = Vec::new();
+                let mut body = Vec::new();
                 $(
                     $crate::traits::binary_converter::BinaryConverter::write_into(
                         &mut self.$field_name,
-                        &mut packet
+                        &mut body
                     ).unwrap();
                 )*
-                let header = Self::_build_header(&packet);
-                [header, packet].concat()
+                let header = Self::_build_header(&body);
+                [header, body].concat()
             }
 
             fn _build_header(body: &Vec<u8>) -> Vec<u8> {
