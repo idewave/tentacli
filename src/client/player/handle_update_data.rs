@@ -11,14 +11,8 @@ use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
 use crate::traits::packet_handler::PacketHandler;
 
 packet! {
+    @option[compressed_if: Opcode::SMSG_COMPRESSED_UPDATE_OBJECT]
     struct Income {
-        parsed_blocks: Vec<ParsedBlock>,
-    }
-}
-
-packet! {
-    @option[compressed: true]
-    struct CompressedIncome {
         parsed_blocks: Vec<ParsedBlock>,
     }
 }
@@ -27,23 +21,9 @@ pub struct Handler;
 #[async_trait]
 impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
-        // omit size
-        let mut reader = Cursor::new(input.data.as_ref().unwrap()[2..].to_vec());
-        let opcode = reader.read_u16::<LittleEndian>()?;
-
-        let parsed_blocks = if opcode == Opcode::SMSG_COMPRESSED_UPDATE_OBJECT {
-            let CompressedIncome { parsed_blocks } = CompressedIncome::from_binary(
-                input.data.as_ref().unwrap(),
-            );
-
-            parsed_blocks
-        } else {
-            let Income { parsed_blocks } = Income::from_binary(
-                input.data.as_ref().unwrap(),
-            );
-
-            parsed_blocks
-        };
+        let Income { parsed_blocks } = Income::from_binary(
+            input.data.as_ref().unwrap(),
+        );
 
         input.message_income.send_debug_message(String::from("Handling update packet"));
 

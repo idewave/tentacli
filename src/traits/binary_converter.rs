@@ -383,7 +383,7 @@ impl BinaryConverter for Vec<u8> {
         buffer.write_all(self)
     }
 
-    fn read_from<R: BufRead>(reader: R) -> Result<Self, Error> where Self: Sized {
+    fn read_from<R: BufRead>(_reader: R) -> Result<Self, Error> where Self: Sized {
         todo!()
     }
 }

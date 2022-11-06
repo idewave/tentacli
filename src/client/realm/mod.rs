@@ -80,11 +80,11 @@ impl Processor for RealmProcessor {
             },
             Opcode::SMSG_LOGIN_SETTIMESPEED => {
                 message = String::from("SMSG_LOGIN_SETTIMESPEED");
-                vec![Box::new(parse_motd::Handler)]
+                vec![]
             },
             Opcode::SMSG_SET_FORCED_REACTIONS => {
                 message = String::from("SMSG_SET_FORCED_REACTIONS");
-                vec![Box::new(parse_motd::Handler)]
+                vec![]
             },
             _ => {
                 vec![]

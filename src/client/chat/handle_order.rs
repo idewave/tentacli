@@ -14,11 +14,9 @@ packet! {
         language: u32,
         sender_guid: u64,
         skip: u32,
-        // if @message_type == MessageType::CHANNEL
         channel_name: String,
         target_guid: u64,
         message_length: u32,
-        // len=@message_length
         message: String,
     }
 }

@@ -91,7 +91,7 @@ impl<'a> DebugPanel<'a> {
                 Spans::from(vec![
                     time_block,
                     Span::styled(
-                        format!("[SERVER]: {}", message),
+                        format!("[INCOME]: {}", message),
                         Style::default().fg(Color::LightMagenta),
                     ),
                 ])
@@ -103,7 +103,7 @@ impl<'a> DebugPanel<'a> {
                 Spans::from(vec![
                     time_block,
                     Span::styled(
-                        format!("[CLIENT]: {}", message),
+                        format!("[OUTCOME]: {}", message),
                         Style::default().fg(Color::LightBlue),
                     ),
                 ])

@@ -1,15 +1,7 @@
-use rand::{thread_rng, RngCore};
 use std::{fmt::Write, num::ParseIntError};
 use std::io::{BufRead, Read};
 use byteorder::ReadBytesExt;
 use flate2::read::ZlibDecoder;
-
-pub fn random_range(size: usize) -> Vec<u8> {
-    let mut range = vec![0u8; size];
-    thread_rng().fill_bytes(&mut range[..]);
-
-    range
-}
 
 #[allow(dead_code)]
 pub fn decode_hex(s: &str) -> Result<Vec<u8>, ParseIntError> {
@@ -84,16 +76,8 @@ mod tests {
 
     use crate::utils::{
         decode_hex, decompress, encode_hex,
-        pack_guid, random_range, read_packed_guid,
+        pack_guid, read_packed_guid,
     };
-
-    #[test]
-    fn test_random_range() {
-        const RANGE_SIZE: usize = 10;
-
-        let range = random_range(RANGE_SIZE);
-        assert_eq!(RANGE_SIZE, range.len());
-    }
 
     #[test]
     fn test_decompress() {
