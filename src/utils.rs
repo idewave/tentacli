@@ -5,37 +5,19 @@ use flate2::read::ZlibDecoder;
 
 #[allow(dead_code)]
 pub fn decode_hex(s: &str) -> Result<Vec<u8>, ParseIntError> {
-    (0..s.len())
+    let str = s.replace(" ", "");
+    (0..str.len())
         .step_by(2)
-        .map(|i| u8::from_str_radix(&s[i..i + 2], 16))
+        .map(|i| u8::from_str_radix(&str[i..i + 2], 16))
         .collect()
 }
 
 pub fn encode_hex(bytes: &[u8]) -> String {
-    let mut s = String::with_capacity(bytes.len() * 2);
+    let mut items: Vec<String> = Vec::new();
     for &b in bytes {
-        write!(&mut s, "{:02x}", b).unwrap();
+        items.push(format!("{:02x}", b).to_uppercase());
     }
-    s.to_uppercase()
-}
-
-pub fn pack_guid(mut guid: u64) -> Vec<u8> {
-    let mut pack_guid = vec![0u8; 9];
-    let mut size = 1;
-    let mut index = 0;
-
-    while guid != 0 {
-        if guid & 0xFF > 0 {
-            pack_guid[0] |= 1 << index;
-            pack_guid[size] = guid as u8;
-            size += 1;
-        }
-
-        index += 1;
-        guid >>= 8;
-    }
-
-    pack_guid[..size].to_vec()
+    items.join(" ")
 }
 
 pub fn read_packed_guid<R: BufRead>(reader: &mut R) -> u64 {
@@ -76,7 +58,7 @@ mod tests {
 
     use crate::utils::{
         decode_hex, decompress, encode_hex,
-        pack_guid, read_packed_guid,
+        read_packed_guid,
     };
 
     #[test]
@@ -89,23 +71,11 @@ mod tests {
         assert_eq!(origin, decompress(&encoder.finish().unwrap()));
     }
 
-    // #[test]
-    // fn test_packed_guid() {
-    //     const ORIGIN_GUID: u64 = 1;
-    //
-    //     let packed_guid = pack_guid(ORIGIN_GUID);
-    //     let mut reader = BufReader::new(packed_guid);
-    //
-    //     let unpacked_guid = read_packed_guid(&mut reader);
-    //
-    //     assert_eq!(ORIGIN_GUID, unpacked_guid);
-    // }
-
     #[test]
     fn test_encode_decode() {
         const ORIGIN: [u8; 5] = [255, 12, 3, 45, 5];
         let encoded = encode_hex(&ORIGIN);
-        assert_eq!("FF0C032D05", encoded);
+        assert_eq!("FF 0C 03 2D 05", encoded);
 
         assert_eq!(ORIGIN.to_vec(), decode_hex(&encoded).unwrap());
     }

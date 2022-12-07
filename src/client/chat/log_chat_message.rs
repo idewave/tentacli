@@ -1,20 +1,40 @@
 use async_trait::async_trait;
+use std::io::BufRead;
 
-use crate::packet;
-use crate::types::{HandlerInput, HandlerOutput, HandlerResult, TerminatedString};
+use crate::client::chat::types::{MessageType};
+use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
 use crate::traits::packet_handler::PacketHandler;
 
-packet! {
-    struct Income {
-        message_type: u8,
-        language: u32,
-        skip: u32,
-        // if @message_type == MessageType::CHANNEL
-        channel_name: TerminatedString,
-        target_guid: u64,
-        message_length: u32,
-        // length=@message_length
-        message: String,
+#[derive(WorldPacket, Serialize, Deserialize)]
+#[options(no_opcode)]
+#[allow(dead_code)]
+struct Income {
+    message_type: u8,
+    language: u32,
+    skip: u32,
+    #[dynamic_field]
+    channel_name: String,
+    target_guid: u64,
+    message_length: u32,
+    #[dynamic_field]
+    message: String,
+}
+
+impl Income {
+    fn message<R: BufRead>(mut reader: R, initial: &mut Self) -> String {
+        let mut buffer = vec![0u8; initial.message_length as usize];
+        reader.read_exact(&mut buffer).unwrap();
+        String::from_utf8(buffer).unwrap()
+    }
+
+    fn channel_name<R: BufRead>(mut reader: R, initial: &mut Self) -> String {
+        if initial.message_type == MessageType::CHANNEL {
+            let mut buffer = Vec::new();
+            reader.read_until(0, &mut buffer).unwrap();
+            String::from_utf8(buffer).unwrap()
+        } else {
+            String::default()
+        }
     }
 }
 

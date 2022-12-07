@@ -1,0 +1,18 @@
+[package]
+name = "idewave_packet"
+version = "0.1.0"
+edition = "2021"
+authors = ["Sergio Ivanuzzo <sergio.ivanuzzo@gmail.com>"]
+description = "Macro for implementing packet structures"
+
+[lib]
+name = "idewave_packet"
+path = "src/lib.rs"
+proc-macro = true
+
+[dependencies]
+# https://github.com/dtolnay/proc-macro-workshop#debugging-tips
+syn = { version = "1.0", features = ["full"] }
+quote = "1.0"
+proc-macro2 = "1.0"
+structmeta = "0.1.5"

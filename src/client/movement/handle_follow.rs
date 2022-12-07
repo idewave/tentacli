@@ -1,17 +1,16 @@
 use async_trait::async_trait;
 
-use crate::packet;
 use crate::client::opcodes::Opcode;
 use crate::ipc::session::types::{StateFlags};
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult, PackedGuid};
 use crate::traits::packet_handler::PacketHandler;
 
-packet! {
-    struct Income {
-        skip: u16,
-        opcode: u16,
-        target_guid: PackedGuid,
-    }
+#[derive(WorldPacket, Serialize, Deserialize, Debug)]
+#[options(no_opcode)]
+struct Income {
+    skip: u16,
+    opcode: u16,
+    target_guid: PackedGuid,
 }
 
 pub struct Handler;

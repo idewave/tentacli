@@ -12,7 +12,7 @@ pub struct Srp {
 
 // public methods
 impl Srp {
-    pub fn new(n: &[u8; 32], g: &[u8; 1], server_ephemeral: &[u8; 32]) -> Self {
+    pub fn new(n: &Vec<u8>, g: &Vec<u8>, server_ephemeral: &[u8; 32]) -> Self {
         let private_ephemeral: [u8; 19] = rand::random();
 
         let modulus = BigInt::from_bytes_le(Sign::Plus, n);

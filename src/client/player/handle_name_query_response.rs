@@ -1,20 +1,19 @@
 use async_trait::async_trait;
 
-use crate::client::Player;
-use crate::packet;
+use crate::client::{Player};
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult, PackedGuid};
 use crate::traits::packet_handler::PacketHandler;
 
-packet! {
-    struct Income {
-        packed_guid: PackedGuid,
-        unknown: u8,
-        name: String,
-        realm: String,
-        race: u8,
-        gender: u8,
-        class: u8,
-    }
+#[derive(WorldPacket, Serialize, Deserialize, Debug)]
+#[options(no_opcode)]
+struct Income {
+    packed_guid: PackedGuid,
+    unknown: u8,
+    name: String,
+    realm: String,
+    race: u8,
+    gender: u8,
+    class: u8,
 }
 
 pub struct Handler;

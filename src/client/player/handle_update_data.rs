@@ -1,8 +1,7 @@
-use std::io::{Cursor};
-use byteorder::{LittleEndian, ReadBytesExt};
+use std::io::Cursor;
 use async_trait::async_trait;
+use byteorder::{LittleEndian, ReadBytesExt};
 
-use crate::packet;
 use crate::client::{ObjectField, Player};
 use crate::client::opcodes::Opcode;
 use crate::client::player::globals::NameQueryOutcome;
@@ -10,22 +9,34 @@ use crate::parsers::update_block_parser::types::{ObjectTypeMask, ParsedBlock};
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
 use crate::traits::packet_handler::PacketHandler;
 
-packet! {
-    @option[compressed_if: Opcode::SMSG_COMPRESSED_UPDATE_OBJECT]
-    struct Income {
-        parsed_blocks: Vec<ParsedBlock>,
-    }
+#[derive(WorldPacket, Serialize, Deserialize, Debug)]
+#[options(no_opcode)]
+struct Income {
+    parsed_blocks: Vec<ParsedBlock>,
+}
+
+#[derive(WorldPacket, Serialize, Deserialize, Debug)]
+#[options(no_opcode, compressed)]
+struct CompressedIncome {
+    parsed_blocks: Vec<ParsedBlock>,
 }
 
 pub struct Handler;
 #[async_trait]
 impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
-        let Income { parsed_blocks } = Income::from_binary(
-            input.data.as_ref().unwrap(),
-        );
+        let mut reader = Cursor::new(input.data.as_ref().unwrap()[2..].to_vec());
+        let opcode = reader.read_u16::<LittleEndian>()?;
 
-        input.message_income.send_debug_message(String::from("Handling update packet"));
+        let parsed_blocks = if opcode == Opcode::SMSG_UPDATE_OBJECT {
+            let Income { parsed_blocks } = Income::from_binary(input.data.as_ref().unwrap());
+            parsed_blocks
+        } else {
+            let CompressedIncome { parsed_blocks } = CompressedIncome::from_binary(
+                input.data.as_ref().unwrap()
+            );
+            parsed_blocks
+        };
 
         let my_guid = {
             input.session.lock().unwrap().me.as_ref().unwrap().guid

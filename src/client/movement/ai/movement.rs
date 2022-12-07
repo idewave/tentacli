@@ -1,14 +1,27 @@
 use std::time::{SystemTime};
 use std::f32::consts::PI;
 
-use crate::packet;
 use crate::client::{MovementFlags, MovementFlagsExtra, UnitMoveType};
 use crate::client::opcodes::Opcode;
 use crate::ipc::session::types::ActionFlags;
 use crate::parsers::position_parser::types::Position;
-use crate::types::{AIManagerInput, PackedGuid};
+use crate::types::{AIManagerInput, PackedGuid, PacketOutcome};
 
 const MINIMAL_DISTANCE: f32 = 5.0;
+
+#[derive(WorldPacket, Serialize, Deserialize, Debug)]
+#[options(no_opcode)]
+struct Outcome {
+    guid: PackedGuid,
+    movement_flags: u32,
+    movement_flags2: u16,
+    time: u32,
+    x: f32,
+    y: f32,
+    z: f32,
+    direction: f32,
+    unknown: u32,
+}
 
 pub struct AI {
     is_moving_started: bool,
@@ -154,25 +167,9 @@ impl AI {
         guid: u64,
         new_position: Position,
         movement_flags: MovementFlags
-    ) -> (u32, Vec<u8>) {
-        packet! {
-            // @option[world_opcode=opcode]
-            @option[world_opcode=Opcode::MSG_MOVE_START_FORWARD]
-            struct Outcome {
-                guid: PackedGuid,
-                movement_flags: u32,
-                movement_flags2: u16,
-                time: u32,
-                x: f32,
-                y: f32,
-                z: f32,
-                direction: f32,
-                unknown: u32,
-            }
-        }
-
+    ) -> PacketOutcome {
         let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
-        let packet = Outcome {
+        Outcome {
             guid: PackedGuid(guid),
             movement_flags: movement_flags.bits(),
             movement_flags2: MovementFlagsExtra::NONE.bits(),
@@ -183,9 +180,7 @@ impl AI {
             z: new_position.z,
             direction: new_position.orientation,
             unknown: 0
-        }.to_binary();
-
-        (opcode, packet)
+        }.unpack_with_opcode(opcode)
     }
 
     fn calculate_velocity(from: Position, to: Position, speed: f32) -> Position {

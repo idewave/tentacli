@@ -1,6 +1,7 @@
 /target
 /files
 
+.env
 .idea
 .vs
 .vscode

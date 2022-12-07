@@ -9,7 +9,6 @@ const ENCRYPTION_KEY: [u8; 16] = [
 ];
 
 pub const OUTCOMING_HEADER_LENGTH: usize = 6;
-pub const OUTCOMING_OPCODE_LENGTH: usize = 4;
 
 pub struct Encryptor {
     instance: RC4,

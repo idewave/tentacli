@@ -2,15 +2,16 @@ use std::io::{Cursor, Read};
 use byteorder::{LittleEndian, ReadBytesExt};
 use async_trait::async_trait;
 
-use crate::packet;
+use crate::{with_opcode};
 use crate::client::opcodes::Opcode;
 use crate::client::WardenModuleInfo;
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
 use crate::traits::packet_handler::PacketHandler;
 use super::opcodes::WardenOpcode;
 
-packet! {
-    @option[world_opcode=Opcode::CMSG_WARDEN_DATA]
+with_opcode! {
+    @world_opcode(Opcode::CMSG_WARDEN_DATA)
+    #[derive(WorldPacket, Serialize, Deserialize, Debug)]
     struct Outcome {
         warden_opcode: u8,
     }

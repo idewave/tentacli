@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use crate::packet;
+use crate::{with_opcode};
 use crate::client::opcodes::Opcode;
 use crate::types::{
     HandlerInput,
@@ -9,8 +9,9 @@ use crate::types::{
 };
 use crate::traits::packet_handler::PacketHandler;
 
-packet! {
-    @option[world_opcode=Opcode::CMSG_CHAR_ENUM]
+with_opcode! {
+    @world_opcode(Opcode::CMSG_CHAR_ENUM)
+    #[derive(WorldPacket, Serialize, Deserialize, Debug, Default)]
     struct Outcome {}
 }
 

@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use crate::packet;
+use crate::{with_opcode};
 use crate::client::chat::types::{TextEmoteType};
 use crate::client::opcodes::Opcode;
 use crate::client::spell::types::SpellCastTargetType;
@@ -11,16 +11,16 @@ use crate::traits::packet_handler::PacketHandler;
 // priest initial spell for healing
 const SPELL_ID: u32 = 2050;
 
-packet! {
-    @option[world_opcode=Opcode::SMSG_TEXT_EMOTE]
-    struct Income {
-        sender_guid: u64,
-        text_emote: u32,
-    }
+#[derive(WorldPacket, Serialize, Deserialize, Debug)]
+#[options(no_opcode)]
+struct Income {
+    sender_guid: u64,
+    text_emote: u32,
 }
 
-packet! {
-    @option[world_opcode=Opcode::CMSG_CAST_SPELL]
+with_opcode! {
+    @world_opcode(Opcode::CMSG_CAST_SPELL)
+    #[derive(WorldPacket, Serialize, Deserialize, Debug)]
     struct Outcome {
         unknown: u8,
         sender_guid: u32,

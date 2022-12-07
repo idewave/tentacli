@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use crate::packet;
+use crate::{with_opcode};
 use crate::client::Realm;
 use crate::traits::packet_handler::PacketHandler;
 use crate::types::{
@@ -10,8 +10,9 @@ use crate::types::{
 };
 use super::opcodes::Opcode;
 
-packet! {
-    @option[login_opcode=Opcode::REALM_LIST]
+with_opcode! {
+    @login_opcode(Opcode::REALM_LIST)
+    #[derive(LoginPacket, Serialize, Deserialize, Debug, Default)]
     struct Income {
         skip: [u8; 6],
         realms: Vec<Realm>,

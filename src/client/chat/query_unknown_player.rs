@@ -1,15 +1,14 @@
 use async_trait::async_trait;
 
-use crate::packet;
 use crate::client::player::globals::NameQueryOutcome;
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
 use crate::traits::packet_handler::PacketHandler;
 
-packet! {
-    struct Income {
-        skip: [u8; 5],
-        sender_guid: u64,
-    }
+#[derive(WorldPacket, Serialize, Deserialize, Debug)]
+#[options(no_opcode)]
+struct Income {
+    skip: [u8; 5],
+    sender_guid: u64,
 }
 
 pub struct Handler;

@@ -1,31 +1,56 @@
+use std::io::BufRead;
 use sha1::{Sha1};
 use async_trait::async_trait;
+use serde::{Serialize, Deserialize};
 
-use crate::packet;
+use crate::{with_opcode};
 use crate::crypto::srp::Srp;
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
 use crate::traits::packet_handler::PacketHandler;
 use super::opcodes::Opcode;
 
-packet! {
-    @option[login_opcode=Opcode::LOGIN_PROOF]
+with_opcode! {
+    @login_opcode(Opcode::LOGIN_PROOF)
+    #[derive(LoginPacket, Serialize, Deserialize, Debug)]
     struct Income {
         unknown: u8,
         code: u8,
+        #[serde(serialize_with = "crate::serializers::array_serializer::serialize_array")]
         server_ephemeral: [u8; 32],
         g_len: u8,
-        g: [u8; 1],
+        #[dynamic_field]
+        g: Vec<u8>,
         n_len: u8,
-        n: [u8; 32],
+        #[dynamic_field]
+        n: Vec<u8>,
+        #[serde(serialize_with = "crate::serializers::array_serializer::serialize_array")]
         salt: [u8; 32],
+    }
+
+    impl Income {
+        fn g<R: BufRead>(mut reader: R, initial: &mut Self) -> Vec<u8> {
+            let mut buffer = vec![0u8; initial.g_len as usize];
+            reader.read_exact(&mut buffer).unwrap();
+            buffer
+        }
+
+        fn n<R: BufRead>(mut reader: R, initial: &mut Self) -> Vec<u8> {
+            let mut buffer = vec![0u8; initial.n_len as usize];
+            reader.read_exact(&mut buffer).unwrap();
+            buffer
+        }
     }
 }
 
-packet! {
-    @option[login_opcode=Opcode::LOGIN_PROOF]
+with_opcode! {
+    @login_opcode(Opcode::LOGIN_PROOF)
+    #[derive(LoginPacket, Serialize, Deserialize, Debug)]
     struct Outcome {
+        #[serde(serialize_with = "crate::serializers::array_serializer::serialize_array")]
         public_ephemeral: Vec<u8>,
+        #[serde(serialize_with = "crate::serializers::array_serializer::serialize_array")]
         proof: Vec<u8>,
+        #[serde(serialize_with = "crate::serializers::array_serializer::serialize_array")]
         crc_hash: [u8; 20],
         keys_count: u8,
         security_flags: u8,

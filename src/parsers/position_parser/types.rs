@@ -1,4 +1,6 @@
 use std::fmt::{Debug, Formatter};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::ser::SerializeStruct;
 
 #[derive(Copy, Clone, Default)]
 pub struct Position {
@@ -24,5 +26,23 @@ impl Debug for Position {
             self.z,
             self.orientation,
         )
+    }
+}
+
+impl<'de> Deserialize<'de> for Position {
+    fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
+        todo!()
+    }
+}
+
+impl Serialize for Position {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+        const FIELDS_AMOUNT: usize = 4;
+        let mut state = serializer.serialize_struct("Position", FIELDS_AMOUNT)?;
+        state.serialize_field("x", &self.x)?;
+        state.serialize_field("y", &self.y)?;
+        state.serialize_field("z", &self.z)?;
+        state.serialize_field("orientation", &self.orientation)?;
+        state.end()
     }
 }

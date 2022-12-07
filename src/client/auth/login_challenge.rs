@@ -1,23 +1,24 @@
 use std::net::Ipv4Addr;
 
-use crate::packet;
+use crate::{with_opcode};
 use crate::types::{PacketOutcome};
-use crate::types::{TerminatedString};
 use super::opcodes::Opcode;
 
-packet! {
-    @option[login_opcode=Opcode::LOGIN_CHALLENGE]
+with_opcode! {
+    @login_opcode(Opcode::LOGIN_CHALLENGE)
+    #[derive(LoginPacket, Serialize, Deserialize, Debug)]
     struct Outcome {
         unknown: u8,
         packet_size: u16,
-        game_name: TerminatedString,
+        game_name: String,
+        #[serde(serialize_with = "crate::serializers::array_serializer::serialize_array")]
         version: [u8; 3],
         build: u16,
-        platform: TerminatedString,
-        os: TerminatedString,
+        platform: String,
+        os: String,
         locale: String,
         timezone: u32,
-        ip: crate::types::IpAddr,
+        ip: u32,
         account_length: u8,
         account: String,
     }
@@ -33,14 +34,14 @@ pub fn handler(account: &str) -> PacketOutcome {
     Outcome {
         unknown: 0,
         packet_size,
-        game_name: TerminatedString::new("WoW"),
+        game_name: String::from("WoW\0"),
         version: [3, 3, 5],
         build: 12340,
-        platform: TerminatedString::new("68x"),
-        os: TerminatedString::new("niW"),
+        platform: String::from("68x\0"),
+        os: String::from("niW\0"),
         locale: String::from("URur"),
         timezone: 0,
-        ip: crate::types::IpAddr(Ipv4Addr::new(127, 0, 0, 1).into()),
+        ip: Ipv4Addr::new(127, 0, 0, 1).into(),
         account_length,
         account: account.to_string(),
     }.unpack()

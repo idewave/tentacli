@@ -22,12 +22,12 @@ pub mod types;
 mod warden;
 
 pub use characters::types::{Character};
+pub use chat::types::{MessageType, EmoteType, TextEmoteType};
+pub use movement::types::{MovementFlags, MovementFlagsExtra, SplineFlags, UnitMoveType};
 pub use player::types::{Player, ObjectField, UnitField, PlayerField};
 pub use realm::types::{Realm};
 pub use spell::types::{Spell, CooldownInfo};
 pub use warden::types::{WardenModuleInfo};
-
-pub use movement::types::{MovementFlags, MovementFlagsExtra, SplineFlags, UnitMoveType};
 
 use auth::AuthProcessor;
 use characters::CharactersProcessor;
@@ -345,7 +345,7 @@ impl Client {
                         match response {
                             Ok(output) => {
                                 match output {
-                                    HandlerOutput::Data((opcode, packet)) => {
+                                    HandlerOutput::Data((opcode, packet, json)) => {
                                         let packet = match opcode {
                                             Opcode::CMSG_WARDEN_DATA => {
                                                 warden_crypt.lock()
@@ -356,7 +356,7 @@ impl Client {
                                         };
 
                                         // let packet = [header, body].concat();
-                                        output_sender.send((opcode, packet)).await.unwrap();
+                                        output_sender.send((opcode, packet, json)).await.unwrap();
                                     },
                                     HandlerOutput::ConnectionRequest(host, port) => {
                                         match Self::connect_inner(&host, port).await {
@@ -428,17 +428,23 @@ impl Client {
 
         tokio::spawn(async move {
             loop {
-                if let Some((opcode, packet)) = output_receiver.recv().await {
+                if let Some((opcode, packet, json)) = output_receiver.recv().await {
                     if !packet.is_empty() {
                         let result = Self::write_packet(&writer, packet).await;
 
                         match result {
                             Ok(bytes_sent) => {
+                                let message = format!(
+                                    "{}: {} bytes sent",
+                                    Opcode::get_opcode_name(opcode),
+                                    bytes_sent,
+                                );
+
                                 message_income.send_client_message(
                                     format!(
-                                        "{}: {} bytes sent",
-                                        Opcode::get_opcode_name(opcode),
-                                        bytes_sent,
+                                        "{{\"title\": {:?}, \"details\": {:?} }}",
+                                        message,
+                                        json,
                                     ),
                                 );
                             },
@@ -666,7 +672,7 @@ mod tests {
 
             let message_income = MessageIncome::new(input_tx.clone());
 
-            output_sender.send((0, PACKET.to_vec())).await.unwrap();
+            output_sender.send((0, PACKET.to_vec(), String::new())).await.unwrap();
 
             if let Some((stream, _)) = listener.accept().await.ok() {
                 let buffer_size = PACKET.to_vec().len();

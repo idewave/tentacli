@@ -1,16 +1,15 @@
 use async_trait::async_trait;
-use crate::client::{CooldownInfo, Spell};
 
-use crate::packet;
+use crate::client::{CooldownInfo, Spell};
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
 use crate::traits::packet_handler::PacketHandler;
 
-packet! {
-    struct Income {
-        skip: u8,
-        spells: Vec<Spell>,
-        cooldowns: Vec<CooldownInfo>
-    }
+#[derive(WorldPacket, Serialize, Deserialize, Debug, Default)]
+#[options(no_opcode)]
+struct Income {
+    skip: u8,
+    spells: Vec<Spell>,
+    cooldowns: Vec<CooldownInfo>
 }
 
 pub struct Handler;

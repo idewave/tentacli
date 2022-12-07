@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 
 use crate::client::chat::globals::JoinChannelOutcome;
-use crate::types::{HandlerInput, HandlerOutput, HandlerResult, TerminatedString};
+use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
 use crate::traits::packet_handler::PacketHandler;
 
 const CHANNEL_ID: u32 = 2;
@@ -21,7 +21,7 @@ impl PacketHandler for Handler {
 
         Ok(HandlerOutput::Data(JoinChannelOutcome {
             channel_id: CHANNEL_ID,
-            channel_name: TerminatedString::from(channel_name),
+            channel_name: format!("{}\0", channel_name),
             ..JoinChannelOutcome::default()
         }.unpack()))
     }

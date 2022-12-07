@@ -4,35 +4,39 @@ use flate2::Compression;
 use flate2::write::ZlibEncoder;
 use async_trait::async_trait;
 
-use crate::packet;
+use crate::{with_opcode};
 use crate::client::opcodes::Opcode;
 use crate::config::types::AddonInfo;
-use crate::types::{HandlerInput, HandlerOutput, HandlerResult, TerminatedString};
+use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
 use crate::traits::packet_handler::PacketHandler;
 
 const CLIENT_SEED_SIZE: usize = 4;
 
-packet! {
-    @option[world_opcode=Opcode::SMSG_AUTH_CHALLENGE]
-    struct Income {
-        skip: u32,
-        server_seed: [u8; 32],
-    }
+#[derive(WorldPacket, Serialize, Deserialize, Debug)]
+#[options(no_opcode)]
+struct Income {
+    skip: u32,
+    #[serde(serialize_with = "crate::serializers::array_serializer::serialize_array")]
+    server_seed: [u8; 32],
 }
 
-packet! {
-    @option[world_opcode=Opcode::CMSG_AUTH_SESSION]
+with_opcode! {
+    @world_opcode(Opcode::CMSG_AUTH_SESSION)
+    #[derive(WorldPacket, Serialize, Deserialize, Debug)]
     struct Outcome {
         build: u32,
         unknown: u32,
-        account: TerminatedString,
+        account: String,
         unknown2: u32,
+        #[serde(serialize_with = "crate::serializers::array_serializer::serialize_array")]
         client_seed: [u8; CLIENT_SEED_SIZE],
         unknown3: u64,
         server_id: u32,
         unknown4: u64,
+        #[serde(serialize_with = "crate::serializers::array_serializer::serialize_array")]
         digest: [u8; 20],
         addons_count: u32,
+        #[serde(serialize_with = "crate::serializers::array_serializer::serialize_array")]
         addons: Vec<u8>,
     }
 }
@@ -72,7 +76,7 @@ impl PacketHandler for Handler {
         Ok(HandlerOutput::Data(Outcome {
             build: 12340,
             unknown: 0,
-            account: TerminatedString::from(account),
+            account: format!("{}\0", account),
             unknown2: 0,
             client_seed,
             unknown3: 0,

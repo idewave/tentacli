@@ -1,12 +1,13 @@
 use async_trait::async_trait;
 
-use crate::packet;
+use crate::{with_opcode};
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
 use crate::traits::packet_handler::PacketHandler;
 use super::opcodes::Opcode;
 
-packet! {
-    @option[login_opcode=Opcode::REALM_LIST]
+with_opcode! {
+    @login_opcode(Opcode::REALM_LIST)
+    #[derive(LoginPacket, Serialize, Deserialize, Debug, Default)]
     struct Outcome {
         unknown: i32,
     }

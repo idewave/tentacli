@@ -1,16 +1,15 @@
 use async_trait::async_trait;
 
-use crate::packet;
 use crate::client::player::globals::NameQueryOutcome;
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult, PackedGuid};
 use crate::parsers::movement_parser::types::{MovementInfo};
 use crate::traits::packet_handler::PacketHandler;
 
-packet! {
-    struct Income {
-        packed_guid: PackedGuid,
-        movement_info: MovementInfo,
-    }
+#[derive(WorldPacket, Serialize, Deserialize, Debug)]
+#[options(no_opcode)]
+struct Income {
+    packed_guid: PackedGuid,
+    movement_info: MovementInfo,
 }
 
 pub struct Handler;

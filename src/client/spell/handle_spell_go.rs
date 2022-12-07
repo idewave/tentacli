@@ -1,15 +1,14 @@
 use async_trait::async_trait;
 
-use crate::packet;
 use crate::ipc::session::types::ActionFlags;
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult, PackedGuid};
 use crate::traits::packet_handler::PacketHandler;
 
-packet! {
-    struct Income {
-        cast_item_guid: PackedGuid,
-        caster_guid: PackedGuid,
-    }
+#[derive(WorldPacket, Serialize, Deserialize, Debug)]
+#[options(no_opcode)]
+struct Income {
+    cast_item_guid: PackedGuid,
+    caster_guid: PackedGuid,
 }
 
 pub struct Handler;

@@ -1,28 +1,50 @@
 use async_trait::async_trait;
+use std::io::BufRead;
 
-use crate::packet;
-use crate::client::chat::types::{EmoteType};
+use crate::{with_opcode};
+use crate::client::chat::types::{EmoteType, MessageType};
 use crate::client::opcodes::Opcode;
 use crate::ipc::session::types::{ActionFlags};
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
 use crate::traits::packet_handler::PacketHandler;
 
-packet! {
-    @option[world_opcode=Opcode::SMSG_MESSAGECHAT]
-    struct Income {
-        message_type: u8,
-        language: u32,
-        sender_guid: u64,
-        skip: u32,
-        channel_name: String,
-        target_guid: u64,
-        message_length: u32,
-        message: String,
+#[derive(WorldPacket, Serialize, Deserialize, Debug)]
+#[options(no_opcode)]
+#[allow(dead_code)]
+struct Income {
+    message_type: u8,
+    language: u32,
+    sender_guid: u64,
+    skip: u32,
+    #[dynamic_field]
+    channel_name: String,
+    target_guid: u64,
+    message_length: u32,
+    #[dynamic_field]
+    message: String,
+}
+
+impl Income {
+    fn message<R: BufRead>(mut reader: R, initial: &mut Self) -> String {
+        let mut buffer = vec![0u8; initial.message_length as usize];
+        reader.read_exact(&mut buffer).unwrap();
+        String::from_utf8(buffer).unwrap()
+    }
+
+    fn channel_name<R: BufRead>(mut reader: R, initial: &mut Self) -> String {
+        if initial.message_type == MessageType::CHANNEL {
+            let mut buffer = Vec::new();
+            reader.read_until(0, &mut buffer).unwrap();
+            String::from_utf8(buffer).unwrap()
+        } else {
+            String::default()
+        }
     }
 }
 
-packet! {
-    @option[world_opcode=Opcode::CMSG_EMOTE]
+with_opcode! {
+    @world_opcode(Opcode::CMSG_EMOTE)
+    #[derive(WorldPacket, Serialize, Deserialize, Debug)]
     struct Outcome {
         emote_type: u32,
     }

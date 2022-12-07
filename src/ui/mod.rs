@@ -24,6 +24,7 @@ use tui::Terminal;
 
 mod characters_modal;
 mod debug_panel;
+pub mod formatters;
 mod mode_panel;
 mod realm_modal;
 mod debug_details_panel;

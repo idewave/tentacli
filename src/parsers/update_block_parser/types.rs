@@ -1,6 +1,8 @@
 use std::collections::BTreeMap;
 use std::fmt::{Debug, Formatter};
 use bitflags::bitflags;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::ser::SerializeStruct;
 
 use crate::parsers::movement_parser::types::MovementInfo;
 
@@ -25,11 +27,47 @@ impl MovementData {
     }
 }
 
+impl<'de> Deserialize<'de> for MovementData {
+    fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
+        todo!()
+    }
+}
+
+impl Serialize for MovementData {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+        const FIELDS_AMOUNT: usize = 5;
+        let mut state = serializer.serialize_struct("MovementData", FIELDS_AMOUNT)?;
+        state.serialize_field("movement_info", &self.movement_info)?;
+        state.serialize_field("high_guid", &self.high_guid)?;
+        state.serialize_field("low_guid", &self.low_guid)?;
+        state.serialize_field("target_guid", &self.target_guid)?;
+        state.serialize_field("movement_speed", &self.movement_speed)?;
+        state.end()
+    }
+}
+
 #[derive(Clone, Default)]
 pub struct ParsedBlock {
     pub guid: Option<u64>,
     pub update_fields: BTreeMap<u32, u32>,
     pub movement_data: Option<MovementData>,
+}
+
+impl<'de> Deserialize<'de> for ParsedBlock {
+    fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
+        todo!()
+    }
+}
+
+impl Serialize for ParsedBlock {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+        const FIELDS_AMOUNT: usize = 3;
+        let mut state = serializer.serialize_struct("ParsedBlock", FIELDS_AMOUNT)?;
+        state.serialize_field("guid", &self.guid)?;
+        state.serialize_field("update_fields", &self.update_fields)?;
+        state.serialize_field("movement_data", &self.movement_data)?;
+        state.end()
+    }
 }
 
 impl ParsedBlock {

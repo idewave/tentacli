@@ -1,7 +1,5 @@
 use async_trait::async_trait;
 
-use crate::packet;
-use crate::client::opcodes::Opcode;
 use crate::types::{
     HandlerInput,
     HandlerOutput,
@@ -10,11 +8,10 @@ use crate::types::{
 use crate::traits::packet_handler::PacketHandler;
 use super::types::Character;
 
-packet! {
-    @option[world_opcode=Opcode::SMSG_CHAR_ENUM as u32]
-    struct Income {
-        characters: Vec<Character>,
-    }
+#[derive(WorldPacket, Serialize, Deserialize, Debug)]
+#[options(no_opcode)]
+struct Income {
+    characters: Vec<Character>,
 }
 
 pub struct Handler;

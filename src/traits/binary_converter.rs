@@ -1,12 +1,12 @@
 use std::io::{BufRead, Error, ErrorKind, Write};
-use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use crate::client::{Character, CooldownInfo, Realm, Spell};
 use crate::parsers::movement_parser::MovementParser;
 use crate::parsers::movement_parser::types::MovementInfo;
 use crate::parsers::position_parser::types::Position;
 use crate::parsers::update_block_parser::{UpdateBlocksParser, types::ParsedBlock};
-use crate::types::{PackedGuid, TerminatedString};
+use crate::types::{PackedGuid};
 
 pub trait BinaryConverter {
     fn write_into(&mut self, buffer: &mut Vec<u8>) -> Result<(), Error>;
@@ -123,21 +123,6 @@ impl BinaryConverter for String {
         reader.read_until(0, &mut internal_buf)?;
         match String::from_utf8(internal_buf[..internal_buf.len()].to_vec()) {
             Ok(string) => Ok(string),
-            Err(err) => Err(Error::new(ErrorKind::Other, err.to_string())),
-        }
-    }
-}
-
-impl BinaryConverter for TerminatedString {
-    fn write_into(&mut self, buffer: &mut Vec<u8>) -> Result<(), Error> {
-        buffer.write_all(format!("{}\0", self.get_value()).as_bytes())
-    }
-
-    fn read_from<R: BufRead>(mut reader: R) -> Result<Self, Error> {
-        let mut internal_buf = vec![];
-        reader.read_until(0, &mut internal_buf)?;
-        match String::from_utf8(internal_buf[..internal_buf.len()].to_vec()) {
-            Ok(string) => Ok(TerminatedString::from(string)),
             Err(err) => Err(Error::new(ErrorKind::Other, err.to_string())),
         }
     }
@@ -384,17 +369,6 @@ impl BinaryConverter for Vec<u8> {
     }
 
     fn read_from<R: BufRead>(_reader: R) -> Result<Self, Error> where Self: Sized {
-        todo!()
-    }
-}
-
-impl BinaryConverter for crate::types::IpAddr {
-    fn write_into(&mut self, buffer: &mut Vec<u8>) -> Result<(), Error> {
-        let crate::types::IpAddr(value) = self;
-        buffer.write_u32::<BigEndian>(*value)
-    }
-
-    fn read_from<R: BufRead>(_reader: R) -> Result<Self, Error> {
         todo!()
     }
 }
