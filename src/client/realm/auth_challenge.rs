@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use crate::{with_opcode};
 use crate::client::opcodes::Opcode;
 use crate::config::types::AddonInfo;
-use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
+use crate::types::{HandlerInput, HandlerOutput, HandlerResult, TerminatedString};
 use crate::traits::packet_handler::PacketHandler;
 
 const CLIENT_SEED_SIZE: usize = 4;
@@ -26,7 +26,7 @@ with_opcode! {
     struct Outcome {
         build: u32,
         unknown: u32,
-        account: String,
+        account: TerminatedString,
         unknown2: u32,
         #[serde(serialize_with = "crate::serializers::array_serializer::serialize_array")]
         client_seed: [u8; CLIENT_SEED_SIZE],
@@ -76,7 +76,7 @@ impl PacketHandler for Handler {
         Ok(HandlerOutput::Data(Outcome {
             build: 12340,
             unknown: 0,
-            account: format!("{}\0", account),
+            account: TerminatedString::from(account),
             unknown2: 0,
             client_seed,
             unknown3: 0,

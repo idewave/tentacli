@@ -1,5 +1,6 @@
 use crate::{with_opcode};
 use crate::client::Opcode;
+use crate::types::{TerminatedString};
 
 with_opcode! {
     @world_opcode(Opcode::CMSG_JOIN_CHANNEL)
@@ -8,6 +9,6 @@ with_opcode! {
         pub channel_id: u32,
         pub unknown: u8,
         pub unknown1: u8,
-        pub channel_name: String,
+        pub channel_name: TerminatedString,
     }
 }

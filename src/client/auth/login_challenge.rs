@@ -1,7 +1,7 @@
 use std::net::Ipv4Addr;
 
 use crate::{with_opcode};
-use crate::types::{PacketOutcome};
+use crate::types::{PacketOutcome, TerminatedString};
 use super::opcodes::Opcode;
 
 with_opcode! {
@@ -10,12 +10,12 @@ with_opcode! {
     struct Outcome {
         unknown: u8,
         packet_size: u16,
-        game_name: String,
+        game_name: TerminatedString,
         #[serde(serialize_with = "crate::serializers::array_serializer::serialize_array")]
         version: [u8; 3],
         build: u16,
-        platform: String,
-        os: String,
+        platform: TerminatedString,
+        os: TerminatedString,
         locale: String,
         timezone: u32,
         ip: u32,
@@ -34,11 +34,11 @@ pub fn handler(account: &str) -> PacketOutcome {
     Outcome {
         unknown: 0,
         packet_size,
-        game_name: String::from("WoW\0"),
+        game_name: TerminatedString::from("WoW"),
         version: [3, 3, 5],
         build: 12340,
-        platform: String::from("68x\0"),
-        os: String::from("niW\0"),
+        platform: TerminatedString::from("68x"),
+        os: TerminatedString::from("niW"),
         locale: String::from("URur"),
         timezone: 0,
         ip: Ipv4Addr::new(127, 0, 0, 1).into(),

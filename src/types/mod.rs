@@ -4,7 +4,7 @@ use tokio::sync::{mpsc::Sender};
 
 mod fields;
 
-pub use fields::{PackedGuid};
+pub use fields::{PackedGuid, TerminatedString};
 
 use crate::ipc::pipe::dialog::DialogIncome;
 use crate::ipc::pipe::message::MessageIncome;
