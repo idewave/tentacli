@@ -68,7 +68,7 @@ pub struct UI<'a, B: Backend> {
     _mode_panel: ModePanel,
     _realm_modal: RealmModal<'a>,
     _title: Title,
-    _receiver: Receiver<String>,
+    _receiver: Receiver<Option<String>>,
 }
 
 impl<'a, B: Backend> UI<'a, B> {
@@ -76,7 +76,7 @@ impl<'a, B: Backend> UI<'a, B> {
         enable_raw_mode().unwrap();
         execute!(std::io::stdout(), EnterAlternateScreen, EnableMouseCapture).unwrap();
 
-        let (tx, rx) = mpsc::channel::<String>();
+        let (tx, rx) = mpsc::channel::<Option<String>>();
 
         let mut _terminal = Terminal::new(backend).unwrap();
         _terminal.clear().unwrap();
@@ -107,6 +107,11 @@ impl<'a, B: Backend> UI<'a, B> {
 
     pub fn handle_debug_channel(&mut self) {
         if let Ok(message) = self._receiver.try_recv() {
+            let message = match message {
+                Some(message) => message,
+                _ => String::new(),
+            };
+
             self._debug_details_panel.add_item(message);
         }
     }
@@ -132,6 +137,7 @@ impl<'a, B: Backend> UI<'a, B> {
             IncomeMessageType::ResizeEvent => {
                 self._terminal.autoresize().unwrap();
             },
+            _ => {},
         }
 
         self._terminal.draw(|frame| {

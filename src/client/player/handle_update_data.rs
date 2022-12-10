@@ -1,6 +1,4 @@
-use std::io::Cursor;
 use async_trait::async_trait;
-use byteorder::{LittleEndian, ReadBytesExt};
 
 use crate::client::{ObjectField, Player};
 use crate::client::opcodes::Opcode;
@@ -25,18 +23,22 @@ pub struct Handler;
 #[async_trait]
 impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
-        let mut reader = Cursor::new(input.data.as_ref().unwrap()[2..].to_vec());
-        let opcode = reader.read_u16::<LittleEndian>()?;
-
-        let parsed_blocks = if opcode == Opcode::SMSG_UPDATE_OBJECT {
-            let Income { parsed_blocks } = Income::from_binary(input.data.as_ref().unwrap());
-            parsed_blocks
-        } else {
-            let CompressedIncome { parsed_blocks } = CompressedIncome::from_binary(
+        let (parsed_blocks, json) = if input.opcode == Some(Opcode::SMSG_UPDATE_OBJECT) {
+            let (Income { parsed_blocks }, json) = Income::from_binary(
                 input.data.as_ref().unwrap()
             );
-            parsed_blocks
+            (parsed_blocks, json)
+        } else {
+            let (CompressedIncome { parsed_blocks }, json) = CompressedIncome::from_binary(
+                input.data.as_ref().unwrap()
+            );
+            (parsed_blocks, json)
         };
+
+        input.message_income.send_server_message(
+            Opcode::get_server_opcode_name(input.opcode.unwrap()),
+            Some(json),
+        );
 
         let my_guid = {
             input.session.lock().unwrap().me.as_ref().unwrap().guid

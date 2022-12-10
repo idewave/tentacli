@@ -1,9 +1,9 @@
 use async_trait::async_trait;
 
 use crate::{with_opcode};
+use crate::client::Opcode;
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
 use crate::traits::packet_handler::PacketHandler;
-use super::opcodes::Opcode;
 
 with_opcode! {
     @login_opcode(Opcode::REALM_LIST)

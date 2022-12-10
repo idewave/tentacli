@@ -1,5 +1,5 @@
 use std::io::{Write};
-use serde_json::ser::{CharEscape, PrettyFormatter, Serializer};
+use serde_json::ser::{PrettyFormatter, Serializer};
 
 #[derive(Default)]
 pub struct JsonFormatter {
@@ -14,11 +14,23 @@ impl JsonFormatter {
 }
 
 impl serde_json::ser::Formatter for JsonFormatter {
-    fn end_object<W>(&mut self, writer: &mut W) -> std::io::Result<()> where W: ?Sized + Write {
-        self.pretty.write_raw_fragment(writer, ",\n}")
+    fn begin_object<W>(&mut self, writer: &mut W) -> std::io::Result<()> where W: ?Sized + Write {
+        self.pretty.begin_object(writer)
     }
 
-    fn begin_object_key<W>(&mut self, writer: &mut W, first: bool) -> std::io::Result<()> where W: ?Sized + Write {
+    fn end_object<W>(&mut self, writer: &mut W) -> std::io::Result<()> where W: ?Sized + Write {
+        self.pretty.end_object(writer)
+    }
+
+    fn begin_object_key<W>(
+        &mut self,
+        writer: &mut W,
+        first: bool
+    ) -> std::io::Result<()> where W: ?Sized + Write {
         self.pretty.begin_object_key(writer, first)
+    }
+
+    fn end_object_value<W>(&mut self, writer: &mut W) -> std::io::Result<()> where W: ?Sized + Write {
+        self.pretty.end_object_value(writer)
     }
 }

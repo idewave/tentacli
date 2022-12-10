@@ -14,10 +14,6 @@ impl Processor for TradeProcessor {
         let _size = reader.read_u16::<BigEndian>().unwrap();
         let _opcode = reader.read_u16::<LittleEndian>().unwrap();
 
-        // let handlers: Vec<Box<dyn PacketHandler>> = match opcode {
-        //     _ => vec![]
-        // };
-
         let handlers: ProcessorResult = vec![];
 
         handlers

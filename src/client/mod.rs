@@ -45,6 +45,7 @@ use auth::login_challenge;
 
 pub use crate::client::opcodes::Opcode;
 use crate::client::types::ClientFlags;
+use crate::crypto::encryptor::OUTCOMING_HEADER_LENGTH;
 use crate::crypto::warden_crypt::WardenCrypt;
 use crate::ipc::pipe::{IncomeMessagePipe, OutcomeMessagePipe};
 use crate::ipc::pipe::dialog::DialogIncome;
@@ -108,19 +109,21 @@ impl Client {
                 match self.session.lock().unwrap().set_config(host) {
                     Ok(_) => {},
                     Err(err) => {
-                        message_income.send_error_message(err.to_string());
+                        message_income.send_error_message(err.to_string(), None);
                     }
                 }
 
                 message_income.send_success_message(
-                    format!("Connected to {}:{}", host, port)
+                    format!("Connected to {}:{}", host, port),
+                    None,
                 );
 
                 Ok(())
             },
             Err(err) => {
                 message_income.send_error_message(
-                    format!("Cannot connect: {}", err)
+                    format!("Cannot connect: {}", err),
+                    None,
                 );
 
                 Err(err)
@@ -182,7 +185,8 @@ impl Client {
         {
             let mut guard = self._income_message_pipe.lock().unwrap();
             guard.message_income.send_client_message(
-                format!("LOGIN_CHALLENGE as {}", &account)
+                format!("LOGIN_CHALLENGE as {}", &account),
+                None,
             );
         }
 
@@ -333,6 +337,7 @@ impl Client {
                         data_storage: Arc::clone(&data_storage),
                         message_income: message_income.clone(),
                         dialog_income: dialog_income.clone(),
+                        opcode: None
                     };
 
                     let handler_list = processors
@@ -348,14 +353,16 @@ impl Client {
                                     HandlerOutput::Data((opcode, packet, json)) => {
                                         let packet = match opcode {
                                             Opcode::CMSG_WARDEN_DATA => {
-                                                warden_crypt.lock()
+                                                let header = &packet.to_vec()[..OUTCOMING_HEADER_LENGTH].to_vec();
+                                                let body = warden_crypt.lock()
                                                     .unwrap().as_mut()
-                                                    .unwrap().encrypt(&packet)
+                                                    .unwrap().encrypt(&packet.to_vec()[OUTCOMING_HEADER_LENGTH..].to_vec());
+
+                                                [header.to_vec(), body.to_vec()].concat()
                                             },
                                             _ => packet,
                                         };
 
-                                        // let packet = [header, body].concat();
                                         output_sender.send((opcode, packet, json)).await.unwrap();
                                     },
                                     HandlerOutput::ConnectionRequest(host, port) => {
@@ -372,7 +379,8 @@ impl Client {
                                                 ).await;
 
                                                 message_income.send_success_message(
-                                                    format!("Connected to {}:{}", host, port)
+                                                    format!("Connected to {}:{}", host, port),
+                                                    None,
                                                 );
 
                                                 client_flags.lock().unwrap().set(
@@ -382,7 +390,8 @@ impl Client {
                                             },
                                             Err(err) => {
                                                 message_income.send_error_message(
-                                                    err.to_string()
+                                                    err.to_string(),
+                                                    None,
                                                 );
                                             }
                                         }
@@ -410,7 +419,7 @@ impl Client {
                                 };
                             },
                             Err(err) => {
-                                message_income.send_error_message(err.to_string());
+                                message_income.send_error_message(err.to_string(), None);
                             },
                         };
                     }
@@ -436,20 +445,14 @@ impl Client {
                             Ok(bytes_sent) => {
                                 let message = format!(
                                     "{}: {} bytes sent",
-                                    Opcode::get_opcode_name(opcode),
+                                    Opcode::get_client_opcode_name(opcode),
                                     bytes_sent,
                                 );
 
-                                message_income.send_client_message(
-                                    format!(
-                                        "{{\"title\": {:?}, \"details\": {:?} }}",
-                                        message,
-                                        json,
-                                    ),
-                                );
+                                message_income.send_client_message(message, Some(json));
                             },
                             Err(err) => {
-                                message_income.send_client_message(err.to_string());
+                                message_income.send_client_message(err.to_string(), None);
                             }
                         }
                     }
@@ -476,7 +479,7 @@ impl Client {
                                 input_sender.send(packets).await.unwrap();
                             },
                             Err(err) => {
-                                message_income.send_error_message(err.to_string());
+                                message_income.send_error_message(err.to_string(), None);
                                 sleep(Duration::from_secs(1)).await;
                             }
                         }

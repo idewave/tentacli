@@ -1,8 +1,8 @@
 use std::net::Ipv4Addr;
 
+use crate::client::Opcode;
 use crate::{with_opcode};
 use crate::types::{PacketOutcome, TerminatedString};
-use super::opcodes::Opcode;
 
 with_opcode! {
     @login_opcode(Opcode::LOGIN_CHALLENGE)

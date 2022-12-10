@@ -34,7 +34,14 @@ pub struct Handler;
 #[async_trait]
 impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
-        let Income { sender_guid, text_emote } = Income::from_binary(input.data.as_ref().unwrap());
+        let (Income { sender_guid, text_emote }, json) = Income::from_binary(
+            input.data.as_ref().unwrap()
+        );
+
+        input.message_income.send_server_message(
+            Opcode::get_server_opcode_name(input.opcode.unwrap()),
+            Some(json),
+        );
 
         match text_emote {
             TextEmoteType::TEXT_HEAL_ME | TextEmoteType::TEXT_HELP_ME => {

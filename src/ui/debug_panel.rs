@@ -1,7 +1,6 @@
 use std::sync::mpsc::Sender;
 use chrono::Local;
 use crossterm::event::{KeyCode, KeyModifiers};
-use serde_json::Value;
 use tui::backend::Backend;
 use tui::Frame;
 use tui::layout::{Rect};
@@ -19,10 +18,10 @@ const PANEL_TITLE: &str = "DEBUG";
 
 pub struct DebugPanel<'a> {
     items: Vec<ListItem<'a>>,
-    details: Vec<String>,
+    details: Vec<Option<String>>,
     state: ListState,
     debug_mode: bool,
-    sender: Sender<String>,
+    sender: Sender<Option<String>>,
     start_index: usize,
     per_page: u16,
     absolute_index: Option<usize>,
@@ -48,62 +47,57 @@ impl<'a> DebugPanel<'a> {
         let time_block = Self::generate_time_block();
 
         let message = match output {
-            LoggerOutput::Debug(data) if !data.is_empty() => {
-                let (message, details) = Self::parse_input(data);
+            LoggerOutput::Debug(title, details) if !title.is_empty() => {
                 self.details.push(details);
 
                 Spans::from(vec![
                     time_block,
                     Span::styled(
-                        format!("[DEBUG]: {}", message),
+                        format!("[DEBUG]: {}", title),
                         Style::default().fg(Color::DarkGray),
                     ),
                 ])
             },
-            LoggerOutput::Error(data) if !data.is_empty() => {
-                let (message, details) = Self::parse_input(data);
+            LoggerOutput::Error(title, details) if !title.is_empty() => {
                 self.details.push(details);
 
                 Spans::from(vec![
                     time_block,
                     Span::styled(
-                        format!("[ERROR]: {}", message),
+                        format!("[ERROR]: {}", title),
                         Style::default().fg(Color::Red),
                     ),
                 ])
             },
-            LoggerOutput::Success(data) if !data.is_empty() => {
-                let (message, details) = Self::parse_input(data);
+            LoggerOutput::Success(title, details) if !title.is_empty() => {
                 self.details.push(details);
 
                 Spans::from(vec![
                     time_block,
                     Span::styled(
-                        format!("[SUCCESS]: {}", message),
+                        format!("[SUCCESS]: {}", title),
                         Style::default().fg(Color::LightGreen),
                     ),
                 ])
             },
-            LoggerOutput::Server(data) if !data.is_empty() => {
-                let (message, details) = Self::parse_input(data);
+            LoggerOutput::Server(title, details) if !title.is_empty() => {
                 self.details.push(details);
 
                 Spans::from(vec![
                     time_block,
                     Span::styled(
-                        format!("[INCOME]: {}", message),
+                        format!("[INCOME]: {}", title),
                         Style::default().fg(Color::LightMagenta),
                     ),
                 ])
             },
-            LoggerOutput::Client(data) if !data.is_empty() => {
-                let (message, details) = Self::parse_input(data);
+            LoggerOutput::Client(title, details) if !title.is_empty() => {
                 self.details.push(details);
 
                 Spans::from(vec![
                     time_block,
                     Span::styled(
-                        format!("[OUTCOME]: {}", message),
+                        format!("[OUTCOME]: {}", title),
                         Style::default().fg(Color::LightBlue),
                     ),
                 ])
@@ -122,7 +116,7 @@ impl<'a> DebugPanel<'a> {
             None => self.items.len() - 1,
         };
         self.calculate_indexes(absolute_index);
-        self.sender.send(self.details[absolute_index].to_string()).unwrap();
+        self.sender.send(self.details[absolute_index].clone()).unwrap();
     }
 
     pub fn next(&mut self) {
@@ -131,7 +125,7 @@ impl<'a> DebugPanel<'a> {
             None => 0,
         };
         self.calculate_indexes(absolute_index);
-        self.sender.send(self.details[absolute_index].to_string()).unwrap();
+        self.sender.send(self.details[absolute_index].clone()).unwrap();
     }
 
     pub fn set_pagination(&mut self, per_page: u16) {
@@ -179,19 +173,6 @@ impl<'a> DebugPanel<'a> {
         ).unwrap();
 
         self.state.select(Some(relative_index));
-    }
-
-    fn parse_input(data: String) -> (String, String) {
-        let mut message = data.to_string();
-        let mut details = String::new();
-        if let Ok(json) = serde_json::from_str::<Value>(&data) {
-            message = json["title"].to_string();
-            if let Some(info) = json["details"].as_str() {
-                details = info.to_string();
-            }
-        }
-
-        (message, details)
     }
 
     fn generate_time_block() -> Span<'a> {

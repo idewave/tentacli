@@ -54,7 +54,18 @@ pub struct Handler;
 #[async_trait]
 impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
-        let Income { message, sender_guid, .. } = Income::from_binary(input.data.as_ref().unwrap());
+        let (Income { message, sender_guid, .. }, json) = Income::from_binary(
+            input.data.as_ref().unwrap()
+        );
+
+        input.message_income.send_server_message(
+            format!(
+                "{} ({})",
+                Opcode::get_server_opcode_name(input.opcode.unwrap()),
+                "handle_order"
+            ),
+            Some(json),
+        );
 
         let bot_chat = {
             let guard = input.session.lock().unwrap();
@@ -69,7 +80,7 @@ impl PacketHandler for Handler {
                 }.unpack()))
             },
             follow_invite if bot_chat.follow_invite.contains(&follow_invite.to_string()) => {
-                input.message_income.send_debug_message(format!("FOLLOW {}", &sender_guid));
+                input.message_income.send_debug_message(format!("FOLLOW {}", &sender_guid), None);
 
                 let mut guard = input.session.lock().unwrap();
                 guard.follow_target = Some(sender_guid);

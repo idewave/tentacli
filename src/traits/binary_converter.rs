@@ -6,7 +6,6 @@ use crate::parsers::movement_parser::MovementParser;
 use crate::parsers::movement_parser::types::MovementInfo;
 use crate::parsers::position_parser::types::Position;
 use crate::parsers::update_block_parser::{UpdateBlocksParser, types::ParsedBlock};
-use crate::types::{PackedGuid};
 
 pub trait BinaryConverter {
     fn write_into(&mut self, buffer: &mut Vec<u8>) -> Result<(), Error>;

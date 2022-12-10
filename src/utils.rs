@@ -1,4 +1,4 @@
-use std::{fmt::Write, num::ParseIntError};
+use std::{num::ParseIntError};
 use std::io::{BufRead, Read};
 use byteorder::ReadBytesExt;
 use flate2::read::ZlibDecoder;
@@ -50,16 +50,21 @@ pub fn decompress(data: &[u8]) -> Vec<u8> {
     buffer
 }
 
+#[allow(dead_code)]
+pub fn crop(value: &str) -> &str {
+    let mut chars = value.chars();
+    chars.next();
+    chars.next_back();
+    chars.as_str()
+}
+
 #[cfg(test)]
 mod tests {
-    use std::io::{BufReader, Cursor, Write};
+    use std::io::{Write};
     use flate2::Compression;
     use flate2::write::ZlibEncoder;
 
-    use crate::utils::{
-        decode_hex, decompress, encode_hex,
-        read_packed_guid,
-    };
+    use crate::utils::{decode_hex, decompress, encode_hex};
 
     #[test]
     fn test_decompress() {

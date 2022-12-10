@@ -2,11 +2,10 @@ use tui::backend::Backend;
 use tui::Frame;
 use tui::layout::{Alignment, Rect};
 use tui::style::{Color, Style};
-use tui::text::{Spans, Text};
+use tui::text::{Text};
 use tui::widgets::{Block, Borders, BorderType, Paragraph, Wrap};
 
 use crate::traits::ui_component::UIComponent;
-use crate::ui::MARGIN;
 use crate::ui::types::{UIComponentOptions};
 
 const PANEL_TITLE: &str = "DEBUG DETAILS";

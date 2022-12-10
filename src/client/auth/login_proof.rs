@@ -4,10 +4,11 @@ use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
 
 use crate::{with_opcode};
+use crate::client::Opcode;
 use crate::crypto::srp::Srp;
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
 use crate::traits::packet_handler::PacketHandler;
-use super::opcodes::Opcode;
+use crate::utils::encode_hex;
 
 with_opcode! {
     @login_opcode(Opcode::LOGIN_PROOF)
@@ -61,8 +62,13 @@ pub struct Handler;
 #[async_trait]
 impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
-        let Income { n, g, server_ephemeral, salt, .. } = Income::from_binary(
+        let (Income { n, g, server_ephemeral, salt, .. }, json) = Income::from_binary(
             input.data.as_ref().unwrap()
+        );
+
+        input.message_income.send_server_message(
+            Opcode::get_login_opcode_name(input.opcode.unwrap() as u8),
+            Some(json),
         );
 
         let mut session = input.session.lock().unwrap();
@@ -78,7 +84,10 @@ impl PacketHandler for Handler {
 
         session.session_key = Some(srp_client.session_key());
 
-        input.message_income.send_debug_message(String::from("Session key created"));
+        input.message_income.send_debug_message(
+            String::from("Session key created"),
+            Some(encode_hex(&srp_client.session_key())),
+        );
 
         Ok(HandlerOutput::Data(Outcome {
             public_ephemeral: srp_client.public_ephemeral(),

@@ -22,12 +22,14 @@ macro_rules! with_opcode {
 
         impl $PacketStruct {
             $(
+                #[allow(dead_code)]
                 fn opcode() -> u8 {
                     $login_opcode as u8
                 }
             )?
 
             $(
+                #[allow(dead_code)]
                 fn opcode() -> u32 {
                     $world_opcode as u32
                 }

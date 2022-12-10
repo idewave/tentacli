@@ -1,4 +1,4 @@
-use std::io::{BufRead, Error, ErrorKind, Write};
+use std::io::{BufRead, Error, Write};
 use byteorder::ReadBytesExt;
 use serde::{Deserialize, Deserializer, Serialize, Serializer, ser::SerializeTupleStruct};
 
@@ -63,7 +63,7 @@ impl BinaryConverter for PackedGuid {
         let mask = reader.read_u8().unwrap_or(0);
 
         if mask == 0 {
-            return Err(Error::new(ErrorKind::Other, "Cannot read from"));
+            return Ok(PackedGuid(0));
         }
 
         let mut guid: u64 = 0;

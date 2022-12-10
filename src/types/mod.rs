@@ -19,6 +19,7 @@ pub struct HandlerInput {
     pub data_storage: Arc<SyncMutex<DataStorage>>,
     pub message_income: MessageIncome,
     pub dialog_income: DialogIncome,
+    pub opcode: Option<u16>,
 }
 
 #[derive(Debug)]

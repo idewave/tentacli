@@ -1,5 +1,5 @@
 use std::io::{BufRead, Error, ErrorKind, Write};
-use byteorder::{ReadBytesExt, WriteBytesExt};
+use byteorder::{WriteBytesExt};
 use serde::{Deserialize, Deserializer, Serialize, Serializer, ser::SerializeTupleStruct};
 
 use crate::traits::binary_converter::BinaryConverter;

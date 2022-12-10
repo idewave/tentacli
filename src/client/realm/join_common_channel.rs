@@ -17,8 +17,6 @@ impl PacketHandler for Handler {
             .unwrap()
             .channels.common.to_string();
 
-        input.message_income.send_debug_message(format!("JOINING '{}' channel", &channel_name));
-
         Ok(HandlerOutput::Data(JoinChannelOutcome {
             channel_id: CHANNEL_ID,
             channel_name: TerminatedString::from(channel_name),

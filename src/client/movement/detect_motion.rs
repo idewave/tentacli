@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 
+use crate::client::Opcode;
 use crate::client::player::globals::NameQueryOutcome;
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult, PackedGuid};
 use crate::parsers::movement_parser::types::{MovementInfo};
@@ -16,8 +17,13 @@ pub struct Handler;
 #[async_trait]
 impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
-        let Income { packed_guid, movement_info } = Income::from_binary(
+        let (Income { packed_guid, movement_info }, json) = Income::from_binary(
             &input.data.as_ref().unwrap().to_vec()
+        );
+
+        input.message_income.send_server_message(
+            Opcode::get_server_opcode_name(input.opcode.unwrap()),
+            Some(json),
         );
 
         let PackedGuid(guid) = packed_guid;

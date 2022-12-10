@@ -1,8 +1,15 @@
 use async_trait::async_trait;
 
-use crate::client::{Player};
+use crate::client::{Opcode, Player};
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult, PackedGuid};
 use crate::traits::packet_handler::PacketHandler;
+
+#[derive(WorldPacket, Serialize, Deserialize, Debug)]
+#[options(no_opcode)]
+struct CheckEmptyIncome {
+    packed_guid: PackedGuid,
+    unknown: u8,
+}
 
 #[derive(WorldPacket, Serialize, Deserialize, Debug)]
 #[options(no_opcode)]
@@ -20,9 +27,25 @@ pub struct Handler;
 #[async_trait]
 impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
-        let Income { packed_guid, name, race, class, .. } = Income::from_binary(
+        let (CheckEmptyIncome { packed_guid, unknown }, _) = CheckEmptyIncome::from_binary(
             input.data.as_ref().unwrap(),
         );
+
+        if packed_guid == 0 && unknown == 1 {
+            input.message_income.send_error_message("Player not exists".to_string(), None);
+
+            return Ok(HandlerOutput::Void);
+        }
+
+        let (Income { packed_guid, name, race, class, .. }, json) = Income::from_binary(
+            input.data.as_ref().unwrap(),
+        );
+
+        input.message_income.send_server_message(
+            Opcode::get_server_opcode_name(input.opcode.unwrap()),
+            Some(json),
+        );
+
         let PackedGuid(guid) = packed_guid;
 
         let my_guid = {

@@ -11,6 +11,7 @@ pub enum IncomeMessageType {
     Message(LoggerOutput),
     KeyEvent(KeyModifiers, KeyCode),
     ResizeEvent,
+    None,
 }
 
 // messages from UI to client
@@ -22,12 +23,11 @@ pub enum OutcomeMessageType {
 
 #[derive(Debug)]
 pub enum LoggerOutput {
-    Debug(String),
-    Error(String),
-    Success(String),
-
-    Server(String),
-    Client(String),
+    Debug(String, Option<String>),
+    Error(String, Option<String>),
+    Success(String, Option<String>),
+    Server(String, Option<String>),
+    Client(String, Option<String>),
 }
 
 #[derive(Debug, Clone)]

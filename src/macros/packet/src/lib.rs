@@ -67,7 +67,7 @@ pub fn derive_login_packet(input: TokenStream) -> TokenStream {
 
     let output = quote! {
         impl #ident {
-            pub fn from_binary(buffer: &Vec<u8>) -> Self {
+            pub fn from_binary(buffer: &Vec<u8>) -> (Self, String) {
                 let mut omit_bytes = Self::opcode().to_le_bytes().len();
                 let mut initial_reader = #cursor::new(buffer[omit_bytes..].to_vec());
                 let mut initial = Self {
@@ -75,9 +75,12 @@ pub fn derive_login_packet(input: TokenStream) -> TokenStream {
                 };
 
                 let mut reader = #cursor::new(buffer[omit_bytes..].to_vec());
-                Self {
+                let mut instance = Self {
                     #(#field_names: #initializers),*
-                }
+                };
+                let details = instance.get_json_details();
+
+                (instance, details)
             }
 
             pub fn to_binary(&mut self) -> Vec<u8> {
@@ -87,32 +90,15 @@ pub fn derive_login_packet(input: TokenStream) -> TokenStream {
                 [header, body].concat()
             }
 
-            // use this method in case you didn't use with_opcode! macro
-            // pub fn to_binary_with_opcode(&mut self, opcode: u8) -> Vec<u8> {
-            //     let body = self._build_body();
-            //     let header = Self::_build_header(opcode);
-            //     [header, body].concat()
-            // }
-
             pub fn unpack(&mut self) -> #types::PacketOutcome {
-                let mut serializer = #json_formatter::init();
-                #serialize::serialize(self, &mut serializer).unwrap();
-                let details = String::from_utf8(serializer.into_inner()).unwrap();
-
-                (
-                    Self::opcode() as u32,
-                    self.to_binary(),
-                    details
-                )
+                (Self::opcode() as u32, self.to_binary(), self.get_json_details())
             }
 
-            // pub fn unpack_with_opcode(&mut self, opcode: u8) -> #types::PacketOutcome {
-            //     (
-            //         opcode as u32,
-            //         self.to_binary_with_opcode(opcode),
-            //         serde_json::to_string_pretty(&self).unwrap()
-            //     )
-            // }
+            pub fn get_json_details(&mut self) -> String {
+                let mut serializer = #json_formatter::init();
+                #serialize::serialize(self, &mut serializer).unwrap();
+                String::from_utf8(serializer.into_inner()).unwrap()
+            }
 
             fn _build_body(&mut self) -> Vec<u8> {
                 let mut body = Vec::new();
@@ -152,7 +138,9 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
         cursor,
         deflate_decoder,
         incoming_header_length,
+        json_formatter,
         read,
+        serialize,
         types,
         ..
     } = Imports::get();
@@ -218,7 +206,7 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
 
     let mut output = quote! {
         impl #ident {
-            pub fn from_binary(buffer: &Vec<u8>) -> Self {
+            pub fn from_binary(buffer: &Vec<u8>) -> (Self, String) {
                 let mut omit_bytes = #incoming_header_length;
 
                 let mut buffer = match #is_compressed {
@@ -242,9 +230,12 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
                 };
 
                 let mut reader = #cursor::new(buffer);
-                Self {
+                let mut instance = Self {
                     #(#field_names: #initializers),*
-                }
+                };
+                let details = instance.get_json_details();
+
+                (instance, details)
             }
 
             // use this method in case you didn't use with_opcode! macro
@@ -255,11 +246,13 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
             }
 
             pub fn unpack_with_opcode(&mut self, opcode: u32) -> #types::PacketOutcome {
-                (
-                    opcode,
-                    self.to_binary_with_opcode(opcode),
-                    serde_json::to_string_pretty(&self).unwrap()
-                )
+                (opcode, self.to_binary_with_opcode(opcode), self.get_json_details())
+            }
+
+            pub fn get_json_details(&mut self) -> String {
+                let mut serializer = #json_formatter::init();
+                #serialize::serialize(self, &mut serializer).unwrap();
+                String::from_utf8(serializer.into_inner()).unwrap()
             }
 
             fn _build_body(&mut self) -> Vec<u8> {
@@ -278,7 +271,8 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
                 let mut header: Vec<u8> = Vec::new();
                 #byteorder_write::write_u16::<#byteorder_be>(
                     &mut header,
-                    body_len as u16,
+                    // header is 2 bytes packet size + 4 bytes outcoming opcode size
+                    (body_len as u16) + 4,
                 ).unwrap();
 
                 #byteorder_write::write_u32::<#byteorder_le>(
@@ -304,11 +298,7 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
                 }
 
                 pub fn unpack(&mut self) -> #types::PacketOutcome {
-                    (
-                        Self::opcode(),
-                        self.to_binary(),
-                        serde_json::to_string_pretty(&self).unwrap()
-                    )
+                    (Self::opcode(), self.to_binary(), self.get_json_details())
                 }
             }
         }

@@ -23,83 +23,79 @@ impl Processor for MovementProcessor {
             Box::new(handle_follow::Handler),
         ];
 
-        let mut message = String::new();
-
         let handlers: ProcessorResult = match opcode {
             Opcode::MSG_MOVE_START_FORWARD => {
-                message = String::from("MSG_MOVE_START_FORWARD");
+                input.opcode = Some(opcode);
                 handlers
             },
             Opcode::MSG_MOVE_START_BACKWARD => {
-                message = String::from("MSG_MOVE_START_BACKWARD");
+                input.opcode = Some(opcode);
                 handlers
             },
             Opcode::MSG_MOVE_JUMP => {
-                message = String::from("MSG_MOVE_JUMP");
+                input.opcode = Some(opcode);
                 handlers
             },
             Opcode::MSG_MOVE_HEARTBEAT => {
-                message = String::from("MSG_MOVE_HEARTBEAT");
+                input.opcode = Some(opcode);
                 handlers
             },
             Opcode::MSG_MOVE_START_TURN_LEFT => {
-                message = String::from("MSG_MOVE_START_TURN_LEFT");
+                input.opcode = Some(opcode);
                 handlers
             },
             Opcode::MSG_MOVE_START_TURN_RIGHT => {
-                message = String::from("MSG_MOVE_START_TURN_RIGHT");
+                input.opcode = Some(opcode);
                 handlers
             },
             Opcode::MSG_MOVE_STOP => {
-                message = String::from("MSG_MOVE_STOP");
+                input.opcode = Some(opcode);
                 handlers
             },
             Opcode::MSG_MOVE_STOP_STRAFE => {
-                message = String::from("MSG_MOVE_STOP_STRAFE");
+                input.opcode = Some(opcode);
                 handlers
             },
             Opcode::MSG_MOVE_STOP_TURN => {
-                message = String::from("MSG_MOVE_STOP_TURN");
+                input.opcode = Some(opcode);
                 handlers
             },
             Opcode::MSG_MOVE_START_PITCH_UP => {
-                message = String::from("MSG_MOVE_START_PITCH_UP");
+                input.opcode = Some(opcode);
                 handlers
             },
             Opcode::MSG_MOVE_START_PITCH_DOWN => {
-                message = String::from("MSG_MOVE_START_PITCH_DOWN");
+                input.opcode = Some(opcode);
                 handlers
             },
             Opcode::MSG_MOVE_STOP_PITCH => {
-                message = String::from("MSG_MOVE_STOP_PITCH");
+                input.opcode = Some(opcode);
                 handlers
             },
             Opcode::MSG_MOVE_FALL_LAND => {
-                message = String::from("MSG_MOVE_FALL_LAND");
+                input.opcode = Some(opcode);
                 handlers
             },
             Opcode::MSG_MOVE_SET_PITCH => {
-                message = String::from("MSG_MOVE_SET_PITCH");
+                input.opcode = Some(opcode);
                 handlers
             },
             Opcode::MSG_MOVE_START_SWIM => {
-                message = String::from("MSG_MOVE_START_SWIM");
+                input.opcode = Some(opcode);
                 handlers
             },
             Opcode::MSG_MOVE_STOP_SWIM => {
-                message = String::from("MSG_MOVE_STOP_SWIM");
+                input.opcode = Some(opcode);
                 handlers
             },
             Opcode::MSG_MOVE_SET_FACING => {
-                message = String::from("MSG_MOVE_SET_FACING");
+                input.opcode = Some(opcode);
                 handlers
             },
             _ => {
                 vec![]
             },
         };
-
-        input.message_income.send_server_message(message);
 
         handlers
     }

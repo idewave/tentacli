@@ -20,7 +20,7 @@ pub struct UIOutputOptions {
 #[derive(Clone)]
 pub struct UIComponentOptions {
     pub output_options: UIOutputOptions,
-    pub sender: Sender<String>,
+    pub sender: Sender<Option<String>>,
 }
 
 bitflags! {

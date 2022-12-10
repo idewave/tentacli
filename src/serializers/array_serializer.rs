@@ -1,4 +1,4 @@
-use serde::{Serialize, Serializer};
+use serde::{Serializer};
 
 use crate::utils::encode_hex;
 

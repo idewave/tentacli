@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use std::io::BufRead;
 
 use crate::client::chat::types::{MessageType};
+use crate::client::Opcode;
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
 use crate::traits::packet_handler::PacketHandler;
 
@@ -11,6 +12,7 @@ use crate::traits::packet_handler::PacketHandler;
 struct Income {
     message_type: u8,
     language: u32,
+    sender_guid: u64,
     skip: u32,
     #[dynamic_field]
     channel_name: String,
@@ -42,7 +44,16 @@ pub struct Handler;
 #[async_trait]
 impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
-        let Income { .. } = Income::from_binary(input.data.as_ref().unwrap());
+        let (Income { .. }, json) = Income::from_binary(input.data.as_ref().unwrap());
+
+        input.message_income.send_server_message(
+            format!(
+                "{} ({})",
+                Opcode::get_server_opcode_name(input.opcode.unwrap()),
+                "log_chat_message"
+            ),
+            Some(json),
+        );
 
         Ok(HandlerOutput::Void)
     }

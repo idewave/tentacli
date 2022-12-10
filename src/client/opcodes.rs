@@ -3,10 +3,9 @@ pub struct Opcode;
 
 #[allow(dead_code)]
 impl Opcode {
-    // auth opcodes here are just for output (see get_opcode_name below)
-    pub const LOGIN_CHALLENGE: u32 = 0;
-    pub const LOGIN_PROOF: u32 = 1;
-    pub const REALM_LIST: u32 = 16;
+    pub const LOGIN_CHALLENGE: u8 = 0;
+    pub const LOGIN_PROOF: u8 = 1;
+    pub const REALM_LIST: u8 = 16;
 
     pub const CMSG_CHAR_ENUM: u32 = 55;
     pub const CMSG_PLAYER_LOGIN: u32 = 61;
@@ -132,11 +131,17 @@ impl Opcode {
     pub const MSG_MOVE_HEARTBEAT: u16 = 238;
     pub const MSG_SET_DUNGEON_DIFFICULTY: u16 = 809;
 
-    pub fn get_opcode_name(opcode: u32) -> String {
+    pub fn get_login_opcode_name(opcode: u8) -> String {
         match opcode {
             Opcode::LOGIN_CHALLENGE => String::from("LOGIN_CHALLENGE"),
             Opcode::LOGIN_PROOF => String::from("LOGIN_PROOF"),
             Opcode::REALM_LIST => String::from("REALM_LIST"),
+            _ => format!("{}", opcode),
+        }
+    }
+
+    pub fn get_client_opcode_name(opcode: u32) -> String {
+        match opcode {
             Opcode::CMSG_CHAR_ENUM => String::from("CMSG_CHAR_ENUM"),
             Opcode::CMSG_PLAYER_LOGIN => String::from("CMSG_PLAYER_LOGIN"),
             Opcode::CMSG_LOGOUT_REQUEST => String::from("CMSG_LOGOUT_REQUEST"),
@@ -176,6 +181,94 @@ impl Opcode {
             Opcode::CMSG_QUESTGIVER_STATUS_MULTIPLE_QUERY => String::from("CMSG_QUESTGIVER_STATUS_MULTIPLE_QUERY"),
             Opcode::CMSG_GAMEOBJ_REPORT_USE => String::from("CMSG_GAMEOBJ_REPORT_USE"),
             Opcode::CMSG_READY_FOR_ACCOUNT_DATA_TIMES => String::from("CMSG_READY_FOR_ACCOUNT_DATA_TIMES"),
+            _ => format!("{}", opcode),
+        }
+    }
+
+    pub fn get_server_opcode_name(opcode: u16) -> String {
+        match opcode {
+            Opcode::SMSG_CHAR_ENUM => String::from("SMSG_CHAR_ENUM"),
+            Opcode::SMSG_LOGIN_SETTIMESPEED => String::from("SMSG_LOGIN_SETTIMESPEED"),
+            Opcode::SMSG_NAME_QUERY_RESPONSE => String::from("SMSG_NAME_QUERY_RESPONSE"),
+            Opcode::SMSG_ITEM_QUERY_SINGLE_RESPONSE => String::from("SMSG_ITEM_QUERY_SINGLE_RESPONSE"),
+            Opcode::SMSG_GAMEOBJECT_QUERY_RESPONSE => String::from("SMSG_GAMEOBJECT_QUERY_RESPONSE"),
+            Opcode::SMSG_CREATURE_QUERY_RESPONSE => String::from("SMSG_CREATURE_QUERY_RESPONSE"),
+            Opcode::SMSG_GROUP_INVITE => String::from("SMSG_GROUP_INVITE"),
+            Opcode::SMSG_GROUP_LIST => String::from("SMSG_GROUP_LIST"),
+            Opcode::SMSG_MESSAGECHAT => String::from("SMSG_MESSAGECHAT"),
+            Opcode::SMSG_UPDATE_OBJECT => String::from("SMSG_UPDATE_OBJECT"),
+            Opcode::SMSG_DESTROY_OBJECT => String::from("SMSG_DESTROY_OBJECT"),
+            Opcode::SMSG_GAMEOBJECT_CUSTOM_ANIM => String::from("SMSG_GAMEOBJECT_CUSTOM_ANIM"),
+            Opcode::SMSG_MONSTER_MOVE => String::from("SMSG_MONSTER_MOVE"),
+            Opcode::SMSG_TUTORIAL_FLAGS => String::from("SMSG_TUTORIAL_FLAGS"),
+            Opcode::SMSG_EMOTE => String::from("SMSG_EMOTE"),
+            Opcode::SMSG_TEXT_EMOTE => String::from("SMSG_TEXT_EMOTE"),
+            Opcode::SMSG_INVENTORY_CHANGE_FAILURE => String::from("SMSG_INVENTORY_CHANGE_FAILURE"),
+            Opcode::SMSG_SET_PROFICIENCY => String::from("SMSG_SET_PROFICIENCY"),
+            Opcode::SMSG_INITIAL_SPELLS => String::from("SMSG_INITIAL_SPELLS"),
+            Opcode::SMSG_CAST_RESULT => String::from("SMSG_CAST_RESULT"),
+            Opcode::SMSG_SPELL_START => String::from("SMSG_SPELL_START"),
+            Opcode::SMSG_SPELL_GO => String::from("SMSG_SPELL_GO"),
+            Opcode::SMSG_SPELL_FAILURE => String::from("SMSG_SPELL_FAILURE"),
+            Opcode::SMSG_CANCEL_COMBAT => String::from("SMSG_CANCEL_COMBAT"),
+            Opcode::SMSG_SPELLHEALLOG => String::from("SMSG_SPELLHEALLOG"),
+            Opcode::SMSG_BINDPOINTUPDATE => String::from("SMSG_BINDPOINTUPDATE"),
+            Opcode::SMSG_LOOT_RESPONSE => String::from("SMSG_LOOT_RESPONSE"),
+            Opcode::SMSG_LOOT_RELEASE_RESPONSE => String::from("SMSG_LOOT_RELEASE_RESPONSE"),
+            Opcode::SMSG_LOOT_REMOVED => String::from("SMSG_LOOT_REMOVED"),
+            Opcode::SMSG_ITEM_PUSH_RESULT => String::from("SMSG_ITEM_PUSH_RESULT"),
+            Opcode::SMSG_BUY_ITEM => String::from("SMSG_BUY_ITEM"),
+            Opcode::SMSG_FISH_NOT_HOOKED => String::from("SMSG_FISH_NOT_HOOKED"),
+            Opcode::SMSG_PONG => String::from("SMSG_PONG"),
+            Opcode::SMSG_SPELL_DELAYED => String::from("SMSG_SPELL_DELAYED"),
+            Opcode::SMSG_AUTH_CHALLENGE => String::from("SMSG_AUTH_CHALLENGE"),
+            Opcode::SMSG_AUTH_RESPONSE => String::from("SMSG_AUTH_RESPONSE"),
+            Opcode::SMSG_COMPRESSED_UPDATE_OBJECT => String::from("SMSG_COMPRESSED_UPDATE_OBJECT"),
+            Opcode::SMSG_ACCOUNT_DATA_TIMES => String::from("SMSG_ACCOUNT_DATA_TIMES"),
+            Opcode::SMSG_GAMEOBJECT_DESPAWN_ANIM => String::from("SMSG_GAMEOBJECT_DESPAWN_ANIM"),
+            Opcode::SMSG_LOGIN_VERIFY_WORLD => String::from("SMSG_LOGIN_VERIFY_WORLD"),
+            Opcode::SMSG_SEND_MAIL_RESULT => String::from("SMSG_SEND_MAIL_RESULT"),
+            Opcode::SMSG_MAIL_LIST_RESULT => String::from("SMSG_MAIL_LIST_RESULT"),
+            Opcode::SMSG_SPELLLOGEXECUTE => String::from("SMSG_SPELLLOGEXECUTE"),
+            Opcode::SMSG_SET_PCT_SPELL_MODIFIER => String::from("SMSG_SET_PCT_SPELL_MODIFIER"),
+            Opcode::SMSG_SET_FORCED_REACTIONS => String::from("SMSG_SET_FORCED_REACTIONS"),
+            Opcode::SMSG_SPELL_FAILED_OTHER => String::from("SMSG_SPELL_FAILED_OTHER"),
+            Opcode::SMSG_WARDEN_DATA => String::from("SMSG_WARDEN_DATA"),
+            Opcode::SMSG_ADDON_INFO => String::from("SMSG_ADDON_INFO"),
+            Opcode::SMSG_EXPECTED_SPAM_RECORDS => String::from("SMSG_EXPECTED_SPAM_RECORDS"),
+            Opcode::SMSG_MOTD => String::from("SMSG_MOTD"),
+            Opcode::SMSG_REALM_SPLIT => String::from("SMSG_REALM_SPLIT"),
+            Opcode::SMSG_FEATURE_SYSTEM_STATUS => String::from("SMSG_FEATURE_SYSTEM_STATUS"),
+            Opcode::SMSG_QUESTGIVER_STATUS_MULTIPLE => String::from("SMSG_QUESTGIVER_STATUS_MULTIPLE"),
+            Opcode::SMSG_ACHIEVEMENT_EARNED => String::from("SMSG_ACHIEVEMENT_EARNED"),
+            Opcode::SMSG_CRITERIA_UPDATE => String::from("SMSG_CRITERIA_UPDATE"),
+            Opcode::SMSG_SET_PHASE_SHIFT => String::from("SMSG_SET_PHASE_SHIFT"),
+            Opcode::SMSG_POWER_UPDATE => String::from("SMSG_POWER_UPDATE"),
+            Opcode::SMSG_AURA_UPDATE_ALL => String::from("SMSG_AURA_UPDATE_ALL"),
+            Opcode::SMSG_AURA_UPDATE => String::from("SMSG_AURA_UPDATE"),
+            Opcode::SMSG_CLIENTCACHE_VERSION => String::from("SMSG_CLIENTCACHE_VERSION"),
+            Opcode::SMSG_TALENT_UPDATE => String::from("SMSG_TALENT_UPDATE"),
+            Opcode::MSG_MOVE_START_FORWARD => String::from("MSG_MOVE_START_FORWARD"),
+            Opcode::MSG_MOVE_START_BACKWARD => String::from("MSG_MOVE_START_BACKWARD"),
+            Opcode::MSG_MOVE_STOP => String::from("MSG_MOVE_STOP"),
+            Opcode::MSG_MOVE_START_STRAFE_LEFT => String::from("MSG_MOVE_START_STRAFE_LEFT"),
+            Opcode::MSG_MOVE_START_STRAFE_RIGHT => String::from("MSG_MOVE_START_STRAFE_RIGHT"),
+            Opcode::MSG_MOVE_STOP_STRAFE => String::from("MSG_MOVE_STOP_STRAFE"),
+            Opcode::MSG_MOVE_JUMP => String::from("MSG_MOVE_JUMP"),
+            Opcode::MSG_MOVE_START_TURN_LEFT => String::from("MSG_MOVE_START_TURN_LEFT"),
+            Opcode::MSG_MOVE_START_TURN_RIGHT => String::from("MSG_MOVE_START_TURN_RIGHT"),
+            Opcode::MSG_MOVE_STOP_TURN => String::from("MSG_MOVE_STOP_TURN"),
+            Opcode::MSG_MOVE_START_PITCH_UP => String::from("MSG_MOVE_START_PITCH_UP"),
+            Opcode::MSG_MOVE_START_PITCH_DOWN => String::from("MSG_MOVE_START_PITCH_DOWN"),
+            Opcode::MSG_MOVE_STOP_PITCH => String::from("MSG_MOVE_STOP_PITCH"),
+            Opcode::MSG_MOVE_FALL_LAND => String::from("MSG_MOVE_FALL_LAND"),
+            Opcode::MSG_MOVE_START_SWIM => String::from("MSG_MOVE_START_SWIM"),
+            Opcode::MSG_MOVE_STOP_SWIM => String::from("MSG_MOVE_STOP_SWIM"),
+            Opcode::MSG_MOVE_SET_FACING => String::from("MSG_MOVE_SET_FACING"),
+            Opcode::MSG_MOVE_SET_PITCH => String::from("MSG_MOVE_SET_PITCH"),
+            Opcode::MSG_MOVE_WORLDPORT_ACK => String::from("MSG_MOVE_WORLDPORT_ACK"),
+            Opcode::MSG_MOVE_HEARTBEAT => String::from("MSG_MOVE_HEARTBEAT"),
+            Opcode::MSG_SET_DUNGEON_DIFFICULTY => String::from("MSG_SET_DUNGEON_DIFFICULTY"),
             _ => format!("{}", opcode),
         }
     }
