@@ -24,7 +24,7 @@ mod warden;
 pub use characters::types::{Character};
 pub use chat::types::{MessageType, EmoteType, TextEmoteType};
 pub use movement::types::{MovementFlags, MovementFlagsExtra, SplineFlags, UnitMoveType};
-pub use player::types::{Player, ObjectField, UnitField, PlayerField, FieldType};
+pub use player::types::{Player, ObjectField, UnitField, PlayerField, FieldType, FieldValue};
 pub use realm::types::{Realm};
 pub use spell::types::{Spell, CooldownInfo};
 pub use warden::types::{WardenModuleInfo};

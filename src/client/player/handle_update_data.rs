@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use crate::client::{ObjectField, Player};
+use crate::client::{FieldValue, ObjectField, Player};
 use crate::client::opcodes::Opcode;
 use crate::client::player::globals::NameQueryOutcome;
 use crate::parsers::update_block_parser::types::{ObjectTypeMask, ParsedBlock};
@@ -55,38 +55,40 @@ impl PacketHandler for Handler {
             if my_guid != guid {
                 match parsed_block.update_fields.get(&ObjectField::TYPE) {
                     Some(type_mask) => {
-                        match *type_mask {
-                            ObjectTypeMask::IS_PLAYER => {
-                                if players_map.get(&guid).is_none() {
-                                    let mut player = Player {
-                                        guid,
-                                        .. Player::default()
-                                    };
+                        if let FieldValue::LONG(mask) = type_mask {
+                            match *mask {
+                                ObjectTypeMask::IS_PLAYER => {
+                                    if players_map.get(&guid).is_none() {
+                                        let mut player = Player {
+                                            guid,
+                                            .. Player::default()
+                                        };
 
-                                    if let Some(movement_data) = parsed_block.movement_data {
-                                        if let Some(movement_info) = movement_data.movement_info {
-                                            player.position = Some(movement_info.position);
+                                        if let Some(movement_data) = parsed_block.movement_data {
+                                            if let Some(movement_info) = movement_data.movement_info {
+                                                player.position = Some(movement_info.position);
+                                            }
+
+                                            if !movement_data.movement_speed.is_empty() {
+                                                player.movement_speed = movement_data.movement_speed;
+                                            }
                                         }
 
-                                        if !movement_data.movement_speed.is_empty() {
-                                            player.movement_speed = movement_data.movement_speed;
+                                        if !parsed_block.update_fields.is_empty() {
+                                            player.fields = parsed_block.update_fields;
                                         }
+
+                                        input.data_storage.lock()
+                                            .unwrap().players_map.insert(guid, player);
+
+                                        return Ok(
+                                            HandlerOutput::Data(NameQueryOutcome { guid }.unpack())
+                                        );
                                     }
-
-                                    if !parsed_block.update_fields.is_empty() {
-                                        player.fields = parsed_block.update_fields;
-                                    }
-
-                                    input.data_storage.lock()
-                                        .unwrap().players_map.insert(guid, player);
-
-                                    return Ok(
-                                        HandlerOutput::Data(NameQueryOutcome { guid }.unpack())
-                                    );
-                                }
-                            },
-                            ObjectTypeMask::IS_UNIT => {},
-                            _ => {},
+                                },
+                                ObjectTypeMask::IS_UNIT => {},
+                                _ => {},
+                            }
                         }
                     },
                     None => {

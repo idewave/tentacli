@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 use std::fmt::{Debug, Formatter};
+use serde::{Serialize, Serializer};
 
 use crate::client::Character;
 use crate::parsers::position_parser::types::Position;
@@ -10,7 +11,7 @@ pub struct Player {
     pub name: String,
     pub race: u8,
     pub class: u8,
-    pub fields: BTreeMap<u32, u64>,
+    pub fields: BTreeMap<u32, FieldValue>,
     pub movement_speed: BTreeMap<u8, f32>,
     pub position: Option<Position>,
 }
@@ -109,6 +110,23 @@ pub enum FieldType {
     LONG,
     FLOAT,
     NONE,
+}
+
+#[derive(Debug, Clone)]
+pub enum FieldValue {
+    INT(u32),
+    LONG(u64),
+    FLOAT(f32),
+}
+
+impl Serialize for FieldValue {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+        match *self {
+            FieldValue::INT(value) => serializer.serialize_u32(value),
+            FieldValue::LONG(value) => serializer.serialize_u64(value),
+            FieldValue::FLOAT(value) => serializer.serialize_f32((value * 100.0).round() / 100.0),
+        }
+    }
 }
 
 #[non_exhaustive]

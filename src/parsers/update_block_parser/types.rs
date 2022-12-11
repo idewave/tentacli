@@ -3,7 +3,7 @@ use std::fmt::{Debug, Formatter};
 use bitflags::bitflags;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde::ser::SerializeStruct;
-use crate::client::{ObjectField, PlayerField, UnitField};
+use crate::client::{FieldValue, ObjectField, PlayerField, UnitField};
 
 use crate::parsers::movement_parser::types::MovementInfo;
 
@@ -50,7 +50,7 @@ impl Serialize for MovementData {
 #[derive(Clone, Default)]
 pub struct ParsedBlock {
     pub guid: Option<u64>,
-    pub update_fields: BTreeMap<u32, u64>,
+    pub update_fields: BTreeMap<u32, FieldValue>,
     pub movement_data: Option<MovementData>,
 }
 
@@ -62,7 +62,7 @@ impl<'de> Deserialize<'de> for ParsedBlock {
 
 impl Serialize for ParsedBlock {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        let mut update_fields: BTreeMap<String, u64> = BTreeMap::new();
+        let mut update_fields: BTreeMap<String, FieldValue> = BTreeMap::new();
         for (k, v) in &self.update_fields {
             let key = if k < &ObjectField::LIMIT {
                 ObjectField::get_field_name(*k)
@@ -72,7 +72,7 @@ impl Serialize for ParsedBlock {
                 PlayerField::get_field_name(*k)
             };
 
-            update_fields.insert(key, *v);
+            update_fields.insert(key, v.clone());
         }
 
         const FIELDS_AMOUNT: usize = 3;

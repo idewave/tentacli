@@ -4,7 +4,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 
 pub mod types;
 
-use crate::client::{FieldType, MovementFlags, ObjectField, PlayerField, SplineFlags, UnitField, UnitMoveType};
+use crate::client::{FieldType, FieldValue, MovementFlags, ObjectField, PlayerField, SplineFlags, UnitField, UnitMoveType};
 use crate::parsers::movement_parser::MovementParser;
 use crate::parsers::position_parser::PositionParser;
 use crate::parsers::update_block_parser::types::{MovementData, ObjectUpdateFlags, ObjectUpdateType, ParsedBlock};
@@ -27,12 +27,14 @@ pub struct UpdateBlocksParser;
 
 impl UpdateBlocksParser {
     pub fn parse<R: BufRead>(reader: &mut R) -> Result<Vec<ParsedBlock>, Error> {
+        // sometimes blocks_amount is 0
         let blocks_amount = reader.read_u32::<LittleEndian>()?;
         let mut parsed_blocks: Vec<ParsedBlock> = Vec::new();
 
         for _ in 0..blocks_amount {
             match Self::parse_block(reader) {
                 Ok(parsed_block) => {
+                    // TODO: need to investigate why empty block comes from server
                     if !ParsedBlock::is_empty(&parsed_block) {
                         parsed_blocks.push(parsed_block);
                     }
@@ -126,9 +128,11 @@ impl UpdateBlocksParser {
         Ok(parsed_block)
     }
 
-    fn parse_updated_values<R: BufRead>(reader: &mut R) -> Result<BTreeMap<u32, u64>, Error> {
+    fn parse_updated_values<R: BufRead>(
+        reader: &mut R
+    ) -> Result<BTreeMap<u32, FieldValue>, Error> {
         let blocks_amount = reader.read_u8().unwrap_or(0);
-        let mut update_fields: BTreeMap<u32, u64> = BTreeMap::new();
+        let mut update_fields: BTreeMap<u32, FieldValue> = BTreeMap::new();
 
         if blocks_amount > 0 {
             let mut update_mask = vec![0i32; blocks_amount as usize];
@@ -141,15 +145,8 @@ impl UpdateBlocksParser {
             for i in 0..blocks_amount {
                 let mut bitmask = update_mask[i as usize];
 
-                let mut omit_next_iteration = false;
-
                 for _ in 0..32 {
                     if bitmask & 1 != 0 {
-                        if omit_next_iteration {
-                            omit_next_iteration = false;
-                            continue;
-                        }
-
                         let field_type = if index < ObjectField::LIMIT {
                             ObjectField::get_field_type(index)
                         } else if index < UnitField::LIMIT {
@@ -158,14 +155,16 @@ impl UpdateBlocksParser {
                             PlayerField::get_field_type(index)
                         };
 
-                        if field_type == FieldType::LONG {
-                            omit_next_iteration = true;
-                        }
-
                         if let Some(value) = match field_type {
-                            FieldType::LONG => Some(reader.read_u64::<LittleEndian>()?),
-                            FieldType::INT => Some(reader.read_u32::<LittleEndian>()? as u64),
-                            FieldType::FLOAT => Some(reader.read_f32::<LittleEndian>()? as u64),
+                            FieldType::LONG => {
+                                Some(FieldValue::LONG(reader.read_u64::<LittleEndian>()?))
+                            },
+                            FieldType::INT => {
+                                Some(FieldValue::INT(reader.read_u32::<LittleEndian>()?))
+                            },
+                            FieldType::FLOAT => {
+                                Some(FieldValue::FLOAT(reader.read_f32::<LittleEndian>()?))
+                            },
                             _ => None,
                         } {
                             update_fields.insert(index, value);
