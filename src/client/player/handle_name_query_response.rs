@@ -27,11 +27,11 @@ pub struct Handler;
 #[async_trait]
 impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
-        let (CheckEmptyIncome { packed_guid, unknown }, _) = CheckEmptyIncome::from_binary(
+        let (CheckEmptyIncome { unknown, .. }, _) = CheckEmptyIncome::from_binary(
             input.data.as_ref().unwrap(),
         );
 
-        if packed_guid == 0 && unknown == 1 {
+        if unknown == 1 {
             input.message_income.send_error_message("Player not exists".to_string(), None);
 
             return Ok(HandlerOutput::Void);

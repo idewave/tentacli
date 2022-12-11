@@ -53,7 +53,7 @@ impl PacketHandler for Handler {
             let guid = parsed_block.guid.unwrap();
 
             if my_guid != guid {
-                match parsed_block.update_fields.get(&ObjectField::OBJECT_FIELD_TYPE) {
+                match parsed_block.update_fields.get(&ObjectField::TYPE) {
                     Some(type_mask) => {
                         match *type_mask {
                             ObjectTypeMask::IS_PLAYER => {

@@ -5,7 +5,7 @@ use crate::{with_opcode};
 use crate::client::chat::types::{EmoteType, MessageType};
 use crate::client::opcodes::Opcode;
 use crate::ipc::session::types::{ActionFlags};
-use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
+use crate::types::{HandlerInput, HandlerOutput, HandlerResult, TerminatedString};
 use crate::traits::packet_handler::PacketHandler;
 
 #[derive(WorldPacket, Serialize, Deserialize, Debug)]
@@ -17,27 +17,34 @@ struct Income {
     sender_guid: u64,
     skip: u32,
     #[dynamic_field]
-    channel_name: String,
+    channel_name: TerminatedString,
     target_guid: u64,
     message_length: u32,
     #[dynamic_field]
-    message: String,
+    message: TerminatedString,
 }
 
 impl Income {
-    fn message<R: BufRead>(mut reader: R, initial: &mut Self) -> String {
+    fn message<R: BufRead>(mut reader: R, initial: &mut Self) -> TerminatedString {
         let mut buffer = vec![0u8; initial.message_length as usize];
-        reader.read_exact(&mut buffer).unwrap();
-        String::from_utf8(buffer).unwrap()
+        match reader.read_exact(&mut buffer) {
+            Ok(_) => TerminatedString::from(buffer),
+            _ => {
+                match reader.read_to_end(&mut buffer) {
+                    Ok(_) => TerminatedString::from(buffer),
+                    _ => TerminatedString::from("Cannot parse message"),
+                }
+            }
+        }
     }
 
-    fn channel_name<R: BufRead>(mut reader: R, initial: &mut Self) -> String {
+    fn channel_name<R: BufRead>(mut reader: R, initial: &mut Self) -> TerminatedString {
         if initial.message_type == MessageType::CHANNEL {
             let mut buffer = Vec::new();
             reader.read_until(0, &mut buffer).unwrap();
-            String::from_utf8(buffer).unwrap()
+            TerminatedString::from(buffer)
         } else {
-            String::default()
+            TerminatedString::default()
         }
     }
 }
@@ -54,17 +61,8 @@ pub struct Handler;
 #[async_trait]
 impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
-        let (Income { message, sender_guid, .. }, json) = Income::from_binary(
+        let (Income { message, sender_guid, .. }, _) = Income::from_binary(
             input.data.as_ref().unwrap()
-        );
-
-        input.message_income.send_server_message(
-            format!(
-                "{} ({})",
-                Opcode::get_server_opcode_name(input.opcode.unwrap()),
-                "handle_order"
-            ),
-            Some(json),
         );
 
         let bot_chat = {
@@ -73,7 +71,9 @@ impl PacketHandler for Handler {
             config.bot_chat.clone()
         };
 
-        return match message.trim_matches(char::from(0)) {
+        let TerminatedString(text) = message;
+
+        return match text.trim_matches(char::from(0)) {
             greet if bot_chat.greet.contains(&greet.to_string()) => {
                 Ok(HandlerOutput::Data(Outcome {
                     emote_type: EmoteType::ONESHOT_WAVE as u32,

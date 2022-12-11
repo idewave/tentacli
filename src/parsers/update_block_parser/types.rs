@@ -3,6 +3,7 @@ use std::fmt::{Debug, Formatter};
 use bitflags::bitflags;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde::ser::SerializeStruct;
+use crate::client::{ObjectField, PlayerField, UnitField};
 
 use crate::parsers::movement_parser::types::MovementInfo;
 
@@ -49,7 +50,7 @@ impl Serialize for MovementData {
 #[derive(Clone, Default)]
 pub struct ParsedBlock {
     pub guid: Option<u64>,
-    pub update_fields: BTreeMap<u32, u32>,
+    pub update_fields: BTreeMap<u32, u64>,
     pub movement_data: Option<MovementData>,
 }
 
@@ -61,10 +62,23 @@ impl<'de> Deserialize<'de> for ParsedBlock {
 
 impl Serialize for ParsedBlock {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+        let mut update_fields: BTreeMap<String, u64> = BTreeMap::new();
+        for (k, v) in &self.update_fields {
+            let key = if k < &ObjectField::LIMIT {
+                ObjectField::get_field_name(*k)
+            } else if k < &UnitField::LIMIT {
+                UnitField::get_field_name(*k)
+            } else {
+                PlayerField::get_field_name(*k)
+            };
+
+            update_fields.insert(key, *v);
+        }
+
         const FIELDS_AMOUNT: usize = 3;
         let mut state = serializer.serialize_struct("ParsedBlock", FIELDS_AMOUNT)?;
         state.serialize_field("guid", &self.guid)?;
-        state.serialize_field("update_fields", &self.update_fields)?;
+        state.serialize_field("update_fields", &update_fields)?;
         state.serialize_field("movement_data", &self.movement_data)?;
         state.end()
     }
@@ -130,17 +144,17 @@ pub struct ObjectTypeMask;
 
 #[allow(dead_code)]
 impl ObjectTypeMask {
-    pub const TYPEMASK_OBJECT: u32 = 0x0001;
-    pub const TYPEMASK_ITEM: u32 = 0x0002;
-    pub const TYPEMASK_CONTAINER: u32 = 0x0004;
-    pub const TYPEMASK_UNIT: u32 = 0x0008;
-    pub const TYPEMASK_PLAYER: u32 = 0x0010;
-    pub const TYPEMASK_GAMEOBJECT: u32 = 0x0020;
-    pub const TYPEMASK_DYNAMICOBJECT: u32 = 0x0040;
-    pub const TYPEMASK_CORPSE: u32 = 0x0080;
+    pub const TYPEMASK_OBJECT: u64 = 0x0001;
+    pub const TYPEMASK_ITEM: u64 = 0x0002;
+    pub const TYPEMASK_CONTAINER: u64 = 0x0004;
+    pub const TYPEMASK_UNIT: u64 = 0x0008;
+    pub const TYPEMASK_PLAYER: u64 = 0x0010;
+    pub const TYPEMASK_GAMEOBJECT: u64 = 0x0020;
+    pub const TYPEMASK_DYNAMICOBJECT: u64 = 0x0040;
+    pub const TYPEMASK_CORPSE: u64 = 0x0080;
 
-    pub const IS_UNIT: u32 = ObjectTypeMask::TYPEMASK_OBJECT | ObjectTypeMask::TYPEMASK_UNIT;
-    pub const IS_PLAYER: u32 = ObjectTypeMask::IS_UNIT | ObjectTypeMask::TYPEMASK_PLAYER;
+    pub const IS_UNIT: u64 = ObjectTypeMask::TYPEMASK_OBJECT | ObjectTypeMask::TYPEMASK_UNIT;
+    pub const IS_PLAYER: u64 = ObjectTypeMask::IS_UNIT | ObjectTypeMask::TYPEMASK_PLAYER;
 }
 
 bitflags! {

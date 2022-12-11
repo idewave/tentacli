@@ -56,15 +56,6 @@ with_opcode! {
     }
 }
 
-with_opcode! {
-    @world_opcode(Opcode::CMSG_WARDEN_DATA)
-    #[derive(WorldPacket, Serialize, Deserialize, Debug)]
-    struct Outcome1 {
-        warden_opcode: u8,
-        digest: Vec<u8>,
-    }
-}
-
 // I did this part mostly according to https://www.getmangos.eu/forums/topic/3409-warden/
 // unfortunately this topic incomplete and seems like TS will not finish it. In case somebody know
 // how to finish please help me do this

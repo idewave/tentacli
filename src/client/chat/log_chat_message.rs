@@ -3,7 +3,7 @@ use std::io::BufRead;
 
 use crate::client::chat::types::{MessageType};
 use crate::client::Opcode;
-use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
+use crate::types::{HandlerInput, HandlerOutput, HandlerResult, TerminatedString};
 use crate::traits::packet_handler::PacketHandler;
 
 #[derive(WorldPacket, Serialize, Deserialize)]
@@ -15,27 +15,34 @@ struct Income {
     sender_guid: u64,
     skip: u32,
     #[dynamic_field]
-    channel_name: String,
+    channel_name: TerminatedString,
     target_guid: u64,
     message_length: u32,
     #[dynamic_field]
-    message: String,
+    message: TerminatedString,
 }
 
 impl Income {
-    fn message<R: BufRead>(mut reader: R, initial: &mut Self) -> String {
+    fn message<R: BufRead>(mut reader: R, initial: &mut Self) -> TerminatedString {
         let mut buffer = vec![0u8; initial.message_length as usize];
-        reader.read_exact(&mut buffer).unwrap();
-        String::from_utf8(buffer).unwrap()
+        match reader.read_exact(&mut buffer) {
+            Ok(_) => TerminatedString::from(buffer),
+            _ => {
+                match reader.read_to_end(&mut buffer) {
+                    Ok(_) => TerminatedString::from(buffer),
+                    _ => TerminatedString::from("Cannot parse message"),
+                }
+            }
+        }
     }
 
-    fn channel_name<R: BufRead>(mut reader: R, initial: &mut Self) -> String {
+    fn channel_name<R: BufRead>(mut reader: R, initial: &mut Self) -> TerminatedString {
         if initial.message_type == MessageType::CHANNEL {
             let mut buffer = Vec::new();
             reader.read_until(0, &mut buffer).unwrap();
-            String::from_utf8(buffer).unwrap()
+            TerminatedString::from(buffer)
         } else {
-            String::default()
+            TerminatedString::default()
         }
     }
 }
