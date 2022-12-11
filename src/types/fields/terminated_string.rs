@@ -26,6 +26,13 @@ impl From<Vec<u8>> for TerminatedString {
     }
 }
 
+impl ToString for TerminatedString {
+    fn to_string(&self) -> String {
+        let Self(string) = self;
+        string.to_string()
+    }
+}
+
 impl BinaryConverter for TerminatedString {
     fn write_into(&mut self, buffer: &mut Vec<u8>) -> Result<(), Error> {
         let TerminatedString(str) = self;
@@ -52,6 +59,6 @@ impl<'de> Deserialize<'de> for TerminatedString {
 
 impl Serialize for TerminatedString {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        serializer.serialize_str(&self.0.trim_end_matches(char::from(0)))
+        serializer.serialize_str(self.0.trim_end_matches(char::from(0)))
     }
 }

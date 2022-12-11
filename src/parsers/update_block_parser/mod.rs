@@ -110,15 +110,23 @@ impl UpdateBlocksParser {
             }
             ObjectUpdateType::OUT_OF_RANGE_OBJECTS => {
                 let guid_amount = reader.read_u32::<LittleEndian>()?;
+                let mut guids: Vec<u64> = Vec::new();
                 for _ in 0..guid_amount {
-                    let _guid = read_packed_guid(reader);
+                    let guid = read_packed_guid(reader);
+                    guids.push(guid);
                 }
+
+                parsed_block.out_of_range_guids = guids;
             }
             ObjectUpdateType::NEAR_OBJECTS => {
                 let guid_amount = reader.read_u32::<LittleEndian>()?;
+                let mut guids: Vec<u64> = Vec::new();
                 for _ in 0..guid_amount {
-                    let _guid = read_packed_guid(reader);
+                    let guid = read_packed_guid(reader);
+                    guids.push(guid);
                 }
+
+                parsed_block.near_object_guids = guids;
             }
             _ => {
                 return Err(Error::new(ErrorKind::InvalidData, "Wrong block type"));

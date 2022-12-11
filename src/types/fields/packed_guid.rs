@@ -1,6 +1,6 @@
 use std::io::{BufRead, Error, Write};
 use byteorder::ReadBytesExt;
-use serde::{Deserialize, Deserializer, Serialize, Serializer, ser::SerializeTupleStruct};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::traits::binary_converter::BinaryConverter;
 
@@ -29,10 +29,7 @@ impl<'de> Deserialize<'de> for PackedGuid {
 
 impl Serialize for PackedGuid {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        const FIELDS_AMOUNT: usize = 1;
-        let mut state = serializer.serialize_tuple_struct("PackedGuid", FIELDS_AMOUNT)?;
-        state.serialize_field(&self.0)?;
-        state.end()
+        serializer.serialize_u64(self.0)
     }
 }
 

@@ -23,6 +23,10 @@ pub struct Handler;
 #[async_trait]
 impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
+        input.message_income.send_success_message(
+            format!("UPDATE PACKET"),
+            Some(format!("{:?}", input.data.as_ref().unwrap())),
+        );
         let (parsed_blocks, json) = if input.opcode == Some(Opcode::SMSG_UPDATE_OBJECT) {
             let (Income { parsed_blocks }, json) = Income::from_binary(
                 input.data.as_ref().unwrap()
@@ -50,6 +54,10 @@ impl PacketHandler for Handler {
         };
 
         for parsed_block in parsed_blocks {
+            if parsed_block.guid.is_none() {
+                continue;
+            }
+
             let guid = parsed_block.guid.unwrap();
 
             if my_guid != guid {

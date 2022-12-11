@@ -50,6 +50,8 @@ impl Serialize for MovementData {
 #[derive(Clone, Default)]
 pub struct ParsedBlock {
     pub guid: Option<u64>,
+    pub out_of_range_guids: Vec<u64>,
+    pub near_object_guids: Vec<u64>,
     pub update_fields: BTreeMap<u32, FieldValue>,
     pub movement_data: Option<MovementData>,
 }
@@ -78,6 +80,8 @@ impl Serialize for ParsedBlock {
         const FIELDS_AMOUNT: usize = 3;
         let mut state = serializer.serialize_struct("ParsedBlock", FIELDS_AMOUNT)?;
         state.serialize_field("guid", &self.guid)?;
+        state.serialize_field("out_of_range_guids", &self.out_of_range_guids)?;
+        state.serialize_field("near_object_guids", &self.near_object_guids)?;
         state.serialize_field("update_fields", &update_fields)?;
         state.serialize_field("movement_data", &self.movement_data)?;
         state.end()
@@ -88,6 +92,8 @@ impl ParsedBlock {
     pub fn new() -> Self {
         Self {
             guid: None,
+            out_of_range_guids: Vec::new(),
+            near_object_guids: Vec::new(),
             update_fields: BTreeMap::new(),
             movement_data: None,
         }
@@ -97,6 +103,8 @@ impl ParsedBlock {
         parsed_block.guid.is_none()
             && parsed_block.update_fields.is_empty()
             && parsed_block.movement_data.is_none()
+            && parsed_block.out_of_range_guids.is_empty()
+            && parsed_block.near_object_guids.is_empty()
     }
 }
 
