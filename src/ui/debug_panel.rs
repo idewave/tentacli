@@ -155,6 +155,30 @@ impl<'a> DebugPanel<'a> {
                     }
                 }
             },
+            KeyCode::PageUp => {
+                let absolute_index = match self.absolute_index {
+                    Some(i) => if i >= self.per_page as usize {
+                        i - (self.per_page as usize)
+                    } else {
+                        0
+                    },
+                    None => 0,
+                };
+                self.calculate_indexes(absolute_index);
+                self.sender.send(self.details[absolute_index].clone()).unwrap();
+            },
+            KeyCode::PageDown => {
+                let absolute_index = match self.absolute_index {
+                    Some(i) => if i + (self.per_page as usize) <= self.items.len() - 1 {
+                        i + (self.per_page as usize)
+                    } else {
+                        self.items.len() - 1
+                    },
+                    None => 0,
+                };
+                self.calculate_indexes(absolute_index);
+                self.sender.send(self.details[absolute_index].clone()).unwrap();
+            },
             _ => {},
         }
     }
