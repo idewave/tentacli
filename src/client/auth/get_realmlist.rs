@@ -25,7 +25,7 @@ impl PacketHandler for Handler {
         let (Income { realms, .. }, json) = Income::from_binary(input.data.as_ref().unwrap());
 
         input.message_income.send_server_message(
-            Opcode::get_login_opcode_name(input.opcode.unwrap() as u8),
+            Opcode::get_server_opcode_name(input.opcode.unwrap()),
             Some(json),
         );
 

@@ -134,12 +134,12 @@ impl<'a> DebugPanel<'a> {
 
     pub fn handle_key_event(
         &mut self,
-        _: KeyModifiers,
+        key_modifiers: KeyModifiers,
         key_code: KeyCode,
         state_flags: &mut UIStateFlags
     ) {
         match key_code {
-            KeyCode::Up => {
+            KeyCode::Up if !key_modifiers.contains(KeyModifiers::CONTROL) => {
                 if !state_flags.contains(UIStateFlags::IS_EVENT_HANDLED) {
                     if self.debug_mode {
                         self.prev();
@@ -147,7 +147,7 @@ impl<'a> DebugPanel<'a> {
                     }
                 }
             },
-            KeyCode::Down => {
+            KeyCode::Down if !key_modifiers.contains(KeyModifiers::CONTROL) => {
                 if !state_flags.contains(UIStateFlags::IS_EVENT_HANDLED) {
                     if self.debug_mode {
                         self.next();
@@ -155,7 +155,7 @@ impl<'a> DebugPanel<'a> {
                     }
                 }
             },
-            KeyCode::PageUp => {
+            KeyCode::PageUp if !key_modifiers.contains(KeyModifiers::CONTROL) => {
                 let absolute_index = match self.absolute_index {
                     Some(i) => if i >= self.per_page as usize {
                         i - (self.per_page as usize)
@@ -167,7 +167,7 @@ impl<'a> DebugPanel<'a> {
                 self.calculate_indexes(absolute_index);
                 self.sender.send(self.details[absolute_index].clone()).unwrap();
             },
-            KeyCode::PageDown => {
+            KeyCode::PageDown if !key_modifiers.contains(KeyModifiers::CONTROL) => {
                 let absolute_index = match self.absolute_index {
                     Some(i) => if i + (self.per_page as usize) <= self.items.len() - 1 {
                         i + (self.per_page as usize)

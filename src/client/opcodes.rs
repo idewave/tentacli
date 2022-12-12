@@ -131,16 +131,15 @@ impl Opcode {
     pub const MSG_MOVE_HEARTBEAT: u16 = 238;
     pub const MSG_SET_DUNGEON_DIFFICULTY: u16 = 809;
 
-    pub fn get_login_opcode_name(opcode: u8) -> String {
-        match opcode {
-            Opcode::LOGIN_CHALLENGE => String::from("LOGIN_CHALLENGE"),
-            Opcode::LOGIN_PROOF => String::from("LOGIN_PROOF"),
-            Opcode::REALM_LIST => String::from("REALM_LIST"),
-            _ => format!("{}", opcode),
-        }
-    }
-
     pub fn get_client_opcode_name(opcode: u32) -> String {
+        if (opcode as u8) == Opcode::LOGIN_CHALLENGE {
+            return String::from("LOGIN_CHALLENGE");
+        } else if (opcode as u8) == Opcode::LOGIN_PROOF {
+            return String::from("LOGIN_PROOF");
+        } else if (opcode as u8) == Opcode::REALM_LIST {
+            return String::from("REALM_LIST");
+        }
+
         match opcode {
             Opcode::CMSG_CHAR_ENUM => String::from("CMSG_CHAR_ENUM"),
             Opcode::CMSG_PLAYER_LOGIN => String::from("CMSG_PLAYER_LOGIN"),
@@ -186,6 +185,14 @@ impl Opcode {
     }
 
     pub fn get_server_opcode_name(opcode: u16) -> String {
+        if (opcode as u8) == Opcode::LOGIN_CHALLENGE {
+            return String::from("LOGIN_CHALLENGE");
+        } else if (opcode as u8) == Opcode::LOGIN_PROOF {
+            return String::from("LOGIN_PROOF");
+        } else if (opcode as u8) == Opcode::REALM_LIST {
+            return String::from("REALM_LIST");
+        }
+
         match opcode {
             Opcode::SMSG_CHAR_ENUM => String::from("SMSG_CHAR_ENUM"),
             Opcode::SMSG_LOGIN_SETTIMESPEED => String::from("SMSG_LOGIN_SETTIMESPEED"),

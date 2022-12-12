@@ -112,7 +112,7 @@ impl<'a, B: Backend> UI<'a, B> {
                 _ => String::new(),
             };
 
-            self._debug_details_panel.add_item(message);
+            self._debug_details_panel.set_output(message);
         }
     }
 
@@ -193,6 +193,7 @@ impl<'a, B: Backend> UI<'a, B> {
         self._mode_panel.handle_key_event(modifiers, key_code, &mut self.state_flags);
         self._realm_modal.handle_key_event(modifiers, key_code, &mut self.state_flags);
         self._debug_panel.handle_key_event(modifiers, key_code, &mut self.state_flags);
+        self._debug_details_panel.handle_key_event(modifiers, key_code, &mut self.state_flags);
 
         if key_code == KeyCode::Char('c') {
             if modifiers.contains(KeyModifiers::CONTROL) {
