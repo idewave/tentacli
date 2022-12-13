@@ -28,6 +28,7 @@ pub enum HandlerOutput {
     ConnectionRequest(String, u16),
     Freeze,
     Void,
+    Drop,
 }
 
 #[derive(Debug)]

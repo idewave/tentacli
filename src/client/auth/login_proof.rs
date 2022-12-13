@@ -10,8 +10,6 @@ use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
 use crate::traits::packet_handler::PacketHandler;
 use crate::utils::encode_hex;
 
-// TODO: check LOGIN_PROOF code before parsing rest packet
-
 with_opcode! {
     @login_opcode(Opcode::LOGIN_PROOF)
     #[derive(LoginPacket, Serialize, Deserialize, Debug)]

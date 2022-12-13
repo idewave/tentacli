@@ -416,6 +416,9 @@ impl Client {
                                         }
                                     },
                                     HandlerOutput::Void => {},
+                                    HandlerOutput::Drop => {
+                                        break;
+                                    },
                                 };
                             },
                             Err(err) => {
