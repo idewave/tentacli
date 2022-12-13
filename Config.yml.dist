@@ -1,13 +1,18 @@
 connection_data:
   127.0.0.1:
-    username: "username"
+    account: "account"
     password: "password"
     realm_name: ".*PATTERN TO FIND REALM NAME.*"
 
   another.server.com:
-    username: ""
+    account: ""
     password: ""
     realm_name: "FULL REALM NAME"
+
+channels:
+  lfg: "lfg-channel-name"
+  common: "common-channel-name"
+  trade: "trade-channel-name"
 
 addons:
   - name: "Blizzard_AchievementUI"

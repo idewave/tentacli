@@ -2,7 +2,7 @@ use async_trait::async_trait;
 
 use crate::ipc::session::types::StateFlags;
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
-use crate::types::traits::PacketHandler;
+use crate::traits::packet_handler::PacketHandler;
 
 pub struct Handler;
 #[async_trait]

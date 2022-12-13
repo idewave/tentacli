@@ -1,16 +1,13 @@
 # idewave-cli
 This is Rust implementation of World of Warcraft client v3.3.5a. Smart CLI.
 
-Use this project to customize actions when interact with WoW server. Interaction can be automatic and manual. 
-
-In case of automatic interaction you just define any amount of handlers and bind them to specific opcode inside special `Processor` object. So this handlers will be processed once packet with specific opcode received from server.
-
-In case of manual interaction you can define special manager (see **movement/ai** as example) where you decide by yourself when to send packets (or do another actions).
+You can use the CLI to debug TCP packets from/to World of Warcraft Server. Or send your own (need to implement handlers).
+Also, you can use it as bot (but you need to implement actions by yourself, see MovementAI for example).
 
 ### How to start
-Rename **Config.yml.dist** into **Config.yml**, then edit it according to your preferences. 
+Rename **Config.yml.dist** into **Config.yml**, then edit it according to your preferences.
 
-Since v1.0.0 `realm_name` param temporary not supported (will be supported in future with autoconnect to realm feature).
+Rename **.env.example** into *.env* and edit it according to your preferences.
 
 Then just run:
 
@@ -24,14 +21,5 @@ Then just run:
 5. Support of yml config
 6. Added UI with keyboard interaction
 
-*Unfortunately, I have no experience with reverse engineering*. 
-If somebody can help to finish warden part I would appreciate it.
-Please consider also: I do not support cheaters and cheat making. 
-This part implemented in learning purpose only.
-
-### You want contribute
+### You want to contribute
 It's always welcome. Just create pull request with your improvements, bugfix etc.
-
-If you want to support me you can buy me a coffee on https://ko-fi.com/idewave.
-
-Please join us on discord: https://discord.gg/PvaJ2g4zTp

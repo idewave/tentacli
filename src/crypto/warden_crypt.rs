@@ -1,4 +1,5 @@
 use sha1::{Digest, Sha1};
+
 use crate::crypto::rc4::RC4;
 
 const KEY_SIZE: usize = 16;

@@ -8,7 +8,7 @@ use tui::widgets::{Block, Borders, BorderType, Clear, List, ListItem, ListState}
 
 use crate::client::{Realm};
 use crate::ipc::pipe::dialog::DialogOutcome;
-use crate::types::traits::UIComponent;
+use crate::traits::ui_component::UIComponent;
 use crate::ui::types::{UIComponentOptions, UIStateFlags};
 
 const PANEL_TITLE: &str = "SELECT REALM";

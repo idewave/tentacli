@@ -6,7 +6,7 @@ mod opcodes;
 mod send_data;
 pub mod types;
 
-use crate::types::traits::{Processor};
+use crate::traits::processor::Processor;
 use crate::types::{HandlerInput, ProcessorResult};
 
 pub struct WardenProcessor;
@@ -16,18 +16,14 @@ impl Processor for WardenProcessor {
         let mut reader = Cursor::new(input.data.as_ref().unwrap());
         let _size = reader.read_u16::<BigEndian>().unwrap();
         let opcode = reader.read_u16::<LittleEndian>().unwrap();
-        
-        let mut message = String::new();
 
         let handlers: ProcessorResult = match opcode {
             Opcode::SMSG_WARDEN_DATA => {
-                message = String::from("RECEIVE SMSG_WARDEN_DATA");
+                input.opcode = Some(opcode);
                 vec![Box::new(send_data::Handler)]
             },
             _ => vec![],
         };
-
-        input.message_income.send_server_message(message);
 
         handlers
     }

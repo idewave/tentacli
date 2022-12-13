@@ -14,23 +14,23 @@ impl MessageIncome {
         }
     }
 
-    pub fn send_debug_message(&mut self, message: String) {
-        self._sender.send(IncomeMessageType::Message(LoggerOutput::Debug(message))).unwrap();
+    pub fn send_debug_message(&mut self, message: String, details: Option<String>) {
+        self._sender.send(IncomeMessageType::Message(LoggerOutput::Debug(message, details))).unwrap();
     }
 
-    pub fn send_success_message(&mut self, message: String) {
-        self._sender.send(IncomeMessageType::Message(LoggerOutput::Success(message))).unwrap();
+    pub fn send_success_message(&mut self, message: String, details: Option<String>) {
+        self._sender.send(IncomeMessageType::Message(LoggerOutput::Success(message, details))).unwrap();
     }
 
-    pub fn send_server_message(&mut self, message: String) {
-        self._sender.send(IncomeMessageType::Message(LoggerOutput::Server(message))).unwrap();
+    pub fn send_server_message(&mut self, message: String, details: Option<String>) {
+        self._sender.send(IncomeMessageType::Message(LoggerOutput::Server(message, details))).unwrap();
     }
 
-    pub fn send_client_message(&mut self, message: String) {
-        self._sender.send(IncomeMessageType::Message(LoggerOutput::Client(message))).unwrap();
+    pub fn send_client_message(&mut self, message: String, details: Option<String>) {
+        self._sender.send(IncomeMessageType::Message(LoggerOutput::Client(message, details))).unwrap();
     }
 
-    pub fn send_error_message(&mut self, message: String) {
-        self._sender.send(IncomeMessageType::Message(LoggerOutput::Error(message))).unwrap();
+    pub fn send_error_message(&mut self, message: String, details: Option<String>) {
+        self._sender.send(IncomeMessageType::Message(LoggerOutput::Error(message, details))).unwrap();
     }
 }

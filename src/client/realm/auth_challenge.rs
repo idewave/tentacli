@@ -1,81 +1,95 @@
-use byteorder::{LittleEndian, WriteBytesExt};
-use std::io::{Cursor, Write, Read};
+use std::io::{Write};
 use sha1::{Digest, Sha1};
 use flate2::Compression;
 use flate2::write::ZlibEncoder;
 use async_trait::async_trait;
 
+use crate::{with_opcode};
 use crate::client::opcodes::Opcode;
-use crate::network::packet::OutcomePacket;
-use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
-use crate::types::traits::PacketHandler;
-use crate::utils::random_range;
+use crate::config::types::AddonInfo;
+use crate::types::{HandlerInput, HandlerOutput, HandlerResult, TerminatedString};
+use crate::traits::packet_handler::PacketHandler;
 
 const CLIENT_SEED_SIZE: usize = 4;
+
+#[derive(WorldPacket, Serialize, Deserialize, Debug)]
+#[options(no_opcode)]
+struct Income {
+    skip: u32,
+    #[serde(serialize_with = "crate::serializers::array_serializer::serialize_array")]
+    server_seed: [u8; 32],
+}
+
+with_opcode! {
+    @world_opcode(Opcode::CMSG_AUTH_SESSION)
+    #[derive(WorldPacket, Serialize, Deserialize, Debug)]
+    struct Outcome {
+        build: u32,
+        unknown: u32,
+        account: TerminatedString,
+        unknown2: u32,
+        #[serde(serialize_with = "crate::serializers::array_serializer::serialize_array")]
+        client_seed: [u8; CLIENT_SEED_SIZE],
+        unknown3: u64,
+        server_id: u32,
+        unknown4: u64,
+        #[serde(serialize_with = "crate::serializers::array_serializer::serialize_array")]
+        digest: [u8; 20],
+        addons_count: u32,
+        #[serde(serialize_with = "crate::serializers::array_serializer::serialize_array")]
+        addons: Vec<u8>,
+    }
+}
 
 pub struct Handler;
 #[async_trait]
 impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
-        let session = input.session.lock().unwrap();
-        let server_id = session.selected_realm.as_ref().unwrap().server_id;
-        let config = session.get_config().unwrap();
-        let username = &config.connection_data.username;
-        let session_key = session.session_key.as_ref().unwrap();
+        let (Income { server_seed, .. }, json) = Income::from_binary(input.data.as_ref().unwrap());
 
-        let mut reader = Cursor::new(input.data.as_ref().unwrap()[8..].to_vec());
-        let mut server_seed = vec![0u8; 32];
-        reader.read_exact(&mut server_seed)?;
+        input.message_income.send_server_message(
+            Opcode::get_server_opcode_name(input.opcode.unwrap()),
+            Some(json),
+        );
 
-        let client_seed = random_range(CLIENT_SEED_SIZE);
+        let (server_id, account, session_key, addons) = {
+            let guard = input.session.lock().unwrap();
+            (
+                guard.selected_realm.as_ref().unwrap().server_id as u32,
+                guard.get_config().as_ref().unwrap().connection_data.account.clone(),
+                guard.session_key.as_ref().unwrap().to_vec(),
+                guard.get_config().as_ref().unwrap().addons.clone()
+            )
+        };
 
-        let hasher = Sha1::new();
-        let digest = hasher
-            .chain(&username)
+        let client_seed: [u8; CLIENT_SEED_SIZE] = rand::random();
+
+        let digest = Sha1::new()
+            .chain(&account)
             .chain(vec![0, 0, 0, 0])
             .chain(&client_seed)
             // from server_seed we need only CLIENT_SEED_SIZE first bytes
             .chain(&server_seed[..CLIENT_SEED_SIZE])
             .chain(session_key)
-            .finalize();
+            .finalize()
+            .to_vec();
 
-        let mut body = Vec::new();
-        // TODO: refactor build into config or smth like that
-        body.write_i32::<LittleEndian>(12340)?;
-        body.write_u32::<LittleEndian>(0)?;
-        body.write_all(username.as_bytes())?;
-        body.write_u8(0)?;
-        body.write_u32::<LittleEndian>(0)?;
-        body.write_all(&client_seed)?;
-        body.write_u32::<LittleEndian>(0)?;
-        body.write_u32::<LittleEndian>(0)?;
-        body.write_u32::<LittleEndian>(server_id as u32)?;
-        body.write_u32::<LittleEndian>(2)?; // expansion ???
-        body.write_u32::<LittleEndian>(0)?; // ???
-        body.write_all(&digest)?;
-
-        let mut addon_info = Vec::new();
-        addon_info.write_u32::<LittleEndian>(config.addons.len() as u32)?;
-
-        for addon in &config.addons {
-            addon_info.write_all(addon.name.as_bytes())?;
-            addon_info.write_u8(0)?; // null-terminator for name string
-            addon_info.write_u8(addon.flags)?;
-            addon_info.write_u32::<LittleEndian>(addon.modulus_crc)?;
-            addon_info.write_u32::<LittleEndian>(addon.urlcrc_crc)?;
-        }
-
-        // seems like this timestamp always same, maybe it can be moved to config or smth ?
-        addon_info.write_u32::<LittleEndian>(1636457673)?; // last modified timestamp, smth like that
-
-        body.write_u32::<LittleEndian>(addon_info.len() as u32)?;
-
+        let addon_info = AddonInfo::build_addon_info(addons)?;
         let mut encoder = ZlibEncoder::new(Vec::new(), Compression::best());
         encoder.write_all(&addon_info)?;
-        body.write_all(&encoder.finish().unwrap())?;
 
-        Ok(HandlerOutput::Data(
-            OutcomePacket::from(Opcode::CMSG_AUTH_SESSION, Some(body))
-        ))
+        Ok(HandlerOutput::Data(Outcome {
+            build: 12340,
+            unknown: 0,
+            account: TerminatedString::from(account),
+            unknown2: 0,
+            client_seed,
+            unknown3: 0,
+            server_id,
+            unknown4: 0,
+            digest: digest.try_into().unwrap(),
+            addons_count: addon_info.len() as u32,
+            addons: encoder.finish().unwrap(),
+        }.unpack()))
     }
 }

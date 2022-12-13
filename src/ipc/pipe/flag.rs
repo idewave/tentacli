@@ -16,6 +16,6 @@ impl FlagOutcome {
     }
 
     pub fn send_toggle_flag(&mut self, flag: UIModeFlags) {
-        self._sender.send(OutcomeMessageType::SetUIMode(flag)).unwrap();
+        self._sender.send(OutcomeMessageType::SetUIFlag(flag)).unwrap();
     }
 }

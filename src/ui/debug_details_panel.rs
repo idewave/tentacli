@@ -2,54 +2,75 @@ use crossterm::event::{KeyCode, KeyModifiers};
 use tui::backend::Backend;
 use tui::Frame;
 use tui::layout::{Alignment, Rect};
-use tui::style::{Color, Modifier, Style};
-use tui::text::{Span, Spans};
-use tui::widgets::{Block, Borders, BorderType, Clear, List, ListItem, ListState, Paragraph, Wrap};
+use tui::style::{Color, Style};
+use tui::text::{Text};
+use tui::widgets::{Block, Borders, BorderType, Paragraph, Wrap};
 
-use crate::ipc::pipe::types::LoggerOutput;
-use crate::types::traits::UIComponent;
+use crate::traits::ui_component::UIComponent;
 use crate::ui::MARGIN;
 use crate::ui::types::{UIComponentOptions, UIStateFlags};
 
 const PANEL_TITLE: &str = "DEBUG DETAILS";
 
 pub struct DebugDetailsPanel<'a> {
-    items: Vec<Spans<'a>>,
-    state: ListState,
+    text: Text<'a>,
+    scroll: u16,
+    panel_height: u16,
 }
 
 impl<'a> DebugDetailsPanel<'a> {
-    pub fn add_item(&mut self, output: String) -> &mut Self {
-        self.items = vec![Spans::from(output)];
+    pub fn set_output(&mut self, output: String) -> &mut Self {
+        self.scroll = 0;
+        self.text = Text::styled(output, Style::default());
         self
+    }
+
+    pub fn handle_key_event(
+        &mut self,
+        key_modifiers: KeyModifiers,
+        key_code: KeyCode,
+        _: &mut UIStateFlags
+    ) {
+        match key_code {
+            KeyCode::Down if key_modifiers.contains(KeyModifiers::CONTROL) => {
+                if self.text.height() > (self.panel_height as usize) {
+                    if (self.scroll as usize) < self.text.height() - (self.panel_height as usize) {
+                        self.scroll += 1;
+                    }
+                }
+            },
+            KeyCode::Up if key_modifiers.contains(KeyModifiers::CONTROL) => {
+                if self.scroll > 0 {
+                    self.scroll -= 1;
+                }
+            },
+            _ => {},
+        }
     }
 }
 
 impl<'a> UIComponent for DebugDetailsPanel<'a> {
     fn new(_: UIComponentOptions) -> Self {
         Self {
-            items: vec![],
-            state: ListState::default(),
+            text: Text::default(),
+            scroll: 0,
+            panel_height: 0,
         }
     }
 
     fn render<B: Backend>(&mut self, frame: &mut Frame<B>, rect: Rect) {
+        self.panel_height = rect.height - MARGIN * 2;
+
         let block = Block::default()
             .title(PANEL_TITLE)
             .borders(Borders::ALL)
             .border_type(BorderType::Plain);
 
-        let items_amount = self.items.len();
-
-        let mut start_index: usize = 0;
-        if items_amount > rect.height as usize {
-            start_index = items_amount - (rect.height - MARGIN * 2) as usize;
-        }
-
-        let paragraph = Paragraph::new(self.items[start_index..].to_vec())
+        let paragraph = Paragraph::new(self.text.clone())
             .alignment(Alignment::Left)
-            .wrap(Wrap { trim: true })
+            .wrap(Wrap { trim: false })
             .style(Style::default().fg(Color::White).bg(Color::Black))
+            .scroll((self.scroll, 0))
             .block(block);
 
         frame.render_widget(paragraph, rect);

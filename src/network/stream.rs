@@ -37,15 +37,15 @@ impl Reader {
             if self._need_sync {
                 self._need_sync = false;
             } else {
-                let mut header = [0u8; INCOMING_HEADER_LENGTH as usize];
-                self._stream.read_exact(&mut header).await.unwrap();
+                let mut header = [0u8; INCOMING_HEADER_LENGTH];
+                self._stream.read_exact(&mut header).await?;
 
                 let mut header_reader = Cursor::new(decryptor.decrypt(&header));
-                let size = ReadBytesExt::read_u16::<BigEndian>(&mut header_reader).unwrap();
-                let opcode = ReadBytesExt::read_u16::<LittleEndian>(&mut header_reader).unwrap();
+                let size = ReadBytesExt::read_u16::<BigEndian>(&mut header_reader)?;
+                let opcode = ReadBytesExt::read_u16::<LittleEndian>(&mut header_reader)?;
 
-                let mut body = vec![0u8; (size - INCOMING_OPCODE_LENGTH) as usize];
-                self._stream.read_exact(&mut body).await.unwrap();
+                let mut body = vec![0u8; size as usize - INCOMING_OPCODE_LENGTH];
+                self._stream.read_exact(&mut body).await?;
 
                 if opcode == Opcode::SMSG_WARDEN_DATA {
                     body = self._warden_crypt.lock().unwrap().as_mut().unwrap().decrypt(&body);

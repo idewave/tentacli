@@ -1,59 +1,30 @@
-use rand::{thread_rng, RngCore};
-use std::{fmt::Write, num::ParseIntError};
-use std::cell::RefCell;
-use std::io::{Cursor, Read};
+use std::{num::ParseIntError};
+use std::io::{BufRead, Read};
 use byteorder::ReadBytesExt;
 use flate2::read::ZlibDecoder;
 
-pub fn random_range(size: usize) -> Vec<u8> {
-    let mut range = vec![0u8; size];
-    thread_rng().fill_bytes(&mut range[..]);
-
-    range
-}
-
 #[allow(dead_code)]
 pub fn decode_hex(s: &str) -> Result<Vec<u8>, ParseIntError> {
-    (0..s.len())
+    let str = s.replace(" ", "");
+    (0..str.len())
         .step_by(2)
-        .map(|i| u8::from_str_radix(&s[i..i + 2], 16))
+        .map(|i| u8::from_str_radix(&str[i..i + 2], 16))
         .collect()
 }
 
 pub fn encode_hex(bytes: &[u8]) -> String {
-    let mut s = String::with_capacity(bytes.len() * 2);
+    let mut items: Vec<String> = Vec::new();
     for &b in bytes {
-        write!(&mut s, "{:02x}", b).unwrap();
+        items.push(format!("{:02x}", b).to_uppercase());
     }
-    s.to_uppercase()
+    items.join(" ")
 }
 
-pub fn pack_guid(mut guid: u64) -> Vec<u8> {
-    let mut pack_guid = vec![0u8; 9];
-    let mut size = 1;
-    let mut index = 0;
-
-    while guid != 0 {
-        if guid & 0xFF > 0 {
-            pack_guid[0] |= 1 << index;
-            pack_guid[size] = guid as u8;
-            size += 1;
-        }
-
-        index += 1;
-        guid >>= 8;
-    }
-
-    pack_guid[..size].to_vec()
-}
-
-pub fn read_packed_guid(reader: RefCell<Cursor<Vec<u8>>>) -> (u64, u64) {
-    let mut reader = reader.borrow_mut();
-
+pub fn read_packed_guid<R: BufRead>(reader: &mut R) -> u64 {
     let mask = reader.read_u8().unwrap_or(0);
 
     if mask == 0 {
-        return (0, reader.position());
+        return 0;
     }
 
     let mut guid: u64 = 0;
@@ -67,7 +38,7 @@ pub fn read_packed_guid(reader: RefCell<Cursor<Vec<u8>>>) -> (u64, u64) {
         i += 1;
     }
 
-    (guid, reader.position())
+    guid
 }
 
 pub fn decompress(data: &[u8]) -> Vec<u8> {
@@ -79,22 +50,21 @@ pub fn decompress(data: &[u8]) -> Vec<u8> {
     buffer
 }
 
+#[allow(dead_code)]
+pub fn crop(value: &str) -> &str {
+    let mut chars = value.chars();
+    chars.next();
+    chars.next_back();
+    chars.as_str()
+}
+
 #[cfg(test)]
 mod tests {
-    use std::cell::RefCell;
-    use std::io::{Cursor, Write};
+    use std::io::{Write};
     use flate2::Compression;
     use flate2::write::ZlibEncoder;
 
-    use crate::utils::{decode_hex, decompress, encode_hex, pack_guid, random_range, read_packed_guid};
-
-    #[test]
-    fn test_random_range() {
-        const RANGE_SIZE: usize = 10;
-
-        let range = random_range(RANGE_SIZE);
-        assert_eq!(RANGE_SIZE, range.len());
-    }
+    use crate::utils::{decode_hex, decompress, encode_hex};
 
     #[test]
     fn test_decompress() {
@@ -107,22 +77,10 @@ mod tests {
     }
 
     #[test]
-    fn test_packed_guid() {
-        const ORIGIN_GUID: u64 = 1;
-
-        let packed_guid = pack_guid(ORIGIN_GUID);
-        let reader = RefCell::new(Cursor::new(packed_guid));
-
-        let (unpacked_guid, _) = read_packed_guid(RefCell::clone(&reader));
-
-        assert_eq!(ORIGIN_GUID, unpacked_guid);
-    }
-
-    #[test]
     fn test_encode_decode() {
         const ORIGIN: [u8; 5] = [255, 12, 3, 45, 5];
         let encoded = encode_hex(&ORIGIN);
-        assert_eq!("FF0C032D05", encoded);
+        assert_eq!("FF 0C 03 2D 05", encoded);
 
         assert_eq!(ORIGIN.to_vec(), decode_hex(&encoded).unwrap());
     }

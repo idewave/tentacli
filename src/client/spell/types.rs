@@ -1,3 +1,6 @@
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::ser::SerializeStruct;
+
 #[non_exhaustive]
 pub struct SpellCastTargetType;
 
@@ -243,4 +246,52 @@ impl CastResult {
     // custom value, don't must be send to client
     pub const SPELL_NOT_FOUND: u8 = 254;
     pub const SPELL_CAST_OK: u8 = 255;
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct Spell {
+    pub spell_id: u32,
+}
+
+impl<'de> Deserialize<'de> for Spell {
+    fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
+        todo!()
+    }
+}
+
+impl Serialize for Spell {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+        const FIELDS_AMOUNT: usize = 1;
+        let mut state = serializer.serialize_struct("Spell", FIELDS_AMOUNT)?;
+        state.serialize_field("spell_id", &self.spell_id)?;
+        state.end()
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct CooldownInfo {
+    pub spell_id: u32,
+    pub item_id: u16,
+    pub spell_category: u16,
+    pub cooldown_duration: u32,
+    pub cooldown_category: u32,
+}
+
+impl<'de> Deserialize<'de> for CooldownInfo {
+    fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
+        todo!()
+    }
+}
+
+impl Serialize for CooldownInfo {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+        const FIELDS_AMOUNT: usize = 5;
+        let mut state = serializer.serialize_struct("CooldownInfo", FIELDS_AMOUNT)?;
+        state.serialize_field("spell_id", &self.spell_id)?;
+        state.serialize_field("item_id", &self.item_id)?;
+        state.serialize_field("spell_category", &self.spell_category)?;
+        state.serialize_field("cooldown_duration", &self.cooldown_duration)?;
+        state.serialize_field("cooldown_category", &self.cooldown_category)?;
+        state.end()
+    }
 }

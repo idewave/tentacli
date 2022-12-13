@@ -6,7 +6,7 @@ mod player_login;
 pub mod types;
 
 use crate::client::opcodes::Opcode;
-use crate::types::traits::{Processor};
+use crate::traits::processor::Processor;
 use crate::types::{HandlerInput, ProcessorResult};
 
 pub struct CharactersProcessor;
@@ -16,11 +16,9 @@ impl Processor for CharactersProcessor {
         let mut reader = Cursor::new(input.data.as_ref().unwrap()[2..].to_vec());
         let opcode = reader.read_u16::<LittleEndian>().unwrap();
 
-        let mut message = String::new();
-
         let handlers: ProcessorResult = match opcode {
             Opcode::SMSG_CHAR_ENUM => {
-                message = String::from("SMSG_CHAR_ENUM");
+                input.opcode = Some(opcode);
                 vec![
                     Box::new(get_characters_list::Handler),
                     Box::new(player_login::Handler),
@@ -28,8 +26,6 @@ impl Processor for CharactersProcessor {
             },
             _ => vec![],
         };
-
-        input.message_income.send_server_message(message);
 
         handlers
     }

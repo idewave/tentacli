@@ -1,6 +1,7 @@
 use bitflags::bitflags;
 
 bitflags! {
+    #[derive(Default)]
     pub struct MovementFlags: u32 {
         const NONE = 0x00000000;
         const FORWARD = 0x00000001;
@@ -38,6 +39,7 @@ bitflags! {
 }
 
 bitflags! {
+    #[derive(Default)]
     pub struct MovementFlagsExtra: u16 {
         const NONE = 0x00000000;
         const NO_STRAFE = 0x00000001;

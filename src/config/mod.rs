@@ -2,7 +2,7 @@ use std::fs::read_to_string;
 use std::io::{Error, ErrorKind};
 use yaml_rust::{Yaml, YamlLoader};
 
-mod types;
+pub mod types;
 
 use crate::config::types::{AddonInfo, BotChat, Channels, ConnectionData};
 
@@ -42,7 +42,7 @@ impl Config {
 
     fn parse_connection_data(config: &Yaml) -> ConnectionData {
         return ConnectionData {
-            username: config["username"].as_str().unwrap().to_string().to_uppercase(),
+            account: config["account"].as_str().unwrap().to_string().to_uppercase(),
             password: config["password"].as_str().unwrap().to_string().to_uppercase(),
             realm_name: config["realm_name"].as_str().unwrap().to_string(),
         }
