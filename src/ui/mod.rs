@@ -25,6 +25,7 @@ use tui::Terminal;
 mod characters_modal;
 mod debug_panel;
 pub mod formatters;
+mod info_panel;
 mod mode_panel;
 mod realm_modal;
 mod debug_details_panel;
@@ -45,6 +46,7 @@ use crate::ui::mode_panel::ModePanel;
 use crate::ui::realm_modal::RealmModal;
 use crate::ui::title::Title;
 use crate::ui::debug_details_panel::DebugDetailsPanel;
+use crate::ui::info_panel::InfoPanel;
 use crate::ui::types::{
     UIComponentOptions,
     UIModeFlags,
@@ -65,6 +67,7 @@ pub struct UI<'a, B: Backend> {
     _characters_modal: CharactersModal<'a>,
     _debug_panel: DebugPanel<'a>,
     _debug_details_panel: DebugDetailsPanel<'a>,
+    _info_panel: InfoPanel,
     _mode_panel: ModePanel,
     _realm_modal: RealmModal<'a>,
     _title: Title,
@@ -98,6 +101,7 @@ impl<'a, B: Backend> UI<'a, B> {
             _characters_modal: CharactersModal::new(component_options.clone()),
             _debug_panel: DebugPanel::new(component_options.clone()),
             _debug_details_panel: DebugDetailsPanel::new(component_options.clone()),
+            _info_panel: InfoPanel::new(component_options.clone()),
             _mode_panel: ModePanel::new(component_options.clone()),
             _realm_modal: RealmModal::new(component_options.clone()),
             _title: Title::new(component_options),
@@ -118,10 +122,12 @@ impl<'a, B: Backend> UI<'a, B> {
 
     pub fn render(&mut self, options: UIRenderOptions) {
         let in_debug_mode = options.client_flags.contains(ClientFlags::IN_DEBUG_MODE);
+        self._debug_panel.set_debug_mode(in_debug_mode);
+        self._info_panel.set_debug_mode(in_debug_mode);
 
         match options.message {
             IncomeMessageType::Message(output) => {
-                self._debug_panel.set_mode(in_debug_mode).add_item(output);
+                self._debug_panel.add_item(output);
             },
             IncomeMessageType::ChooseCharacter(characters) => {
                 self.state_flags.set(UIStateFlags::IS_CHARACTERS_MODAL_OPENED, true);
@@ -152,29 +158,46 @@ impl<'a, B: Backend> UI<'a, B> {
                 ])
                 .split(frame.size());
 
-            let constraints = match in_debug_mode {
-                true => vec![
-                    Constraint::Percentage(70),
-                    Constraint::Percentage(30),
-                ],
-                false => vec![
-                    Constraint::Percentage(100),
-                ],
-            };
-
             let output_panels = Layout::default()
                 .direction(Direction::Horizontal)
-                .constraints(constraints)
+                .constraints(match in_debug_mode {
+                    true => vec![
+                        Constraint::Percentage(70),
+                        Constraint::Percentage(30),
+                    ],
+                    false => vec![
+                        Constraint::Percentage(100),
+                    ],
+                })
                 .split(chunks[2]);
+
+            let debug_chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints(vec![
+                    Constraint::Max(88),
+                    Constraint::Length(3),
+                ])
+                .split(output_panels[0]);
 
             self._title.render(frame, chunks[0]);
             self._mode_panel.render(frame, chunks[1]);
-            self._debug_panel.render(frame, output_panels[0]);
+            self._debug_panel.render(frame, debug_chunks[0]);
+
+            self._info_panel
+                .set_total_income(self._debug_panel.get_total_income())
+                .set_total_outcome(self._debug_panel.get_total_outcome());
+
             if in_debug_mode {
                 // set per_page value equals to height of block where debug panel rendered
                 self._debug_panel.set_pagination(output_panels[0].height);
                 self._debug_details_panel.render(frame, output_panels[1]);
+
+                self._info_panel
+                    .set_total_items(self._debug_panel.get_total_items())
+                    .set_selected_index(self._debug_panel.get_selected_index());
             }
+
+            self._info_panel.render(frame, debug_chunks[1]);
 
             if self.state_flags.contains(UIStateFlags::IS_CHARACTERS_MODAL_OPENED) {
                 self._characters_modal.render(frame, chunks[2])
@@ -253,7 +276,7 @@ impl<'a> UIOutput<'a> {
                 self.session.lock().unwrap().selected_realm = Some(realm);
                 self.client_flags.set(ClientFlags::IN_FROZEN_MODE, false);
             },
-            OutcomeMessageType::SetUIMode(flag) => {
+            OutcomeMessageType::SetUIFlag(flag) => {
                 if flag == UIModeFlags::DEBUG_MODE {
                     self.client_flags.toggle(ClientFlags::IN_DEBUG_MODE);
                 }

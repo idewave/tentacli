@@ -25,12 +25,30 @@ pub struct DebugPanel<'a> {
     start_index: usize,
     per_page: u16,
     absolute_index: Option<usize>,
+    total_income: usize,
+    total_outcome: usize,
 }
 
 impl<'a> DebugPanel<'a> {
-    pub fn set_mode(&mut self, debug_mode: bool) -> &mut Self {
+    pub fn set_debug_mode(&mut self, debug_mode: bool) -> &mut Self {
         self.debug_mode = debug_mode;
         self
+    }
+
+    pub fn get_selected_index(&mut self) -> usize {
+        self.absolute_index.unwrap_or(0)
+    }
+
+    pub fn get_total_items(&mut self) -> usize {
+        self.items.len()
+    }
+
+    pub fn get_total_income(&mut self) -> usize {
+        self.total_income
+    }
+
+    pub fn get_total_outcome(&mut self) -> usize {
+        self.total_outcome
     }
 
     pub fn add_item(&mut self, output: LoggerOutput) -> &mut Self {
@@ -82,6 +100,7 @@ impl<'a> DebugPanel<'a> {
             },
             LoggerOutput::Server(title, details) if !title.is_empty() => {
                 self.details.push(details);
+                self.total_income += 1;
 
                 Spans::from(vec![
                     time_block,
@@ -93,6 +112,7 @@ impl<'a> DebugPanel<'a> {
             },
             LoggerOutput::Client(title, details) if !title.is_empty() => {
                 self.details.push(details);
+                self.total_outcome += 1;
 
                 Spans::from(vec![
                     time_block,
@@ -179,6 +199,16 @@ impl<'a> DebugPanel<'a> {
                 self.calculate_indexes(absolute_index);
                 self.sender.send(self.details[absolute_index].clone()).unwrap();
             },
+            KeyCode::Home if !key_modifiers.contains(KeyModifiers::CONTROL) => {
+                let absolute_index = 0;
+                self.calculate_indexes(absolute_index);
+                self.sender.send(self.details[absolute_index].clone()).unwrap();
+            },
+            KeyCode::End if !key_modifiers.contains(KeyModifiers::CONTROL) => {
+                let absolute_index = self.items.len() - 1;
+                self.calculate_indexes(absolute_index);
+                self.sender.send(self.details[absolute_index].clone()).unwrap();
+            },
             _ => {},
         }
     }
@@ -221,6 +251,8 @@ impl<'a> UIComponent for DebugPanel<'a> {
             start_index: 0,
             per_page: 0,
             absolute_index: None,
+            total_income: 0,
+            total_outcome: 0,
         }
     }
 

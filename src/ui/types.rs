@@ -1,7 +1,7 @@
 use std::sync::mpsc::Sender;
 use bitflags::bitflags;
-use crate::client::types::ClientFlags;
 
+use crate::client::types::ClientFlags;
 use crate::ipc::pipe::dialog::DialogOutcome;
 use crate::ipc::pipe::flag::FlagOutcome;
 use crate::ipc::pipe::types::IncomeMessageType;

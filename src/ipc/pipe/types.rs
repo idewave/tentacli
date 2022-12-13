@@ -18,7 +18,7 @@ pub enum IncomeMessageType {
 pub enum OutcomeMessageType {
     RealmSelected(Realm),
     CharacterSelected(Character),
-    SetUIMode(UIModeFlags),
+    SetUIFlag(UIModeFlags),
 }
 
 #[derive(Debug)]
