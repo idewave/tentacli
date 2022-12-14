@@ -26,12 +26,14 @@ impl PacketHandler for Handler {
         let (parsed_blocks, json) = if input.opcode == Some(Opcode::SMSG_UPDATE_OBJECT) {
             let (Income { parsed_blocks }, json) = Income::from_binary(
                 input.data.as_ref().unwrap()
-            );
+            )?;
+
             (parsed_blocks, json)
         } else {
             let (CompressedIncome { parsed_blocks }, json) = CompressedIncome::from_binary(
                 input.data.as_ref().unwrap()
-            );
+            )?;
+
             (parsed_blocks, json)
         };
 
@@ -86,7 +88,7 @@ impl PacketHandler for Handler {
                                             .unwrap().players_map.insert(guid, player);
 
                                         return Ok(
-                                            HandlerOutput::Data(NameQueryOutcome { guid }.unpack())
+                                            HandlerOutput::Data(NameQueryOutcome { guid }.unpack()?)
                                         );
                                     }
                                 },
@@ -115,7 +117,7 @@ impl PacketHandler for Handler {
 
                             input.data_storage.lock().unwrap().players_map.insert(guid, player);
 
-                            return Ok(HandlerOutput::Data(NameQueryOutcome { guid }.unpack()));
+                            return Ok(HandlerOutput::Data(NameQueryOutcome { guid }.unpack()?));
                         } else {
                             players_map.entry(guid).and_modify(|p| {
                                 if let Some(movement_data) = parsed_block.movement_data {

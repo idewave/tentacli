@@ -36,7 +36,7 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let (Income { sender_guid, text_emote }, json) = Income::from_binary(
             input.data.as_ref().unwrap()
-        );
+        )?;
 
         input.message_income.send_server_message(
             Opcode::get_server_opcode_name(input.opcode.unwrap()),
@@ -53,7 +53,7 @@ impl PacketHandler for Handler {
                     unknown2: 0,
                     cast_flags: SpellCastTargetType::TARGET_FLAG_UNIT,
                     guid: PackedGuid(sender_guid),
-                }.unpack()))
+                }.unpack()?))
             },
             _ => {
                 Ok(HandlerOutput::Void)

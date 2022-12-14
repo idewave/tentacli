@@ -1,6 +1,6 @@
-use std::io::Error;
 use std::sync::{Arc, Mutex as SyncMutex};
 use tokio::sync::{mpsc::Sender};
+use anyhow::{Result as AnyResult};
 
 mod fields;
 
@@ -39,7 +39,7 @@ pub struct AIManagerInput {
     pub message_income: MessageIncome,
 }
 
-pub type HandlerResult = Result<HandlerOutput, Error>;
+pub type HandlerResult = AnyResult<HandlerOutput>;
 
 pub type ProcessorResult = Vec<Box<dyn PacketHandler + Send>>;
 

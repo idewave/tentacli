@@ -22,7 +22,7 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let (Income { code, .. }, _) = Income::from_binary(
             input.data.as_ref().unwrap()
-        );
+        )?;
 
         if code != AuthLogonResult::AUTH_LOGON_SUCCESS {
             match code {

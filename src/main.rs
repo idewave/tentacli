@@ -4,17 +4,18 @@ extern crate core;
 extern crate idewave_packet;
 #[macro_use]
 extern crate serde;
+#[macro_use]
+extern crate thiserror;
 extern crate yaml_rust;
 
 use dotenv::dotenv;
 use std::env;
-
-use crate::client::Client;
-use crate::ui::UI;
+use anyhow::{Result as AnyResult};
 
 mod client;
 mod config;
 mod crypto;
+mod errors;
 mod ipc;
 mod macros;
 mod network;
@@ -25,13 +26,18 @@ mod types;
 mod ui;
 mod utils;
 
+use crate::client::Client;
+use crate::ui::UI;
+
 #[tokio::main]
-async fn main() {
+async fn main() -> AnyResult<()> {
     dotenv().ok();
 
     let host = env::var("CURRENT_HOST").expect("CURRENT_HOST must be set");
 
     let mut client = Client::new();
-    client.connect(&host, 3724).await.unwrap();
-    client.run().await;
+    client.connect(&host, 3724).await?;
+    client.run().await?;
+
+    Ok(())
 }

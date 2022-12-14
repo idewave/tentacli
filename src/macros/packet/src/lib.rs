@@ -16,6 +16,7 @@ pub fn derive_login_packet(input: TokenStream) -> TokenStream {
         byteorder_write,
         cursor,
         json_formatter,
+        result,
         serialize,
         types,
         ..
@@ -42,7 +43,7 @@ pub fn derive_login_packet(input: TokenStream) -> TokenStream {
             if dynamic_fields.contains(&field_name) {
                 quote!{ Default::default() }
             } else {
-                quote! { #binary_converter::read_from(&mut initial_reader).unwrap() }
+                quote! { #binary_converter::read_from(&mut initial_reader)? }
             }
         });
 
@@ -57,7 +58,7 @@ pub fn derive_login_packet(input: TokenStream) -> TokenStream {
             } else {
                 quote! {
                     {
-                        let value: #field_type = #binary_converter::read_from(&mut reader).unwrap();
+                        let value: #field_type = #binary_converter::read_from(&mut reader)?;
                         initial.#field_name = value.clone();
                         value
                     }
@@ -67,7 +68,7 @@ pub fn derive_login_packet(input: TokenStream) -> TokenStream {
 
     let output = quote! {
         impl #ident {
-            pub fn from_binary(buffer: &Vec<u8>) -> (Self, String) {
+            pub fn from_binary(buffer: &Vec<u8>) -> #result<(Self, String)> {
                 let mut omit_bytes = Self::opcode().to_le_bytes().len();
                 let mut initial_reader = #cursor::new(buffer[omit_bytes..].to_vec());
                 let mut initial = Self {
@@ -78,48 +79,48 @@ pub fn derive_login_packet(input: TokenStream) -> TokenStream {
                 let mut instance = Self {
                     #(#field_names: #initializers),*
                 };
-                let details = instance.get_json_details();
+                let details = instance.get_json_details()?;
 
-                (instance, details)
+                Ok((instance, details))
             }
 
-            pub fn to_binary(&mut self) -> Vec<u8> {
-                let body = self._build_body();
+            pub fn to_binary(&mut self) -> #result<Vec<u8>> {
+                let body = self._build_body()?;
 
-                let header = Self::_build_header(Self::opcode());
-                [header, body].concat()
+                let header = Self::_build_header(Self::opcode())?;
+                Ok([header, body].concat())
             }
 
-            pub fn unpack(&mut self) -> #types::PacketOutcome {
-                (Self::opcode() as u32, self.to_binary(), self.get_json_details())
+            pub fn unpack(&mut self) -> #result<#types::PacketOutcome> {
+                Ok((Self::opcode() as u32, self.to_binary()?, self.get_json_details()?))
             }
 
-            pub fn get_json_details(&mut self) -> String {
+            pub fn get_json_details(&mut self) -> #result<String> {
                 let mut serializer = #json_formatter::init();
-                #serialize::serialize(self, &mut serializer).unwrap();
-                String::from_utf8(serializer.into_inner()).unwrap()
+                #serialize::serialize(self, &mut serializer)?;
+                String::from_utf8(serializer.into_inner()).map_err(|e| e.into())
             }
 
-            fn _build_body(&mut self) -> Vec<u8> {
+            fn _build_body(&mut self) -> #result<Vec<u8>> {
                 let mut body = Vec::new();
                 #(
                     #binary_converter::write_into(
                         &mut self.#field_names,
                         &mut body
-                    ).unwrap();
+                    )?;
                 )*
 
-                body
+                Ok(body)
             }
 
-            fn _build_header(opcode: u8) -> Vec<u8> {
+            fn _build_header(opcode: u8) -> #result<Vec<u8>> {
                 let mut header: Vec<u8> = Vec::new();
                 #byteorder_write::write_u8(
                     &mut header,
                     opcode,
-                ).unwrap();
+                )?;
 
-                header
+                Ok(header)
            }
         }
     };
@@ -140,6 +141,7 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
         incoming_header_length,
         json_formatter,
         read,
+        result,
         serialize,
         types,
         ..
@@ -181,7 +183,7 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
             if dynamic_fields.contains(&field_name) {
                 quote!{ Default::default() }
             } else {
-                quote! { #binary_converter::read_from(&mut initial_reader).unwrap() }
+                quote! { #binary_converter::read_from(&mut initial_reader)? }
             }
         });
 
@@ -196,7 +198,7 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
             } else {
                 quote! {
                     {
-                        let value: #field_type = #binary_converter::read_from(&mut reader).unwrap();
+                        let value: #field_type = #binary_converter::read_from(&mut reader)?;
                         initial.#field_name = value.clone();
                         value
                     }
@@ -206,7 +208,7 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
 
     let mut output = quote! {
         impl #ident {
-            pub fn from_binary(buffer: &Vec<u8>) -> (Self, String) {
+            pub fn from_binary(buffer: &Vec<u8>) -> #result<(Self, String)> {
                 let mut omit_bytes = #incoming_header_length;
 
                 let mut buffer = match #is_compressed {
@@ -217,7 +219,7 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
 
                         let data = &buffer[omit_bytes..];
                         let mut decoder = #deflate_decoder::new(data);
-                        #read::read_to_end(&mut decoder, &mut internal_buffer).unwrap();
+                        #read::read_to_end(&mut decoder, &mut internal_buffer)?;
 
                         internal_buffer.to_vec()
                     },
@@ -233,54 +235,54 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
                 let mut instance = Self {
                     #(#field_names: #initializers),*
                 };
-                let details = instance.get_json_details();
+                let details = instance.get_json_details()?;
 
-                (instance, details)
+                Ok((instance, details))
             }
 
             // use this method in case you didn't use with_opcode! macro
-            pub fn to_binary_with_opcode(&mut self, opcode: u32) -> Vec<u8> {
-                let body = self._build_body();
-                let header = Self::_build_header(body.len(), opcode);
-                [header, body].concat()
+            pub fn to_binary_with_opcode(&mut self, opcode: u32) -> #result<Vec<u8>> {
+                let body = self._build_body()?;
+                let header = Self::_build_header(body.len(), opcode)?;
+                Ok([header, body].concat())
             }
 
-            pub fn unpack_with_opcode(&mut self, opcode: u32) -> #types::PacketOutcome {
-                (opcode, self.to_binary_with_opcode(opcode), self.get_json_details())
+            pub fn unpack_with_opcode(&mut self, opcode: u32) -> #result<#types::PacketOutcome> {
+                Ok((opcode, self.to_binary_with_opcode(opcode)?, self.get_json_details()?))
             }
 
-            pub fn get_json_details(&mut self) -> String {
+            pub fn get_json_details(&mut self) -> #result<String> {
                 let mut serializer = #json_formatter::init();
-                #serialize::serialize(self, &mut serializer).unwrap();
-                String::from_utf8(serializer.into_inner()).unwrap()
+                #serialize::serialize(self, &mut serializer)?;
+                String::from_utf8(serializer.into_inner()).map_err(|e| e.into())
             }
 
-            fn _build_body(&mut self) -> Vec<u8> {
+            fn _build_body(&mut self) -> #result<Vec<u8>> {
                 let mut body = Vec::new();
                 #(
                     #binary_converter::write_into(
                         &mut self.#field_names,
                         &mut body
-                    ).unwrap();
+                    )?;
                 )*
 
-                body
+                Ok(body)
             }
 
-            fn _build_header(body_len: usize, opcode: u32) -> Vec<u8> {
+            fn _build_header(body_len: usize, opcode: u32) -> #result<Vec<u8>> {
                 let mut header: Vec<u8> = Vec::new();
                 #byteorder_write::write_u16::<#byteorder_be>(
                     &mut header,
                     // header is 2 bytes packet size + 4 bytes outcoming opcode size
                     (body_len as u16) + 4,
-                ).unwrap();
+                )?;
 
                 #byteorder_write::write_u32::<#byteorder_le>(
                     &mut header,
                     opcode,
-                ).unwrap();
+                )?;
 
-                header
+                Ok(header)
            }
         }
     };
@@ -290,15 +292,15 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
             #output
 
             impl #ident {
-                pub fn to_binary(&mut self) -> Vec<u8> {
-                    let body = self._build_body();
+                pub fn to_binary(&mut self) -> #result<Vec<u8>> {
+                    let body = self._build_body()?;
 
-                    let header = Self::_build_header(body.len(), Self::opcode());
-                    [header, body].concat()
+                    let header = Self::_build_header(body.len(), Self::opcode())?;
+                    Ok([header, body].concat())
                 }
 
-                pub fn unpack(&mut self) -> #types::PacketOutcome {
-                    (Self::opcode(), self.to_binary(), self.get_json_details())
+                pub fn unpack(&mut self) -> #result<#types::PacketOutcome> {
+                    Ok((Self::opcode(), self.to_binary()?, self.get_json_details()?))
                 }
             }
         }

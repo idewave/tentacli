@@ -16,7 +16,7 @@ pub struct Handler;
 #[async_trait]
 impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
-        let (Income { sender_guid, .. }, json) = Income::from_binary(input.data.as_ref().unwrap());
+        let (Income { sender_guid, .. }, json) = Income::from_binary(input.data.as_ref().unwrap())?;
 
         input.message_income.send_server_message(
             format!(
@@ -29,7 +29,7 @@ impl PacketHandler for Handler {
 
         let players_map = &mut input.data_storage.lock().unwrap().players_map;
         if players_map.get(&sender_guid).is_none() {
-            return Ok(HandlerOutput::Data(NameQueryOutcome { guid: sender_guid }.unpack()));
+            return Ok(HandlerOutput::Data(NameQueryOutcome { guid: sender_guid }.unpack()?));
         }
 
         Ok(HandlerOutput::Void)

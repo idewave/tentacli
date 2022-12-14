@@ -1,8 +1,9 @@
-use std::io::{Error, ErrorKind};
+use anyhow::bail;
 use async_trait::async_trait;
 
 use crate::{with_opcode};
 use crate::client::opcodes::Opcode;
+use crate::errors::CharacterListError;
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
 use crate::traits::packet_handler::PacketHandler;
 
@@ -24,16 +25,13 @@ impl PacketHandler for Handler {
         };
         
         if !me_exists {
-            return Err(Error::new(
-                ErrorKind::NotFound,
-                "No character selected ! Seems like char list is empty !"
-            ));
+            bail!(CharacterListError::Empty);
         }
 
         let my_guid = {
             input.session.lock().unwrap().me.as_ref().unwrap().guid
         };
 
-        Ok(HandlerOutput::Data(Outcome { guid: my_guid }.unpack()))
+        Ok(HandlerOutput::Data(Outcome { guid: my_guid }.unpack()?))
     }
 }

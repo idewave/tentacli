@@ -21,6 +21,6 @@ impl PacketHandler for Handler {
             channel_id: CHANNEL_ID,
             channel_name: TerminatedString::from(channel_name),
             ..JoinChannelOutcome::default()
-        }.unpack()))
+        }.unpack()?))
     }
 }

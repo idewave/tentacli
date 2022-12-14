@@ -51,7 +51,7 @@ pub struct Handler;
 #[async_trait]
 impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
-        let (Income { .. }, json) = Income::from_binary(input.data.as_ref().unwrap());
+        let (Income { .. }, json) = Income::from_binary(input.data.as_ref().unwrap())?;
 
         input.message_income.send_server_message(
             format!(

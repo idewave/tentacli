@@ -19,6 +19,6 @@ pub struct Handler;
 #[async_trait]
 impl PacketHandler for Handler {
     async fn handle(&mut self, _: &mut HandlerInput) -> HandlerResult {
-        Ok(HandlerOutput::Data(Outcome::default().unpack()))
+        Ok(HandlerOutput::Data(Outcome::default().unpack()?))
     }
 }

@@ -11,7 +11,7 @@ Rename **.env.example** into *.env* and edit it according to your preferences.
 
 Then just run:
 
-> cargo run
+> cargo run -r
 
 ### What implemented already
 1. Full authentication flow (without extra checks)

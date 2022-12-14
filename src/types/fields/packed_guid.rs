@@ -1,6 +1,7 @@
-use std::io::{BufRead, Error, Write};
+use std::io::{BufRead, Write};
 use byteorder::ReadBytesExt;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use crate::errors::IOError;
 
 use crate::traits::binary_converter::BinaryConverter;
 
@@ -34,7 +35,7 @@ impl Serialize for PackedGuid {
 }
 
 impl BinaryConverter for PackedGuid {
-    fn write_into(&mut self, buffer: &mut Vec<u8>) -> Result<(), Error> {
+    fn write_into(&mut self, buffer: &mut Vec<u8>) -> Result<(), IOError> {
         let PackedGuid(mut guid) = self;
         let mut packed_guid = vec![0u8; 9];
         let mut size = 1;
@@ -51,12 +52,12 @@ impl BinaryConverter for PackedGuid {
             guid >>= 8;
         }
 
-        buffer.write_all(&packed_guid[..size].to_vec())?;
+        buffer.write_all(&packed_guid[..size].to_vec()).map_err(|e| IOError::WriteError(e))?;
 
         Ok(())
     }
 
-    fn read_from<R: BufRead>(mut reader: R) -> Result<Self, Error> {
+    fn read_from<R: BufRead>(mut reader: R) -> Result<Self, IOError> {
         let mask = reader.read_u8().unwrap_or(0);
 
         if mask == 0 {
@@ -68,7 +69,7 @@ impl BinaryConverter for PackedGuid {
 
         while i < 8 {
             if (mask & (1 << i)) != 0 {
-                guid |= (reader.read_u8().unwrap() as u64) << (i * 8);
+                guid |= (reader.read_u8().map_err(|e| IOError::ReadError(e))? as u64) << (i * 8);
             }
 
             i += 1;

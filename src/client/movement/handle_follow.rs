@@ -17,14 +17,9 @@ pub struct Handler;
 #[async_trait]
 impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
-        let (Income { opcode, target_guid, .. }, json) = Income::from_binary(
+        let (Income { opcode, target_guid, .. }, _) = Income::from_binary(
             input.data.as_ref().unwrap()
-        );
-
-        input.message_income.send_server_message(
-            Opcode::get_server_opcode_name(input.opcode.unwrap()),
-            Some(json),
-        );
+        )?;
 
         let is_follow_me = {
             if let Some(follow_guid) = input.session.lock().unwrap().follow_target {

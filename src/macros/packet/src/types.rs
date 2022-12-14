@@ -12,6 +12,7 @@ pub struct Imports {
     pub json_formatter: TokenStream2,
     pub incoming_header_length: TokenStream2,
     pub read: TokenStream2,
+    pub result: TokenStream2,
     pub serialize: TokenStream2,
     pub types: TokenStream2,
 }
@@ -29,6 +30,7 @@ impl Imports {
             // TODO: need to reorganize constants
             incoming_header_length: quote!(crate::crypto::decryptor::INCOMING_HEADER_LENGTH),
             read: quote!(std::io::Read),
+            result: quote!(anyhow::Result),
             serialize: quote!(serde::Serialize),
             types: quote!(crate::types),
         }

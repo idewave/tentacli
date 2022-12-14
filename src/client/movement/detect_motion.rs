@@ -19,7 +19,7 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let (Income { packed_guid, movement_info }, json) = Income::from_binary(
             &input.data.as_ref().unwrap().to_vec()
-        );
+        )?;
 
         input.message_income.send_server_message(
             Opcode::get_server_opcode_name(input.opcode.unwrap()),
@@ -43,7 +43,7 @@ impl PacketHandler for Handler {
             let player = players_map.get(&guid);
 
             if player.is_none() {
-                return Ok(HandlerOutput::Data(NameQueryOutcome { guid }.unpack()));
+                return Ok(HandlerOutput::Data(NameQueryOutcome { guid }.unpack()?));
             }
         }
 

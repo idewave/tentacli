@@ -32,6 +32,8 @@ serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 chrono = "0.4"
 dotenv = "0.15.0"
+thiserror = "1.0"
+anyhow = "1.0"
 idewave_packet = { path = "src/macros/packet" }
 
 [dev-dependencies]
