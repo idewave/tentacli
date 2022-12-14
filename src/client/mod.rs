@@ -8,6 +8,7 @@ use futures::future::join_all;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::time::sleep;
 use tui::backend::CrosstermBackend;
+use anyhow::{Result as AnyResult};
 
 mod auth;
 mod characters;
@@ -47,6 +48,7 @@ pub use crate::client::opcodes::Opcode;
 use crate::client::types::ClientFlags;
 use crate::crypto::encryptor::OUTCOMING_HEADER_LENGTH;
 use crate::crypto::warden_crypt::WardenCrypt;
+use crate::errors::ConfigError;
 use crate::ipc::pipe::{IncomeMessagePipe, OutcomeMessagePipe};
 use crate::ipc::pipe::dialog::DialogIncome;
 use crate::ipc::pipe::message::MessageIncome;
@@ -165,7 +167,7 @@ impl Client {
         }
     }
 
-    pub async fn run(&mut self) {
+    pub async fn run(&mut self) -> AnyResult<()> {
         const BUFFER_SIZE: usize = 50;
 
         let (signal_sender, signal_receiver) = mpsc::channel::<Signal>(1);
@@ -177,7 +179,7 @@ impl Client {
 
         let account = {
             let guard = self.session.lock().unwrap();
-            let config = guard.get_config().unwrap();
+            let config = guard.get_config().ok_or(ConfigError::NotFound)?;
 
             config.connection_data.account.clone()
         };
@@ -190,7 +192,7 @@ impl Client {
             );
         }
 
-        output_sender.send(login_challenge(&account)).await.unwrap();
+        output_sender.send(login_challenge(&account)?).await?;
 
         join_all(vec![
             self.handle_ui_render(),
@@ -207,6 +209,8 @@ impl Client {
                 dialog_income.clone(),
             ),
         ]).await;
+
+        Ok(())
     }
 
     fn handle_ui_input(&mut self) -> JoinHandle<()> {
@@ -416,6 +420,9 @@ impl Client {
                                         }
                                     },
                                     HandlerOutput::Void => {},
+                                    HandlerOutput::Drop => {
+                                        break;
+                                    },
                                 };
                             },
                             Err(err) => {

@@ -20,6 +20,6 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, _: &mut HandlerInput) -> HandlerResult {
         Ok(HandlerOutput::Data(Outcome {
             unknown: [0xFF, 0xFF, 0xFF, 0xFF]
-        }.unpack()))
+        }.unpack()?))
     }
 }

@@ -6,11 +6,10 @@ use serde::{Serialize, Deserialize};
 use crate::{with_opcode};
 use crate::client::Opcode;
 use crate::crypto::srp::Srp;
+use crate::errors::ConfigError;
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
 use crate::traits::packet_handler::PacketHandler;
 use crate::utils::encode_hex;
-
-// TODO: check LOGIN_PROOF code before parsing rest packet
 
 with_opcode! {
     @login_opcode(Opcode::LOGIN_PROOF)
@@ -66,7 +65,7 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let (Income { n, g, server_ephemeral, salt, .. }, json) = Income::from_binary(
             input.data.as_ref().unwrap()
-        );
+        )?;
 
         input.message_income.send_server_message(
             Opcode::get_server_opcode_name(input.opcode.unwrap()),
@@ -74,14 +73,13 @@ impl PacketHandler for Handler {
         );
 
         let mut session = input.session.lock().unwrap();
-        let config = session.get_config().unwrap();
+        let (account, password) = {
+            let config = session.get_config().ok_or(ConfigError::NotFound)?;
+            (&config.connection_data.account, &config.connection_data.password)
+        };
 
         let mut srp_client = Srp::new(&n, &g, &server_ephemeral);
-        let proof = srp_client.calculate_proof::<Sha1>(
-            &config.connection_data.account,
-            &config.connection_data.password,
-            &salt
-        );
+        let proof = srp_client.calculate_proof::<Sha1>(account, password, &salt);
         let crc_hash: [u8; 20] = rand::random();
 
         session.session_key = Some(srp_client.session_key());
@@ -97,6 +95,6 @@ impl PacketHandler for Handler {
             crc_hash,
             keys_count: 0,
             security_flags: 0
-        }.unpack()))
+        }.unpack()?))
     }
 }

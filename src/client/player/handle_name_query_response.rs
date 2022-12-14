@@ -29,7 +29,7 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let (CheckEmptyIncome { unknown, .. }, _) = CheckEmptyIncome::from_binary(
             input.data.as_ref().unwrap(),
-        );
+        )?;
 
         if unknown == 1 {
             input.message_income.send_error_message("Player not exists".to_string(), None);
@@ -39,7 +39,7 @@ impl PacketHandler for Handler {
 
         let (Income { packed_guid, name, race, class, .. }, json) = Income::from_binary(
             input.data.as_ref().unwrap(),
-        );
+        )?;
 
         input.message_income.send_server_message(
             Opcode::get_server_opcode_name(input.opcode.unwrap()),

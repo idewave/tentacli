@@ -4,6 +4,7 @@ use std::io::BufRead;
 use crate::{with_opcode};
 use crate::client::chat::types::{EmoteType, MessageType};
 use crate::client::opcodes::Opcode;
+use crate::errors::ConfigError;
 use crate::ipc::session::types::{ActionFlags};
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult, TerminatedString};
 use crate::traits::packet_handler::PacketHandler;
@@ -63,11 +64,11 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let (Income { message, sender_guid, .. }, _) = Income::from_binary(
             input.data.as_ref().unwrap()
-        );
+        )?;
 
         let bot_chat = {
             let guard = input.session.lock().unwrap();
-            let config = guard.get_config().unwrap();
+            let config = guard.get_config().ok_or(ConfigError::NotFound)?;
             config.bot_chat.clone()
         };
 
@@ -77,7 +78,7 @@ impl PacketHandler for Handler {
             greet if bot_chat.greet.contains(&greet.to_string()) => {
                 Ok(HandlerOutput::Data(Outcome {
                     emote_type: EmoteType::ONESHOT_WAVE as u32,
-                }.unpack()))
+                }.unpack()?))
             },
             follow_invite if bot_chat.follow_invite.contains(&follow_invite.to_string()) => {
                 input.message_income.send_debug_message(format!("FOLLOW {}", &sender_guid), None);

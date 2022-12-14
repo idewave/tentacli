@@ -7,6 +7,7 @@ use async_trait::async_trait;
 use crate::{with_opcode};
 use crate::client::opcodes::Opcode;
 use crate::config::types::AddonInfo;
+use crate::errors::ConfigError;
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult, TerminatedString};
 use crate::traits::packet_handler::PacketHandler;
 
@@ -45,7 +46,7 @@ pub struct Handler;
 #[async_trait]
 impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
-        let (Income { server_seed, .. }, json) = Income::from_binary(input.data.as_ref().unwrap());
+        let (Income { server_seed, .. }, json) = Income::from_binary(input.data.as_ref().unwrap())?;
 
         input.message_income.send_server_message(
             Opcode::get_server_opcode_name(input.opcode.unwrap()),
@@ -54,11 +55,12 @@ impl PacketHandler for Handler {
 
         let (server_id, account, session_key, addons) = {
             let guard = input.session.lock().unwrap();
+            let config = guard.get_config().ok_or(ConfigError::NotFound)?;
             (
                 guard.selected_realm.as_ref().unwrap().server_id as u32,
-                guard.get_config().as_ref().unwrap().connection_data.account.clone(),
+                config.connection_data.account.clone(),
                 guard.session_key.as_ref().unwrap().to_vec(),
-                guard.get_config().as_ref().unwrap().addons.clone()
+                config.addons.clone()
             )
         };
 
@@ -89,7 +91,7 @@ impl PacketHandler for Handler {
             unknown4: 0,
             digest: digest.try_into().unwrap(),
             addons_count: addon_info.len() as u32,
-            addons: encoder.finish().unwrap(),
-        }.unpack()))
+            addons: encoder.finish()?,
+        }.unpack()?))
     }
 }

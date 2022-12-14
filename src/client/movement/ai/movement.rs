@@ -1,5 +1,6 @@
 use std::time::{SystemTime};
 use std::f32::consts::PI;
+use anyhow::{Result as AnyResult};
 
 use crate::client::{MovementFlags, MovementFlagsExtra, UnitMoveType};
 use crate::client::opcodes::Opcode;
@@ -118,7 +119,7 @@ impl AI {
                                         position,
                                         MovementFlags::FORWARD,
                                         // MovementFlags::NONE,
-                                    )
+                                    ).unwrap()
                                 };
 
                                 // input.output_queue_sender.lock().unwrap().push_back(packet);
@@ -134,7 +135,7 @@ impl AI {
                                         position,
                                         MovementFlags::FORWARD,
                                         // MovementFlags::NONE,
-                                    )
+                                    ).unwrap()
                                 };
 
                                 // input.output_queue_sender.lock().unwrap().push_back(packet);
@@ -151,7 +152,7 @@ impl AI {
                                 my_guid.unwrap(),
                                 position,
                                 MovementFlags::NONE,
-                            )
+                            ).unwrap()
                         };
 
                         input.output_sender.send(packet_outcome).await.unwrap();
@@ -167,7 +168,7 @@ impl AI {
         guid: u64,
         new_position: Position,
         movement_flags: MovementFlags
-    ) -> PacketOutcome {
+    ) -> AnyResult<PacketOutcome> {
         let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
         Outcome {
             guid: PackedGuid(guid),

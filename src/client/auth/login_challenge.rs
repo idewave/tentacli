@@ -1,4 +1,5 @@
 use std::net::Ipv4Addr;
+use anyhow::{Result as AnyResult};
 
 use crate::client::Opcode;
 use crate::{with_opcode};
@@ -27,7 +28,7 @@ with_opcode! {
 const PACKET_LENGTH_WITHOUT_ACCOUNT: u16 = 30;
 
 // TODO: need to refactor endianness converting for strings
-pub fn handler(account: &str) -> PacketOutcome {
+pub fn handler(account: &str) -> AnyResult<PacketOutcome> {
     let account_length = account.chars().count() as u8;
     let packet_size = PACKET_LENGTH_WITHOUT_ACCOUNT + account_length as u16;
 

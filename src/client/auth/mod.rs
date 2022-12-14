@@ -1,11 +1,13 @@
 use std::io::{Cursor};
 use byteorder::{ReadBytesExt};
 
+mod check_proof_code;
 mod connect_to_realm;
 mod get_realmlist;
 mod login_challenge;
 mod login_proof;
 mod request_realmlist;
+mod types;
 
 // TODO: remove this (need to think how better refactor this part)
 pub use login_challenge::handler as login_challenge;
@@ -24,7 +26,10 @@ impl Processor for AuthProcessor {
         let handlers: ProcessorResult = match opcode {
             Opcode::LOGIN_CHALLENGE => {
                 input.opcode = Some(opcode as u16);
-                vec![Box::new(login_proof::Handler)]
+                vec![
+                    Box::new(check_proof_code::Handler),
+                    Box::new(login_proof::Handler),
+                ]
             },
             Opcode::LOGIN_PROOF => {
                 input.opcode = Some(opcode as u16);

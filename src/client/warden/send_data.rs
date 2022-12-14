@@ -63,7 +63,7 @@ pub struct Handler;
 #[async_trait]
 impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
-        let (OpcodeIncome { opcode }, json) = OpcodeIncome::from_binary(input.data.as_ref().unwrap());
+        let (OpcodeIncome { opcode }, json) = OpcodeIncome::from_binary(input.data.as_ref().unwrap())?;
         input.message_income.send_server_message(
             Opcode::get_server_opcode_name(input.opcode.unwrap()),
             Some(json),
@@ -77,7 +77,7 @@ impl PacketHandler for Handler {
                     compressed_size
                 }, json) = ModuleUseIncome::from_binary(
                     input.data.as_ref().unwrap()
-                );
+                )?;
 
                 input.message_income.send_server_message(
                     Opcode::get_server_opcode_name(input.opcode.unwrap()),
@@ -94,12 +94,12 @@ impl PacketHandler for Handler {
 
                 Ok(HandlerOutput::Data(Outcome {
                     warden_opcode: WardenOpcode::WARDEN_CMSG_MODULE_OK,
-                }.unpack()))
+                }.unpack()?))
             },
             WardenOpcode::WARDEN_SMSG_MODULE_CACHE => {
                 let (ModuleCacheIncome { partial, .. }, json) = ModuleCacheIncome::from_binary(
                     input.data.as_ref().unwrap()
-                );
+                )?;
 
                 input.message_income.send_server_message(
                     Opcode::get_server_opcode_name(input.opcode.unwrap()),
@@ -116,7 +116,7 @@ impl PacketHandler for Handler {
 
                         return Ok(HandlerOutput::Data(Outcome {
                             warden_opcode: WardenOpcode::WARDEN_CMSG_MODULE_OK,
-                        }.unpack()));
+                        }.unpack()?));
                     }
                 }
 
@@ -126,7 +126,7 @@ impl PacketHandler for Handler {
                 if let Some(module_info) = input.session.lock().unwrap().warden_module_info.as_mut() {
                     let (HashRequestIncome { seed }, json) = HashRequestIncome::from_binary(
                         input.data.as_ref().unwrap()
-                    );
+                    )?;
 
                     input.message_income.send_server_message(
                         Opcode::get_server_opcode_name(input.opcode.unwrap()),
