@@ -48,7 +48,6 @@ pub use crate::client::opcodes::Opcode;
 use crate::client::types::ClientFlags;
 use crate::crypto::encryptor::OUTCOMING_HEADER_LENGTH;
 use crate::crypto::warden_crypt::WardenCrypt;
-use crate::errors::ConfigError;
 use crate::ipc::pipe::{IncomeMessagePipe, OutcomeMessagePipe};
 use crate::ipc::pipe::dialog::DialogIncome;
 use crate::ipc::pipe::message::MessageIncome;
@@ -177,22 +176,19 @@ impl Client {
         let message_income = self._income_message_pipe.lock().unwrap().message_income.clone();
         let dialog_income = self._income_message_pipe.lock().unwrap().dialog_income.clone();
 
-        let account = {
-            let guard = self.session.lock().unwrap();
-            let config = guard.get_config().ok_or(ConfigError::NotFound)?;
-
-            config.connection_data.account.clone()
-        };
-
         {
-            let mut guard = self._income_message_pipe.lock().unwrap();
-            guard.message_income.send_client_message(
-                format!("LOGIN_CHALLENGE as {}", &account),
-                None,
-            );
-        }
+            if let Ok(config) = self.session.lock().unwrap().get_config() {
+                let account = config.connection_data.account.to_string();
 
-        output_sender.send(login_challenge(&account)?).await?;
+                let mut guard = self._income_message_pipe.lock().unwrap();
+                guard.message_income.send_client_message(
+                    format!("LOGIN_CHALLENGE as {}", &account),
+                    None,
+                );
+
+                output_sender.send(login_challenge(&account)?).await?;
+            }
+        }
 
         join_all(vec![
             self.handle_ui_render(),

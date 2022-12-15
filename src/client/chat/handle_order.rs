@@ -4,7 +4,6 @@ use std::io::BufRead;
 use crate::{with_opcode};
 use crate::client::chat::types::{EmoteType, MessageType};
 use crate::client::opcodes::Opcode;
-use crate::errors::ConfigError;
 use crate::ipc::session::types::{ActionFlags};
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult, TerminatedString};
 use crate::traits::packet_handler::PacketHandler;
@@ -63,7 +62,7 @@ impl PacketHandler for Handler {
 
         let bot_chat = {
             let guard = input.session.lock().unwrap();
-            let config = guard.get_config().ok_or(ConfigError::NotFound)?;
+            let config = guard.get_config()?;
             config.bot_chat.clone()
         };
 

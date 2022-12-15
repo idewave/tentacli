@@ -7,7 +7,6 @@ use async_trait::async_trait;
 use crate::{with_opcode};
 use crate::client::opcodes::Opcode;
 use crate::config::types::AddonInfo;
-use crate::errors::ConfigError;
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult, TerminatedString};
 use crate::traits::packet_handler::PacketHandler;
 
@@ -55,7 +54,7 @@ impl PacketHandler for Handler {
 
         let (server_id, account, session_key, addons) = {
             let guard = input.session.lock().unwrap();
-            let config = guard.get_config().ok_or(ConfigError::NotFound)?;
+            let config = guard.get_config()?;
             (
                 guard.selected_realm.as_ref().unwrap().server_id as u32,
                 config.connection_data.account.clone(),

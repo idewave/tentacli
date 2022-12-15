@@ -1,10 +1,10 @@
 use std::fs::read_to_string;
-use std::io::{Error, ErrorKind};
 use yaml_rust::{Yaml, YamlLoader};
 
 pub mod types;
 
 use crate::config::types::{AddonInfo, BotChat, Channels, ConnectionData};
+use crate::errors::ConfigError;
 
 pub struct ConfigParams<'a> {
     pub host: &'a str,
@@ -18,26 +18,23 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new(params: ConfigParams) -> Result<Self, Error> {
-        if let Ok(data) = read_to_string("Config.yml") {
-            let docs = YamlLoader::load_from_str(&data).unwrap();
+    pub fn new(params: ConfigParams) -> Result<Self, ConfigError> {
+        let data = read_to_string("Config.yml").map_err(|_| ConfigError::NotFound)?;
+        let docs = YamlLoader::load_from_str(&data).map_err(|e| ConfigError::ScanError(e))?;
 
-            let connection_data = Self::parse_connection_data(
-                &docs[0]["connection_data"][params.host]
-            );
-            let addons = Self::parse_addons(&docs[0]["addons"]);
-            let bot_chat = Self::parse_chat_config(&docs[0]["bot_chat"]);
-            let channels = Self::parse_channels_data(&docs[0]["channels"]);
+        let connection_data = Self::parse_connection_data(
+            &docs[0]["connection_data"][params.host]
+        );
+        let addons = Self::parse_addons(&docs[0]["addons"]);
+        let bot_chat = Self::parse_chat_config(&docs[0]["bot_chat"]);
+        let channels = Self::parse_channels_data(&docs[0]["channels"]);
 
-            return Ok(Self {
-                connection_data,
-                addons,
-                bot_chat,
-                channels,
-            });
-        }
-
-        Err(Error::new(ErrorKind::NotFound, "Config.yml file is not found"))
+        Ok(Self {
+            connection_data,
+            addons,
+            bot_chat,
+            channels,
+        })
     }
 
     fn parse_connection_data(config: &Yaml) -> ConnectionData {

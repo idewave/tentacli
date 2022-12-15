@@ -6,7 +6,6 @@ use serde::{Serialize, Deserialize};
 use crate::{with_opcode};
 use crate::client::Opcode;
 use crate::crypto::srp::Srp;
-use crate::errors::ConfigError;
 use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
 use crate::traits::packet_handler::PacketHandler;
 use crate::utils::encode_hex;
@@ -74,7 +73,7 @@ impl PacketHandler for Handler {
 
         let mut session = input.session.lock().unwrap();
         let (account, password) = {
-            let config = session.get_config().ok_or(ConfigError::NotFound)?;
+            let config = session.get_config()?;
             (&config.connection_data.account, &config.connection_data.password)
         };
 

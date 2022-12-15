@@ -10,6 +10,7 @@ extern crate yaml_rust;
 
 use dotenv::dotenv;
 use std::env;
+use std::str::FromStr;
 use anyhow::{Result as AnyResult};
 
 mod client;
@@ -34,9 +35,10 @@ async fn main() -> AnyResult<()> {
     dotenv().ok();
 
     let host = env::var("CURRENT_HOST").expect("CURRENT_HOST must be set");
+    let port = env::var("CURRENT_PORT").expect("CURRENT_PORT must be set");
 
     let mut client = Client::new();
-    client.connect(&host, 3724).await?;
+    client.connect(&host, u16::from_str(&port)?).await?;
     client.run().await?;
 
     Ok(())
