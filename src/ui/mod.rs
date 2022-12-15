@@ -65,7 +65,7 @@ pub struct UI<'a, B: Backend> {
     _terminal: Terminal<B>,
 
     _characters_modal: CharactersModal<'a>,
-    _debug_panel: DebugPanel<'a>,
+    _debug_panel: DebugPanel,
     _debug_details_panel: DebugDetailsPanel<'a>,
     _info_panel: InfoPanel,
     _mode_panel: ModePanel,
