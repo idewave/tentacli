@@ -23,11 +23,12 @@ pub enum OutcomeMessageType {
 
 #[derive(Debug)]
 pub enum LoggerOutput {
-    Debug(String, Option<String>),
-    Error(String, Option<String>),
-    Success(String, Option<String>),
-    Server(String, Option<String>),
-    Client(String, Option<String>),
+    // title, formatted local time, optional details
+    Debug(String, String, Option<String>),
+    Error(String, String, Option<String>),
+    Success(String, String, Option<String>),
+    Server(String, String, Option<String>),
+    Client(String, String, Option<String>),
 }
 
 #[derive(Debug, Clone)]

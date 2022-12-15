@@ -14,13 +14,13 @@ const PANEL_TITLE: &str = "DEBUG DETAILS";
 
 pub struct DebugDetailsPanel<'a> {
     text: Text<'a>,
-    scroll: u16,
+    scroll_offset: u16,
     panel_height: u16,
 }
 
 impl<'a> DebugDetailsPanel<'a> {
     pub fn set_output(&mut self, output: String) -> &mut Self {
-        self.scroll = 0;
+        self.scroll_offset = 0;
         self.text = Text::styled(output, Style::default());
         self
     }
@@ -34,14 +34,16 @@ impl<'a> DebugDetailsPanel<'a> {
         match key_code {
             KeyCode::Down if key_modifiers.contains(KeyModifiers::CONTROL) => {
                 if self.text.height() > (self.panel_height as usize) {
-                    if (self.scroll as usize) < self.text.height() - (self.panel_height as usize) {
-                        self.scroll += 1;
+                    if (self.scroll_offset as usize) <
+                        self.text.height() - (self.panel_height as usize)
+                    {
+                        self.scroll_offset += 1;
                     }
                 }
             },
             KeyCode::Up if key_modifiers.contains(KeyModifiers::CONTROL) => {
-                if self.scroll > 0 {
-                    self.scroll -= 1;
+                if self.scroll_offset > 0 {
+                    self.scroll_offset -= 1;
                 }
             },
             _ => {},
@@ -53,7 +55,7 @@ impl<'a> UIComponent for DebugDetailsPanel<'a> {
     fn new(_: UIComponentOptions) -> Self {
         Self {
             text: Text::default(),
-            scroll: 0,
+            scroll_offset: 0,
             panel_height: 0,
         }
     }
@@ -70,7 +72,7 @@ impl<'a> UIComponent for DebugDetailsPanel<'a> {
             .alignment(Alignment::Left)
             .wrap(Wrap { trim: false })
             .style(Style::default().fg(Color::White).bg(Color::Black))
-            .scroll((self.scroll, 0))
+            .scroll((self.scroll_offset, 0))
             .block(block);
 
         frame.render_widget(paragraph, rect);

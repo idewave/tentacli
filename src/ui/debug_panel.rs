@@ -1,5 +1,4 @@
 use std::sync::mpsc::Sender;
-use chrono::Local;
 use crossterm::event::{KeyCode, KeyModifiers};
 use tui::backend::Backend;
 use tui::Frame;
@@ -16,9 +15,16 @@ use crate::ui::types::{UIComponentOptions, UIStateFlags};
 
 const PANEL_TITLE: &str = "DEBUG";
 
-pub struct DebugPanel<'a> {
-    items: Vec<ListItem<'a>>,
-    details: Vec<Option<String>>,
+struct Item {
+    title: String,
+    local_time: String,
+    details: Option<String>,
+    label: String,
+    color: Color,
+}
+
+pub struct DebugPanel {
+    items: Vec<Item>,
     state: ListState,
     debug_mode: bool,
     sender: Sender<Option<String>>,
@@ -29,7 +35,7 @@ pub struct DebugPanel<'a> {
     total_outcome: usize,
 }
 
-impl<'a> DebugPanel<'a> {
+impl DebugPanel {
     pub fn set_debug_mode(&mut self, debug_mode: bool) -> &mut Self {
         self.debug_mode = debug_mode;
         self
@@ -52,82 +58,67 @@ impl<'a> DebugPanel<'a> {
     }
 
     pub fn add_item(&mut self, output: LoggerOutput) -> &mut Self {
-        let message = self.generate_message(output);
-
-        if message.is_some() {
-            self.items.push(ListItem::new(message.unwrap()));
+        if let Some(item) = self.generate_item(output) {
+            self.items.push(item);
         }
-
         self
     }
 
-    fn generate_message(&mut self, output: LoggerOutput) -> Option<Spans<'a>> {
-        let time_block = Self::generate_time_block();
-
-        let message = match output {
-            LoggerOutput::Debug(title, details) if !title.is_empty() => {
-                self.details.push(details);
-
-                Spans::from(vec![
-                    time_block,
-                    Span::styled(
-                        format!("[DEBUG]: {}", title),
-                        Style::default().fg(Color::DarkGray),
-                    ),
-                ])
+    fn generate_item(&mut self, output: LoggerOutput) -> Option<Item> {
+        match output {
+            LoggerOutput::Debug(title, local_time, details) if !title.is_empty() => {
+                Some(Item {
+                    title,
+                    local_time,
+                    details,
+                    label: "[DEBUG]".to_string(),
+                    color: Color::DarkGray,
+                })
             },
-            LoggerOutput::Error(title, details) if !title.is_empty() => {
-                self.details.push(details);
-
-                Spans::from(vec![
-                    time_block,
-                    Span::styled(
-                        format!("[ERROR]: {}", title),
-                        Style::default().fg(Color::Red),
-                    ),
-                ])
+            LoggerOutput::Error(title, local_time, details) if !title.is_empty() => {
+                Some(Item {
+                    title,
+                    local_time,
+                    details,
+                    label: "[ERROR]".to_string(),
+                    color: Color::Red,
+                })
             },
-            LoggerOutput::Success(title, details) if !title.is_empty() => {
-                self.details.push(details);
-
-                Spans::from(vec![
-                    time_block,
-                    Span::styled(
-                        format!("[SUCCESS]: {}", title),
-                        Style::default().fg(Color::LightGreen),
-                    ),
-                ])
+            LoggerOutput::Success(title, local_time, details) if !title.is_empty() => {
+                Some(Item {
+                    title,
+                    local_time,
+                    details,
+                    label: "[SUCCESS]".to_string(),
+                    color: Color::LightGreen,
+                })
             },
-            LoggerOutput::Server(title, details) if !title.is_empty() => {
-                self.details.push(details);
+            LoggerOutput::Server(title, local_time, details) if !title.is_empty() => {
                 self.total_income += 1;
 
-                Spans::from(vec![
-                    time_block,
-                    Span::styled(
-                        format!("[INCOME]: {}", title),
-                        Style::default().fg(Color::LightMagenta),
-                    ),
-                ])
+                Some(Item {
+                    title,
+                    local_time,
+                    details,
+                    label: "[INCOME]".to_string(),
+                    color: Color::LightMagenta,
+                })
             },
-            LoggerOutput::Client(title, details) if !title.is_empty() => {
-                self.details.push(details);
+            LoggerOutput::Client(title, local_time, details) if !title.is_empty() => {
                 self.total_outcome += 1;
 
-                Spans::from(vec![
-                    time_block,
-                    Span::styled(
-                        format!("[OUTCOME]: {}", title),
-                        Style::default().fg(Color::LightBlue),
-                    ),
-                ])
+                Some(Item {
+                    title,
+                    local_time,
+                    details,
+                    label: "[OUTCOME]".to_string(),
+                    color: Color::LightBlue,
+                })
             },
             _ => {
-                return None;
-            },
-        };
-
-        Some(message)
+                None
+            }
+        }
     }
 
     pub fn prev(&mut self) {
@@ -136,7 +127,7 @@ impl<'a> DebugPanel<'a> {
             None => self.items.len() - 1,
         };
         self.calculate_indexes(absolute_index);
-        self.sender.send(self.details[absolute_index].clone()).unwrap();
+        self.sender.send(self.items[absolute_index].details.clone()).unwrap();
     }
 
     pub fn next(&mut self) {
@@ -145,7 +136,7 @@ impl<'a> DebugPanel<'a> {
             None => 0,
         };
         self.calculate_indexes(absolute_index);
-        self.sender.send(self.details[absolute_index].clone()).unwrap();
+        self.sender.send(self.items[absolute_index].details.clone()).unwrap();
     }
 
     pub fn set_pagination(&mut self, per_page: u16) {
@@ -185,7 +176,7 @@ impl<'a> DebugPanel<'a> {
                     None => 0,
                 };
                 self.calculate_indexes(absolute_index);
-                self.sender.send(self.details[absolute_index].clone()).unwrap();
+                self.sender.send(self.items[absolute_index].details.clone()).unwrap();
             },
             KeyCode::PageDown if !key_modifiers.contains(KeyModifiers::CONTROL) => {
                 let absolute_index = match self.absolute_index {
@@ -197,17 +188,17 @@ impl<'a> DebugPanel<'a> {
                     None => 0,
                 };
                 self.calculate_indexes(absolute_index);
-                self.sender.send(self.details[absolute_index].clone()).unwrap();
+                self.sender.send(self.items[absolute_index].details.clone()).unwrap();
             },
             KeyCode::Home if !key_modifiers.contains(KeyModifiers::CONTROL) => {
                 let absolute_index = 0;
                 self.calculate_indexes(absolute_index);
-                self.sender.send(self.details[absolute_index].clone()).unwrap();
+                self.sender.send(self.items[absolute_index].details.clone()).unwrap();
             },
             KeyCode::End if !key_modifiers.contains(KeyModifiers::CONTROL) => {
                 let absolute_index = self.items.len() - 1;
                 self.calculate_indexes(absolute_index);
-                self.sender.send(self.details[absolute_index].clone()).unwrap();
+                self.sender.send(self.items[absolute_index].details.clone()).unwrap();
             },
             _ => {},
         }
@@ -228,23 +219,13 @@ impl<'a> DebugPanel<'a> {
 
         self.state.select(Some(relative_index));
     }
-
-    fn generate_time_block() -> Span<'a> {
-        let local_time = Local::now();
-
-        Span::styled(
-            format!("{} ", local_time.format("[%H:%M:%S]")),
-            Style::default().fg(Color::LightYellow),
-        )
-    }
 }
 
-impl<'a> Paginator for DebugPanel<'a> {}
-impl<'a> UIComponent for DebugPanel<'a> {
+impl Paginator for DebugPanel {}
+impl UIComponent for DebugPanel {
     fn new(options: UIComponentOptions) -> Self {
         Self {
             items: vec![],
-            details: vec![],
             state: ListState::default(),
             debug_mode: false,
             sender: options.sender.clone(),
@@ -272,7 +253,23 @@ impl<'a> UIComponent for DebugPanel<'a> {
             }
         }
 
-        let mut list = List::new(self.items[start_index..].to_vec())
+        let items: Vec<ListItem> = self.items
+            .iter()
+            .map(|item| {
+                ListItem::new(Spans::from(vec![
+                    Span::styled(
+                        format!("{} ", item.local_time),
+                        Style::default().fg(Color::LightYellow),
+                    ),
+                    Span::styled(
+                        format!("{}: {}", item.label, item.title),
+                        Style::default().fg(item.color),
+                    ),
+                ]))
+            })
+            .collect();
+
+        let mut list = List::new(items[start_index..].to_vec())
             .block(block)
             .style(Style::default().fg(Color::White));
 
