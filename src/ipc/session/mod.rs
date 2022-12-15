@@ -1,11 +1,11 @@
 use std::collections::HashSet;
 use std::fmt::{Debug, Formatter};
-use std::io::Error;
 
 pub mod types;
 
 use crate::client::{Player, Realm, WardenModuleInfo};
 use crate::config::{Config, ConfigParams};
+use crate::errors::ConfigError;
 use crate::ipc::session::types::{ActionFlags, StateFlags};
 
 pub struct Session {
@@ -37,25 +37,17 @@ impl Session {
         }
     }
 
-    pub fn get_config(&self) -> Option<&Config> {
-        self.config.as_ref()
+    pub fn get_config(&self) -> Result<&Config, ConfigError> {
+        self.config.as_ref().ok_or(ConfigError::NotFound)
     }
 
-    pub fn set_config(&mut self, host: &str) -> Result<(), Error> {
+    pub fn set_config(&mut self, host: &str) -> Result<(), ConfigError> {
         if self.config.is_none() {
-            let result = Config::new(ConfigParams {
+            let config = Config::new(ConfigParams {
                 host,
-            });
+            })?;
 
-            return match result {
-                Ok(config) => {
-                    self.config = Some(config);
-                    Ok(())
-                },
-                Err(err) => {
-                    Err(err)
-                },
-            }
+            self.config = Some(config);
         }
 
         Ok(())
