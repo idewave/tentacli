@@ -176,19 +176,21 @@ impl Client {
         let message_income = self._income_message_pipe.lock().unwrap().message_income.clone();
         let dialog_income = self._income_message_pipe.lock().unwrap().dialog_income.clone();
 
+        let account = {
+            let guard = self.session.lock().unwrap();
+            let config = guard.get_config()?;
+            config.connection_data.account.to_string()
+        };
+
         {
-            if let Ok(config) = self.session.lock().unwrap().get_config() {
-                let account = config.connection_data.account.to_string();
-
-                let mut guard = self._income_message_pipe.lock().unwrap();
-                guard.message_income.send_client_message(
-                    format!("LOGIN_CHALLENGE as {}", &account),
-                    None,
-                );
-
-                output_sender.send(login_challenge(&account)?).await?;
-            }
+            let mut guard = self._income_message_pipe.lock().unwrap();
+            guard.message_income.send_client_message(
+                format!("LOGIN_CHALLENGE as {}", &account),
+                None,
+            );
         }
+
+        output_sender.send(login_challenge(&account)?).await?;
 
         join_all(vec![
             self.handle_ui_render(),
@@ -353,10 +355,10 @@ impl Client {
                                     HandlerOutput::Data((opcode, packet, json)) => {
                                         let packet = match opcode {
                                             Opcode::CMSG_WARDEN_DATA => {
-                                                let header = &packet.to_vec()[..OUTCOMING_HEADER_LENGTH].to_vec();
+                                                let header = &packet[..OUTCOMING_HEADER_LENGTH];
                                                 let body = warden_crypt.lock()
                                                     .unwrap().as_mut()
-                                                    .unwrap().encrypt(&packet.to_vec()[OUTCOMING_HEADER_LENGTH..].to_vec());
+                                                    .unwrap().encrypt(&packet[OUTCOMING_HEADER_LENGTH..]);
 
                                                 [header.to_vec(), body.to_vec()].concat()
                                             },

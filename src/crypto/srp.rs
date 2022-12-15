@@ -12,7 +12,7 @@ pub struct Srp {
 
 // public methods
 impl Srp {
-    pub fn new(n: &Vec<u8>, g: &Vec<u8>, server_ephemeral: &[u8; 32]) -> Self {
+    pub fn new(n: &[u8], g: &[u8], server_ephemeral: &[u8; 32]) -> Self {
         let private_ephemeral: [u8; 19] = rand::random();
 
         let modulus = BigInt::from_bytes_le(Sign::Plus, n);
@@ -49,12 +49,12 @@ impl Srp {
     where
         D: Digest,
     {
-        self.session_key = self.calculate_session_key::<D>(&account, &password, salt);
+        self.session_key = self.calculate_session_key::<D>(account, password, salt);
 
         D::new()
             .chain(self.calculate_xor_hash::<D>())
-            .chain(Self::calculate_account_hash::<D>(&account))
-            .chain(&salt)
+            .chain(Self::calculate_account_hash::<D>(account))
+            .chain(salt)
             .chain(&self.public_ephemeral.to_bytes_le().1)
             .chain(&self.server_ephemeral.to_bytes_le().1)
             .chain(&self.session_key)
