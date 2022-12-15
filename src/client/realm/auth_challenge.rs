@@ -57,7 +57,7 @@ impl PacketHandler for Handler {
             let config = guard.get_config()?;
             (
                 guard.selected_realm.as_ref().unwrap().server_id as u32,
-                config.connection_data.account.clone(),
+                config.connection_data.account.to_string(),
                 guard.session_key.as_ref().unwrap().to_vec(),
                 config.addons.clone()
             )

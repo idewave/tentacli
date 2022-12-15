@@ -37,17 +37,24 @@ impl ToString for TerminatedString {
 impl BinaryConverter for TerminatedString {
     fn write_into(&mut self, buffer: &mut Vec<u8>) -> Result<(), IOError> {
         let TerminatedString(str) = self;
-        buffer.write_all(str.as_bytes()).map_err(|e| IOError::WriteError(e))?;
-        buffer.write_u8(0).map_err(|e| IOError::WriteError(e))?;
+        let label = "TerminatedString";
+
+        buffer.write_all(str.as_bytes())
+            .map_err(|e| IOError::CannotWrite(e, format!("bytes ({})", label)))?;
+        buffer.write_u8(0)
+            .map_err(|e| IOError::CannotWrite(e, format!("u8 zero ({})", label)))?;
         Ok(())
     }
 
     fn read_from<R: BufRead>(mut reader: R) -> Result<Self, IOError> {
         let mut internal_buf = vec![];
-        reader.read_until(0, &mut internal_buf).map_err(|e| IOError::WriteError(e))?;
+        let label = "TerminatedString";
+
+        reader.read_until(0, &mut internal_buf)
+            .map_err(|e| IOError::CannotRead(e, format!("bytes ({})", label)))?;
         match String::from_utf8(internal_buf[..internal_buf.len() - 1].to_vec()) {
             Ok(string) => Ok(Self(string)),
-            Err(err) => Err(IOError::StringReadError(err)),
+            Err(err) => Err(IOError::CannotReadString(err, format!("{}", label))),
         }
     }
 }

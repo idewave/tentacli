@@ -2,6 +2,6 @@
 pub enum ConfigError {
     #[error("File 'Config.yml' not found")]
     NotFound,
-    #[error("scan error")]
+    #[error("Scan error")]
     ScanError(#[source] yaml_rust::ScanError),
 }

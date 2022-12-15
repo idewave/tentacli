@@ -52,7 +52,8 @@ impl BinaryConverter for PackedGuid {
             guid >>= 8;
         }
 
-        buffer.write_all(&packed_guid[..size].to_vec()).map_err(|e| IOError::WriteError(e))?;
+        buffer.write_all(&packed_guid[..size].to_vec())
+            .map_err(|e| IOError::CannotWrite(e, "bytes (PackedGuid)".to_string()))?;
 
         Ok(())
     }
@@ -69,7 +70,10 @@ impl BinaryConverter for PackedGuid {
 
         while i < 8 {
             if (mask & (1 << i)) != 0 {
-                guid |= (reader.read_u8().map_err(|e| IOError::ReadError(e))? as u64) << (i * 8);
+                guid |= (reader.read_u8()
+                    .map_err(|e| IOError::CannotRead(
+                        e, "guid:u8 of PackedGuid".to_string())
+                    )? as u64) << (i * 8);
             }
 
             i += 1;

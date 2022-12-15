@@ -68,7 +68,7 @@ pub fn derive_login_packet(input: TokenStream) -> TokenStream {
 
     let output = quote! {
         impl #ident {
-            pub fn from_binary(buffer: &Vec<u8>) -> #result<(Self, String)> {
+            pub fn from_binary(buffer: &[u8]) -> #result<(Self, String)> {
                 let mut omit_bytes = Self::opcode().to_le_bytes().len();
                 let mut initial_reader = #cursor::new(buffer[omit_bytes..].to_vec());
                 let mut initial = Self {
@@ -208,7 +208,7 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
 
     let mut output = quote! {
         impl #ident {
-            pub fn from_binary(buffer: &Vec<u8>) -> #result<(Self, String)> {
+            pub fn from_binary(buffer: &[u8]) -> #result<(Self, String)> {
                 let mut omit_bytes = #incoming_header_length;
 
                 let mut buffer = match #is_compressed {
