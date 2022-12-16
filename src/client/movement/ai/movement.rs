@@ -1,17 +1,28 @@
 use std::time::{SystemTime};
 use std::f32::consts::PI;
-use std::io::Write;
-use byteorder::{LittleEndian, WriteBytesExt};
+use anyhow::{Result as AnyResult};
 
-use crate::client::movement::parsers::types::Position;
 use crate::client::{MovementFlags, MovementFlagsExtra, UnitMoveType};
 use crate::client::opcodes::Opcode;
-use crate::network::packet::OutcomePacket;
 use crate::ipc::session::types::ActionFlags;
-use crate::types::AIManagerInput;
-use crate::utils::pack_guid;
+use crate::parsers::position_parser::types::Position;
+use crate::types::{AIManagerInput, PackedGuid, PacketOutcome};
 
 const MINIMAL_DISTANCE: f32 = 5.0;
+
+#[derive(WorldPacket, Serialize, Deserialize, Debug)]
+#[options(no_opcode)]
+struct Outcome {
+    guid: PackedGuid,
+    movement_flags: u32,
+    movement_flags2: u16,
+    time: u32,
+    x: f32,
+    y: f32,
+    z: f32,
+    direction: f32,
+    unknown: u32,
+}
 
 pub struct AI {
     is_moving_started: bool,
@@ -98,62 +109,55 @@ impl AI {
                                     );
                                 }
 
-                                let packet = {
+                                let packet_outcome = {
                                     let guard = input.session.lock().unwrap();
                                     let position = guard.me.as_ref().unwrap().position.unwrap();
 
-                                    let (_, header, body) = Self::build_movement_packet(
+                                    Self::build_movement_packet(
                                         u32::from(Opcode::MSG_MOVE_START_FORWARD),
                                         my_guid.unwrap(),
                                         position,
                                         MovementFlags::FORWARD,
                                         // MovementFlags::NONE,
-                                    );
-                                    [header, body].concat()
+                                    ).unwrap()
                                 };
 
                                 // input.output_queue_sender.lock().unwrap().push_back(packet);
-                                input.output_sender.send(packet).await.unwrap();
+                                input.output_sender.send(packet_outcome).await.unwrap();
                             } else {
-                                let packet = {
+                                let packet_outcome = {
                                     let guard = input.session.lock().unwrap();
                                     let position = guard.me.as_ref().unwrap().position.unwrap();
 
-                                    let (_, header, body) = Self::build_movement_packet(
+                                    Self::build_movement_packet(
                                         u32::from(Opcode::MSG_MOVE_HEARTBEAT),
                                         my_guid.unwrap(),
                                         position,
                                         MovementFlags::FORWARD,
                                         // MovementFlags::NONE,
-                                    );
-                                    [header, body].concat()
+                                    ).unwrap()
                                 };
 
                                 // input.output_queue_sender.lock().unwrap().push_back(packet);
-                                input.output_sender.send(packet).await.unwrap();
+                                input.output_sender.send(packet_outcome).await.unwrap();
                             }
                         }
                     } else if self.is_moving_started {
-                        let packet = {
+                        let packet_outcome = {
                             let guard = input.session.lock().unwrap();
                             let position = guard.me.as_ref().unwrap().position.unwrap();
 
-                            let (_, header, body) = Self::build_movement_packet(
+                            Self::build_movement_packet(
                                 u32::from(Opcode::MSG_MOVE_STOP),
                                 my_guid.unwrap(),
                                 position,
                                 MovementFlags::NONE,
-                            );
-                            [header, body].concat()
+                            ).unwrap()
                         };
 
-                        // input.output_queue_sender.lock().unwrap().push_back(packet);
-                        input.output_sender.send(packet).await.unwrap();
+                        input.output_sender.send(packet_outcome).await.unwrap();
                         self.is_moving_started = false;
                     }
-
-                    // let guard = input.session.lock().unwrap();
-                    // guard.me.unwrap().position = Some(position);
                 }
             }
         }
@@ -164,23 +168,20 @@ impl AI {
         guid: u64,
         new_position: Position,
         movement_flags: MovementFlags
-    ) -> (u32, Vec<u8>, Vec<u8>) {
-        let mut body: Vec<u8> = Vec::new();
-
+    ) -> AnyResult<PacketOutcome> {
         let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
-
-        body.write_all(&pack_guid(guid)).unwrap();
-        body.write_u32::<LittleEndian>(movement_flags.bits()).unwrap();
-        body.write_u16::<LittleEndian>(MovementFlagsExtra::NONE.bits()).unwrap();
-        // TODO: need to investigate how better get u32 value from timestamp
-        body.write_u32::<LittleEndian>(now.as_millis() as u32).unwrap();
-        body.write_f32::<LittleEndian>(new_position.x).unwrap();
-        body.write_f32::<LittleEndian>(new_position.y).unwrap();
-        body.write_f32::<LittleEndian>(new_position.z).unwrap();
-        body.write_f32::<LittleEndian>(new_position.orientation).unwrap();
-        body.write_u32::<LittleEndian>(0).unwrap();
-
-        OutcomePacket::from(opcode, Some(body))
+        Outcome {
+            guid: PackedGuid(guid),
+            movement_flags: movement_flags.bits(),
+            movement_flags2: MovementFlagsExtra::NONE.bits(),
+            // TODO: need to investigate how better get u32 value from timestamp
+            time: now.as_millis() as u32,
+            x: new_position.x,
+            y: new_position.y,
+            z: new_position.z,
+            direction: new_position.orientation,
+            unknown: 0
+        }.unpack_with_opcode(opcode)
     }
 
     fn calculate_velocity(from: Position, to: Position, speed: f32) -> Position {

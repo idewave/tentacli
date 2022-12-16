@@ -4,7 +4,7 @@ use tui::layout::{Alignment, Rect};
 use tui::style::{Color, Style};
 use tui::widgets::{Block, Borders, BorderType, Paragraph, Wrap};
 
-use crate::types::traits::UIComponent;
+use crate::traits::ui_component::UIComponent;
 use crate::ui::types::{UIComponentOptions};
 
 const APP_NAME: &str = "Idewave CLI";

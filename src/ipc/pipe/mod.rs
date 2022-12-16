@@ -34,7 +34,10 @@ impl IncomeMessagePipe {
     }
 
     pub fn recv(&mut self) -> IncomeMessageType {
-        self._receiver.recv().unwrap()
+        match self._receiver.try_recv() {
+            Ok(message) => message,
+            _ => IncomeMessageType::None,
+        }
     }
 }
 

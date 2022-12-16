@@ -6,7 +6,7 @@ mod handle_spell_go;
 pub mod types;
 
 use crate::client::opcodes::Opcode;
-use crate::types::traits::{Processor};
+use crate::traits::processor::Processor;
 use crate::types::{HandlerInput, ProcessorResult};
 
 pub struct SpellProcessor;
@@ -17,23 +17,19 @@ impl Processor for SpellProcessor {
         let _size = reader.read_u16::<BigEndian>().unwrap();
         let opcode = reader.read_u16::<LittleEndian>().unwrap();
 
-        let mut message = String::new();
-
         let handlers: ProcessorResult = match opcode {
             Opcode::SMSG_SPELL_GO => {
-                message = String::from("SMSG_SPELL_GO");
+                input.opcode = Some(opcode);
                 vec![Box::new(handle_spell_go::Handler)]
             },
             Opcode::SMSG_INITIAL_SPELLS => {
-                message = String::from("SMSG_INITIAL_SPELLS");
+                input.opcode = Some(opcode);
                 vec![
                     Box::new(handle_initial_spells::Handler),
                 ]
             },
             _ => vec![]
         };
-
-        input.message_income.send_server_message(message);
 
         handlers
     }

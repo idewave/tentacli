@@ -8,7 +8,7 @@ use tui::widgets::{Block, Borders, BorderType, Clear, List, ListItem, ListState}
 
 use crate::client::{Realm};
 use crate::ipc::pipe::dialog::DialogOutcome;
-use crate::types::traits::UIComponent;
+use crate::traits::ui_component::UIComponent;
 use crate::ui::types::{UIComponentOptions, UIStateFlags};
 
 const PANEL_TITLE: &str = "SELECT REALM";
@@ -81,11 +81,13 @@ impl<'a> RealmModal<'a> {
             KeyCode::Up => {
                 if state_flags.contains(UIStateFlags::IS_REALM_MODAL_OPENED) {
                     self.prev();
+                    state_flags.set(UIStateFlags::IS_EVENT_HANDLED, true);
                 }
             },
             KeyCode::Down => {
                 if state_flags.contains(UIStateFlags::IS_REALM_MODAL_OPENED) {
                     self.next();
+                    state_flags.set(UIStateFlags::IS_EVENT_HANDLED, true);
                 }
             },
             KeyCode::Enter => {

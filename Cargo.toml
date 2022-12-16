@@ -1,11 +1,15 @@
 [package]
 edition = "2021"
 name = "idewave-cli"
-version = "2.0.0"
+version = "3.0.0"
 authors = ["Sergio Ivanuzzo <sergio.ivanuzzo@gmail.com>"]
 description = "Smart wow-client (cli)"
 readme = "README.md"
-keywords = ["wow", "wowcli", "idewave", "wowclient", "cli", "idewave-cli"]
+keywords = [
+    "wow", "wowcli", "idewave", "wowclient",
+    "cli", "idewave-cli", "smart cli",
+    "smart client", "console client"
+]
 license-file = "LICENSE"
 repository = "https://github.com/idewave/idewave-cli"
 
@@ -25,9 +29,16 @@ yaml-rust = "0.4.5"
 tokio = { version = "1", features = ["sync", "net", "io-util", "macros", "time", "rt-multi-thread"] }
 bitflags = "1.3.2"
 futures = "0.3.21"
-tui = "0.18.0"
+tui = { version = "0", features = ["crossterm"] }
 crossterm = "0.24.0"
 async-trait = "0.1.57"
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+chrono = "0.4"
+dotenv = "0.15.0"
+thiserror = "1.0"
+anyhow = "1.0"
+idewave_packet = { path = "src/macros/packet" }
 
 [dev-dependencies]
 rusty-hook = "0.11.2"

@@ -1,41 +1,59 @@
-use std::io::{Cursor, Write};
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use async_trait::async_trait;
 
+use crate::{with_opcode};
 use crate::client::chat::types::{TextEmoteType};
 use crate::client::opcodes::Opcode;
 use crate::client::spell::types::SpellCastTargetType;
 use crate::ipc::session::types::ActionFlags;
-use crate::network::packet::OutcomePacket;
-use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
-use crate::types::traits::PacketHandler;
-use crate::utils::pack_guid;
+use crate::types::{HandlerInput, HandlerOutput, HandlerResult, PackedGuid};
+use crate::traits::packet_handler::PacketHandler;
 
 // priest initial spell for healing
 const SPELL_ID: u32 = 2050;
+
+#[derive(WorldPacket, Serialize, Deserialize, Debug)]
+#[options(no_opcode)]
+struct Income {
+    sender_guid: u64,
+    text_emote: u32,
+}
+
+with_opcode! {
+    @world_opcode(Opcode::CMSG_CAST_SPELL)
+    #[derive(WorldPacket, Serialize, Deserialize, Debug)]
+    struct Outcome {
+        unknown: u8,
+        sender_guid: u32,
+        unknown2: u8,
+        cast_flags: u32,
+        guid: PackedGuid,
+    }
+}
 
 pub struct Handler;
 #[async_trait]
 impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
-        let mut action_flags = input.session.lock().unwrap().action_flags;
-        let mut reader = Cursor::new(input.data.as_ref().unwrap()[4..].to_vec());
+        let (Income { sender_guid, text_emote }, json) = Income::from_binary(
+            input.data.as_ref().unwrap()
+        )?;
 
-        let sender_guid = reader.read_u64::<LittleEndian>()?;
-        let text_emote = reader.read_u32::<LittleEndian>()?;
+        input.message_income.send_server_message(
+            Opcode::get_server_opcode_name(input.opcode.unwrap()),
+            Some(json),
+        );
 
         match text_emote {
             TextEmoteType::TEXT_HEAL_ME | TextEmoteType::TEXT_HELP_ME => {
-                action_flags.set(ActionFlags::IS_CASTING, true);
+                input.session.lock().unwrap().action_flags.set(ActionFlags::IS_CASTING, true);
 
-                let mut body = Vec::new();
-                body.write_u8(0)?;
-                body.write_u32::<LittleEndian>(SPELL_ID)?;
-                body.write_u8(0)?;
-                body.write_u32::<LittleEndian>(SpellCastTargetType::TARGET_FLAG_UNIT)?;
-                body.write_all(&pack_guid(sender_guid))?;
-
-                Ok(HandlerOutput::Data(OutcomePacket::from(Opcode::CMSG_CAST_SPELL, Some(body))))
+                Ok(HandlerOutput::Data(Outcome {
+                    unknown: 0,
+                    sender_guid: SPELL_ID,
+                    unknown2: 0,
+                    cast_flags: SpellCastTargetType::TARGET_FLAG_UNIT,
+                    guid: PackedGuid(sender_guid),
+                }.unpack()?))
             },
             _ => {
                 Ok(HandlerOutput::Void)

@@ -1,46 +1,49 @@
-use std::cell::RefCell;
-use std::io::{Cursor};
-use byteorder::{LittleEndian, WriteBytesExt};
 use async_trait::async_trait;
 
-use crate::client::movement::parsers::movement_parser::MovementParser;
-use crate::client::{Opcode};
-use crate::network::packet::OutcomePacket;
-use crate::types::{HandlerInput, HandlerOutput, HandlerResult};
-use crate::types::traits::PacketHandler;
-use crate::utils::{read_packed_guid};
+use crate::client::Opcode;
+use crate::client::player::globals::NameQueryOutcome;
+use crate::types::{HandlerInput, HandlerOutput, HandlerResult, PackedGuid};
+use crate::parsers::movement_parser::types::{MovementInfo};
+use crate::traits::packet_handler::PacketHandler;
+
+#[derive(WorldPacket, Serialize, Deserialize, Debug)]
+#[options(no_opcode)]
+struct Income {
+    packed_guid: PackedGuid,
+    movement_info: MovementInfo,
+}
 
 pub struct Handler;
 #[async_trait]
 impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
-        let reader = RefCell::new(Cursor::new(input.data.as_ref().unwrap()[4..].to_vec()));
+        let (Income { packed_guid, movement_info }, json) = Income::from_binary(
+            &input.data.as_ref().unwrap().to_vec()
+        )?;
 
-        let (guid, position) = read_packed_guid(RefCell::clone(&reader));
-        reader.borrow_mut().set_position(position);
+        input.message_income.send_server_message(
+            Opcode::get_server_opcode_name(input.opcode.unwrap()),
+            Some(json),
+        );
 
-        let (movement_info, _) = MovementParser::parse(RefCell::clone(&reader));
+        let PackedGuid(guid) = packed_guid;
 
-        input.data_storage.lock().unwrap().players_map.entry(guid).and_modify(|p| {
-            p.position = Some(movement_info.position);
-        });
+        {
+            input.data_storage.lock().unwrap().players_map.entry(guid).and_modify(|p| {
+                p.position = Some(movement_info.position);
+            });
+        }
 
-        if input.session.lock().unwrap().me.as_ref().unwrap().guid != guid {
+        let my_guid = {
+            input.session.lock().unwrap().me.as_ref().unwrap().guid
+        };
+
+        if my_guid != guid {
             let players_map = &mut input.data_storage.lock().unwrap().players_map;
             let player = players_map.get(&guid);
 
             if player.is_none() {
-                let mut body = Vec::new();
-                body.write_u64::<LittleEndian>(guid)?;
-
-                let mut body = Vec::new();
-                body.write_u64::<LittleEndian>(guid)?;
-
-                return Ok(
-                    HandlerOutput::Data(
-                        OutcomePacket::from(Opcode::CMSG_NAME_QUERY, Some(body))
-                    )
-                );
+                return Ok(HandlerOutput::Data(NameQueryOutcome { guid }.unpack()?));
             }
         }
 
