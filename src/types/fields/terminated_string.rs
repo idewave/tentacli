@@ -2,7 +2,7 @@ use std::io::{BufRead, Write};
 use byteorder::{WriteBytesExt};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use crate::errors::IOError;
+use crate::errors::FieldError;
 use crate::traits::binary_converter::BinaryConverter;
 
 #[derive(Debug, Default, Clone)]
@@ -35,26 +35,26 @@ impl ToString for TerminatedString {
 }
 
 impl BinaryConverter for TerminatedString {
-    fn write_into(&mut self, buffer: &mut Vec<u8>) -> Result<(), IOError> {
+    fn write_into(&mut self, buffer: &mut Vec<u8>) -> Result<(), FieldError> {
         let TerminatedString(str) = self;
         let label = "TerminatedString";
 
         buffer.write_all(str.as_bytes())
-            .map_err(|e| IOError::CannotWrite(e, format!("bytes ({})", label)))?;
+            .map_err(|e| FieldError::CannotWrite(e, format!("bytes ({})", label)))?;
         buffer.write_u8(0)
-            .map_err(|e| IOError::CannotWrite(e, format!("u8 zero ({})", label)))?;
+            .map_err(|e| FieldError::CannotWrite(e, format!("u8 zero ({})", label)))?;
         Ok(())
     }
 
-    fn read_from<R: BufRead>(mut reader: R) -> Result<Self, IOError> {
+    fn read_from<R: BufRead>(mut reader: R) -> Result<Self, FieldError> {
         let mut internal_buf = vec![];
         let label = "TerminatedString";
 
         reader.read_until(0, &mut internal_buf)
-            .map_err(|e| IOError::CannotRead(e, format!("bytes ({})", label)))?;
+            .map_err(|e| FieldError::CannotRead(e, format!("bytes ({})", label)))?;
         match String::from_utf8(internal_buf[..internal_buf.len() - 1].to_vec()) {
             Ok(string) => Ok(Self(string)),
-            Err(err) => Err(IOError::CannotReadString(err, format!("{}", label))),
+            Err(err) => Err(FieldError::InvalidString(err, format!("{}", label))),
         }
     }
 }

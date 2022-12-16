@@ -71,7 +71,7 @@ impl PacketHandler for Handler {
         return match text.trim_matches(char::from(0)) {
             greet if bot_chat.greet.contains(&greet.to_string()) => {
                 Ok(HandlerOutput::Data(Outcome {
-                    emote_type: EmoteType::ONESHOT_WAVE as u32,
+                    emote_type: EmoteType::ONESHOT_WAVE,
                 }.unpack()?))
             },
             follow_invite if bot_chat.follow_invite.contains(&follow_invite.to_string()) => {

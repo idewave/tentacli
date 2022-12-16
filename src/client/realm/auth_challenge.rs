@@ -68,7 +68,7 @@ impl PacketHandler for Handler {
         let digest = Sha1::new()
             .chain(&account)
             .chain(vec![0, 0, 0, 0])
-            .chain(&client_seed)
+            .chain(client_seed)
             // from server_seed we need only CLIENT_SEED_SIZE first bytes
             .chain(&server_seed[..CLIENT_SEED_SIZE])
             .chain(session_key)

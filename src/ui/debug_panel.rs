@@ -167,38 +167,58 @@ impl DebugPanel {
                 }
             },
             KeyCode::PageUp if !key_modifiers.contains(KeyModifiers::CONTROL) => {
-                let absolute_index = match self.absolute_index {
-                    Some(i) => if i >= self.per_page as usize {
-                        i - (self.per_page as usize)
-                    } else {
-                        0
-                    },
-                    None => 0,
-                };
-                self.calculate_indexes(absolute_index);
-                self.sender.send(self.items[absolute_index].details.clone()).unwrap();
+                if !state_flags.contains(UIStateFlags::IS_EVENT_HANDLED) {
+                    if self.debug_mode {
+                        let absolute_index = match self.absolute_index {
+                            Some(i) => if i >= self.per_page as usize {
+                                i - (self.per_page as usize)
+                            } else {
+                                0
+                            },
+                            None => 0,
+                        };
+                        self.calculate_indexes(absolute_index);
+                        self.sender.send(self.items[absolute_index].details.clone()).unwrap();
+                        state_flags.set(UIStateFlags::IS_EVENT_HANDLED, true);
+                    }
+                }
             },
             KeyCode::PageDown if !key_modifiers.contains(KeyModifiers::CONTROL) => {
-                let absolute_index = match self.absolute_index {
-                    Some(i) => if i + (self.per_page as usize) <= self.items.len() - 1 {
-                        i + (self.per_page as usize)
-                    } else {
-                        self.items.len() - 1
-                    },
-                    None => 0,
-                };
-                self.calculate_indexes(absolute_index);
-                self.sender.send(self.items[absolute_index].details.clone()).unwrap();
+                if !state_flags.contains(UIStateFlags::IS_EVENT_HANDLED) {
+                    if self.debug_mode {
+                        let absolute_index = match self.absolute_index {
+                            Some(i) => if i + (self.per_page as usize) <= self.items.len() - 1 {
+                                i + (self.per_page as usize)
+                            } else {
+                                self.items.len() - 1
+                            },
+                            None => 0,
+                        };
+                        self.calculate_indexes(absolute_index);
+                        self.sender.send(self.items[absolute_index].details.clone()).unwrap();
+                        state_flags.set(UIStateFlags::IS_EVENT_HANDLED, true);
+                    }
+                }
             },
             KeyCode::Home if !key_modifiers.contains(KeyModifiers::CONTROL) => {
-                let absolute_index = 0;
-                self.calculate_indexes(absolute_index);
-                self.sender.send(self.items[absolute_index].details.clone()).unwrap();
+                if !state_flags.contains(UIStateFlags::IS_EVENT_HANDLED) {
+                    if self.debug_mode {
+                        let absolute_index = 0;
+                        self.calculate_indexes(absolute_index);
+                        self.sender.send(self.items[absolute_index].details.clone()).unwrap();
+                        state_flags.set(UIStateFlags::IS_EVENT_HANDLED, true);
+                    }
+                }
             },
             KeyCode::End if !key_modifiers.contains(KeyModifiers::CONTROL) => {
-                let absolute_index = self.items.len() - 1;
-                self.calculate_indexes(absolute_index);
-                self.sender.send(self.items[absolute_index].details.clone()).unwrap();
+                if !state_flags.contains(UIStateFlags::IS_EVENT_HANDLED) {
+                    if self.debug_mode {
+                        let absolute_index = self.items.len() - 1;
+                        self.calculate_indexes(absolute_index);
+                        self.sender.send(self.items[absolute_index].details.clone()).unwrap();
+                        state_flags.set(UIStateFlags::IS_EVENT_HANDLED, true);
+                    }
+                }
             },
             _ => {},
         }

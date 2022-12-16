@@ -20,7 +20,7 @@ pub struct Config {
 impl Config {
     pub fn new(params: ConfigParams) -> Result<Self, ConfigError> {
         let data = read_to_string("Config.yml").map_err(|_| ConfigError::NotFound)?;
-        let docs = YamlLoader::load_from_str(&data).map_err(|e| ConfigError::ScanError(e))?;
+        let docs = YamlLoader::load_from_str(&data).map_err(ConfigError::ScanError)?;
 
         let connection_data = Self::parse_connection_data(
             &docs[0]["connection_data"][params.host]
