@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use crate::primary::ipc::session::types::StateFlags;
+use crate::primary::shared::session::types::StateFlags;
 use crate::primary::types::{HandlerInput, HandlerResult};
 use crate::primary::traits::packet_handler::PacketHandler;
 

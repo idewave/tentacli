@@ -6,9 +6,14 @@ mod fields;
 pub use fields::{PackedGuid, TerminatedString};
 use crate::primary::client::{Character, Realm};
 
-use crate::primary::ipc::storage::DataStorage;
-use crate::primary::ipc::session::Session;
+use crate::primary::shared::storage::DataStorage;
+use crate::primary::shared::session::Session;
 use crate::primary::traits::packet_handler::PacketHandler;
+
+#[derive(Debug, Clone)]
+pub enum Signal {
+    Reconnect,
+}
 
 #[derive(Debug)]
 pub struct HandlerInput {

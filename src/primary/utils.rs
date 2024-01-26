@@ -50,14 +50,6 @@ pub fn decompress(data: &[u8]) -> Vec<u8> {
     buffer
 }
 
-#[allow(dead_code)]
-pub fn crop(value: &str) -> &str {
-    let mut chars = value.chars();
-    chars.next();
-    chars.next_back();
-    chars.as_str()
-}
-
 #[cfg(test)]
 mod tests {
     use std::io::{Write};

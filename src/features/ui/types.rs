@@ -1,11 +1,13 @@
-use async_broadcast::{Sender as BroadcastSender};
 use bitflags::bitflags;
 
-use crate::primary::types::HandlerOutput;
-
-#[derive(Clone)]
-pub struct UIComponentOptions {
-    pub sender: BroadcastSender<HandlerOutput>,
+#[derive(Debug)]
+pub enum LoggerOutput {
+    // title, optional details
+    Debug(String, Option<String>),
+    Error(String, Option<String>),
+    Success(String, Option<String>),
+    Response(String, Option<String>),
+    Request(String, Option<String>),
 }
 
 bitflags! {

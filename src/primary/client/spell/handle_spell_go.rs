@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 
 use crate::primary::client::Opcode;
-use crate::primary::ipc::session::types::ActionFlags;
+use crate::primary::shared::session::types::ActionFlags;
 use crate::primary::types::{HandlerInput, HandlerOutput, HandlerResult, PackedGuid};
 use crate::primary::traits::packet_handler::PacketHandler;
 

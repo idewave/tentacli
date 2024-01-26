@@ -6,7 +6,7 @@ pub mod types;
 use crate::primary::client::{Player, Realm, WardenModuleInfo};
 use crate::primary::config::{Config, ConfigParams};
 use crate::primary::errors::ConfigError;
-use crate::primary::ipc::session::types::{ActionFlags, StateFlags};
+use crate::primary::shared::session::types::{ActionFlags, StateFlags};
 
 pub struct Session {
     pub session_key: Option<Vec<u8>>,

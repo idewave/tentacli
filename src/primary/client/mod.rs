@@ -47,16 +47,12 @@ pub use crate::primary::client::opcodes::Opcode;
 use crate::primary::client::types::ClientFlags;
 use crate::primary::crypto::encryptor::OUTCOMING_HEADER_LENGTH;
 use crate::primary::crypto::warden_crypt::WardenCrypt;
-use crate::primary::ipc::pipe::types::Signal;
-use crate::primary::ipc::storage::DataStorage;
-use crate::primary::ipc::session::Session;
+use crate::primary::shared::storage::DataStorage;
+use crate::primary::shared::session::Session;
 use crate::primary::network::stream::{Reader, Writer};
 use crate::primary::traits::Feature;
 use crate::primary::traits::processor::Processor;
-use crate::primary::types::{
-    HandlerInput, HandlerOutput,
-    PacketOutcome, ProcessorFunction, ProcessorResult
-};
+use crate::primary::types::{HandlerInput, HandlerOutput, PacketOutcome, ProcessorFunction, ProcessorResult, Signal};
 
 pub struct Client {
     _reader: Arc<Mutex<Option<Reader>>>,
@@ -516,9 +512,8 @@ mod tests {
 
     use crate::Client;
     use crate::primary::client::types::ClientFlags;
-    use crate::primary::ipc::pipe::types::{Signal};
-    use crate::primary::ipc::session::types::{ActionFlags, StateFlags};
-    use crate::primary::types::{HandlerOutput, PacketOutcome};
+    use crate::primary::shared::session::types::{ActionFlags, StateFlags};
+    use crate::primary::types::{HandlerOutput, PacketOutcome, Signal};
 
     const HOST: &str = "127.0.0.1";
     // https://users.rust-lang.org/t/async-tests-sometimes-fails/78451

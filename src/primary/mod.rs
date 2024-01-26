@@ -2,7 +2,7 @@ pub mod client;
 mod config;
 mod crypto;
 mod errors;
-pub mod ipc;
+pub mod shared;
 mod macros;
 mod network;
 mod parsers;

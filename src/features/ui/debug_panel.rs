@@ -11,10 +11,9 @@ use tui::widgets::{Block, Borders, BorderType, Clear, List, ListItem, ListState}
 use crate::features::ui::debug_details_panel::DebugDetailsPanel;
 use crate::features::ui::info_panel::InfoPanel;
 
-use crate::primary::ipc::pipe::types::LoggerOutput;
 use crate::primary::traits::paginator::Paginator;
 use crate::features::ui::traits::ui_component::{UIComponent};
-use crate::features::ui::types::{UIEventFlags};
+use crate::features::ui::types::{LoggerOutput, UIEventFlags};
 use crate::primary::types::HandlerOutput;
 
 const PANEL_TITLE: &str = "I/O MONITOR";

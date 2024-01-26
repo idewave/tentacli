@@ -36,13 +36,12 @@ pub mod types;
 mod title;
 mod traits;
 
-use crate::primary::ipc::pipe::types::{LoggerOutput};
 use crate::features::ui::traits::ui_component::{UIComponent, UIModalComponent};
 use crate::features::ui::characters_modal::CharactersModal;
 use crate::features::ui::debug_panel::DebugPanel;
 use crate::features::ui::realm_modal::RealmModal;
 use crate::features::ui::title::Title;
-use crate::features::ui::types::{UIEventFlags};
+use crate::features::ui::types::{LoggerOutput, UIEventFlags};
 use crate::primary::traits::Feature;
 use crate::primary::types::{HandlerOutput};
 

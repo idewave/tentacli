@@ -56,6 +56,11 @@ impl UIComponent for InfoPanel {
     fn render<B: Backend>(&mut self, frame: &mut Frame<B>, rect: Rect) {
         let mut spans = vec![
             Span::styled(
+                format!("[CURRENT {}/{}]", self.selected_index + 1, self.total_items),
+                Style::default().fg(Color::Gray)
+            ),
+            Span::raw(" "),
+            Span::styled(
                 format!("[IN {}]", self.total_response_amount),
                 Style::default().fg(Color::LightMagenta)
             ),

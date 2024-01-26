@@ -4,7 +4,7 @@ use tui::style::{Color, Modifier, Style};
 use tui::text::{Span, Spans};
 use tui::widgets::{ListItem, ListState};
 
-use crate::primary::client::Character;
+use crate::primary::client::{Character};
 use crate::features::ui::traits::ui_component::{UIModalComponent};
 use crate::features::ui::types::{UIEventFlags};
 use crate::primary::types::HandlerOutput;
@@ -20,9 +20,14 @@ impl CharactersModal {
         self
     }
 
-    pub fn get_selected(&mut self) -> Character {
-        let index = self.state.selected().unwrap_or(0);
-        self.characters.remove(index)
+    pub fn get_selected(&mut self) -> Option<Character> {
+        if self.state.selected().is_some() {
+            let index = self.state.selected().unwrap();
+            let realm = self.characters.remove(index);
+            Some(realm)
+        } else {
+            None
+        }
     }
 
     pub fn handle_key_event(
@@ -49,9 +54,10 @@ impl CharactersModal {
             },
             KeyCode::Enter => {
                 if is_modal_opened {
-                    let selected = self.get_selected();
-                    output = Some(HandlerOutput::SelectCharacter(selected));
-                    event_flags.lock().unwrap().set(UIEventFlags::IS_CHARACTERS_MODAL_OPENED, false);
+                    if let Some(selected) = self.get_selected() {
+                        output = Some(HandlerOutput::SelectCharacter(selected));
+                        event_flags.lock().unwrap().set(UIEventFlags::IS_CHARACTERS_MODAL_OPENED, false);
+                    }
                 }
             },
             _ => {},

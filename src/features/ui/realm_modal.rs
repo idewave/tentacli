@@ -21,9 +21,14 @@ impl RealmModal {
         self
     }
 
-    pub fn get_selected(&mut self) -> Realm {
-        let index = self.state.selected().unwrap_or(0);
-        self.realms.remove(index)
+    pub fn get_selected(&mut self) -> Option<Realm> {
+        if self.state.selected().is_some() {
+            let index = self.state.selected().unwrap();
+            let realm = self.realms.remove(index);
+            Some(realm)
+        } else {
+            None
+        }
     }
 
     pub fn handle_key_event(
@@ -50,9 +55,10 @@ impl RealmModal {
             },
             KeyCode::Enter => {
                 if is_modal_opened {
-                    let selected = self.get_selected();
-                    output = Some(HandlerOutput::SelectRealm(selected));
-                    event_flags.lock().unwrap().set(UIEventFlags::IS_REALM_MODAL_OPENED, false);
+                    if let Some(selected) = self.get_selected() {
+                        output = Some(HandlerOutput::SelectRealm(selected));
+                        event_flags.lock().unwrap().set(UIEventFlags::IS_REALM_MODAL_OPENED, false);
+                    }
                 }
             },
             _ => {},
