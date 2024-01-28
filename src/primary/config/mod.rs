@@ -38,10 +38,21 @@ impl Config {
     }
 
     fn parse_connection_data(config: &Yaml) -> ConnectionData {
+        let autoselect = config["autoselect"].as_hash().unwrap();
+
         return ConnectionData {
             account: config["account"].as_str().unwrap().to_string().to_uppercase(),
             password: config["password"].as_str().unwrap().to_string().to_uppercase(),
-            realm_name: config["realm_name"].as_str().unwrap().to_string(),
+            autoselect_realm_name: autoselect
+                .get(&Yaml::String("realm_name".to_string()))
+                .unwrap()
+                .as_str()
+                .unwrap_or_default().to_string(),
+            autoselect_character_name: autoselect
+                .get(&Yaml::String("character_name".to_string()))
+                .unwrap()
+                .as_str()
+                .unwrap_or_default().to_string(),
         }
     }
 

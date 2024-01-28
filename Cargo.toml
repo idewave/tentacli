@@ -1,9 +1,9 @@
 [package]
-name = "idewave-cli"
+name = "tentacli"
 version = "3.0.0"
 edition = "2021"
 authors = ["Sergio Ivanuzzo <sergio.ivanuzzo@gmail.com>"]
-description = "Smart wow-client (cli)"
+description = "Smart wow-client (cli), you could use it as separate app or integrate into your own project."
 readme = "README.md"
 keywords = [
     "idewave", "wowclient",
@@ -48,3 +48,4 @@ rusty-hook = "0.11.2"
 [features]
 default = ["ui"]
 ui = ["crossterm/default", "tui/crossterm", "crossterm/event-stream"]
+console = []

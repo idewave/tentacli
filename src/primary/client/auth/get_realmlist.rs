@@ -1,7 +1,10 @@
+use anyhow::bail;
 use async_trait::async_trait;
+use regex::Regex;
 
 use crate::{with_opcode};
 use crate::primary::client::{Realm, Opcode};
+use crate::primary::errors::RealmListError;
 use crate::primary::traits::packet_handler::PacketHandler;
 use crate::primary::types::{
     HandlerInput,
@@ -31,8 +34,23 @@ impl PacketHandler for Handler {
             Some(json),
         ));
 
-        response.push(HandlerOutput::TransferRealmsList(realms));
-        response.push(HandlerOutput::Freeze);
+        let autoselect_realm_name = {
+            let guard = input.session.lock().unwrap();
+            let config = guard.get_config()?;
+            config.connection_data.autoselect_realm_name.to_string()
+        };
+
+        if autoselect_realm_name.is_empty() {
+            response.push(HandlerOutput::TransferRealmsList(realms));
+            response.push(HandlerOutput::Freeze);
+        } else {
+            let re = Regex::new(format!(r#"{}"#, autoselect_realm_name).as_str()).unwrap();
+            if let Some(realm) = realms.into_iter().find(|item| re.is_match(&item.name[..])) {
+                input.session.lock().unwrap().selected_realm = Some(realm);
+            } else {
+                bail!(RealmListError::NotFound);
+            }
+        }
 
         Ok(response)
     }

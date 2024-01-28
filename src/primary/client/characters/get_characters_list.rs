@@ -1,6 +1,9 @@
+use anyhow::bail;
 use async_trait::async_trait;
+use regex::Regex;
 
-use crate::primary::client::Opcode;
+use crate::primary::client::{Opcode, Player};
+use crate::primary::errors::CharacterListError;
 use crate::primary::types::{
     HandlerInput,
     HandlerOutput,
@@ -41,8 +44,23 @@ impl PacketHandler for Handler {
             return Ok(vec![]);
         }
 
-        response.push(HandlerOutput::TransferCharactersList(characters));
-        response.push(HandlerOutput::Freeze);
+        let autoselect_character_name = {
+            let guard = input.session.lock().unwrap();
+            let config = guard.get_config()?;
+            config.connection_data.autoselect_character_name.to_string()
+        };
+
+        if autoselect_character_name.is_empty() {
+            response.push(HandlerOutput::TransferCharactersList(characters));
+            response.push(HandlerOutput::Freeze);
+        } else {
+            let re = Regex::new(format!(r#"{}"#, autoselect_character_name).as_str()).unwrap();
+            if let Some(character) = characters.into_iter().find(|item| re.is_match(&item.name[..])) {
+                input.session.lock().unwrap().me = Some(Player::from(character));
+            } else {
+                bail!(CharacterListError::NotFound);
+            }
+        }
 
         Ok(response)
     }

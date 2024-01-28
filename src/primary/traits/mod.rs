@@ -10,8 +10,8 @@ pub mod processor;
 
 pub trait Feature {
     fn new(
-        query_sender: BroadcastSender<HandlerOutput>,
-        query_receiver: BroadcastReceiver<HandlerOutput>,
+        sender: BroadcastSender<HandlerOutput>,
+        receiver: BroadcastReceiver<HandlerOutput>,
     ) -> Self where Self: Sized;
 
     fn get_tasks(&mut self) -> Vec<JoinHandle<()>>;

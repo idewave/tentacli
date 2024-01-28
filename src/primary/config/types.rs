@@ -5,7 +5,8 @@ use byteorder::{LittleEndian, WriteBytesExt};
 pub struct ConnectionData {
     pub account: String,
     pub password: String,
-    pub realm_name: String,
+    pub autoselect_realm_name: String,
+    pub autoselect_character_name: String,
 }
 
 #[derive(Clone)]

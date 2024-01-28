@@ -164,6 +164,11 @@ impl Client {
 
                 let ui = UI::new(query_sender.clone(), query_receiver.clone());
                 features.push(Box::new(ui));
+            } else if #[cfg(feature = "console")] {
+                use crate::features::console::Console;
+
+                let console = Console::new(query_sender.clone(), query_receiver.clone());
+                features.push(Box::new(console));
             }
         }
 
