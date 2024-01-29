@@ -2,12 +2,21 @@ connection_data:
   127.0.0.1:
     account: "account"
     password: "password"
-    realm_name: ".*PATTERN TO FIND REALM NAME.*"
+    autoselect:
+        realm_name: ".*PATTERN TO FIND REALM NAME.*"
+        character_name: ".*PATTERN TO FIND CHARACTER NAME.*"
 
   another.server.com:
     account: ""
     password: ""
-    realm_name: "FULL REALM NAME"
+    autoselect:
+        realm_name: "FULL REALM NAME"
+        character_name: "FULL CHARACTER NAME"
+
+channels:
+  lfg: "lfg-channel-name"
+  common: "common-channel-name"
+  trade: "trade-channel-name"
 
 channels:
   lfg: "lfg-channel-name"

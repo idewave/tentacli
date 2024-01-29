@@ -1,17 +1,17 @@
 [package]
+name = "tentacli"
+version = "4.0.0"
 edition = "2021"
-name = "idewave-cli"
-version = "3.0.0"
 authors = ["Sergio Ivanuzzo <sergio.ivanuzzo@gmail.com>"]
-description = "Smart wow-client (cli)"
+description = "Smart wow-client (cli), you could use it as separate app or integrate into your own project."
 readme = "README.md"
 keywords = [
-    "wow", "wowcli", "idewave", "wowclient",
-    "cli", "idewave-cli", "smart cli",
-    "smart client", "console client"
+    "idewave", "wow-client",
+    "idewave-cli", "smart-cli",
+    "console-client"
 ]
 license-file = "LICENSE"
-repository = "https://github.com/idewave/idewave-cli"
+repository = "https://github.com/idewave/tentacli"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -27,10 +27,11 @@ flate2 = "1.0.24"
 arc4 = "0.1.0"
 yaml-rust = "0.4.5"
 tokio = { version = "1", features = ["sync", "net", "io-util", "macros", "time", "rt-multi-thread"] }
-bitflags = "1.3.2"
+bitflags = "2.4.2"
 futures = "0.3.21"
-tui = { version = "0", features = ["crossterm"] }
-crossterm = "0.24.0"
+tui = { version = "0", features = ["crossterm"], optional = true }
+crossterm = { version = "0.27.0", optional = true }
+colored = { version = "2.1.0", optional = true }
 async-trait = "0.1.57"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
@@ -38,7 +39,14 @@ chrono = "0.4"
 dotenv = "0.15.0"
 thiserror = "1.0"
 anyhow = "1.0"
-idewave_packet = { path = "src/macros/packet" }
+cfg-if = { version = "1.0.0", features = [] }
+async-broadcast = "0.6.0"
+idewave_packet = { path = "src/primary/macros/packet" }
 
 [dev-dependencies]
 rusty-hook = "0.11.2"
+
+[features]
+default = ["ui"]
+ui = ["crossterm/default", "tui/crossterm", "crossterm/event-stream"]
+console = ["colored"]
