@@ -12,6 +12,6 @@ extern crate cfg_if;
 mod features;
 mod primary;
 
-pub use primary::client::Client;
+pub use primary::client::{Client, RunOptions};
 pub use primary::traits::Feature;
 pub use primary::types::HandlerOutput;

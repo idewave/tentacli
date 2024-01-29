@@ -54,6 +54,11 @@ use crate::primary::traits::Feature;
 use crate::primary::traits::processor::Processor;
 use crate::primary::types::{HandlerInput, HandlerOutput, PacketOutcome, ProcessorFunction, ProcessorResult, Signal};
 
+pub struct RunOptions {
+    pub external_channel: Option<(BroadcastSender<HandlerOutput>, BroadcastReceiver<HandlerOutput>)>,
+    pub external_features: Vec<Box<dyn Feature>>,
+}
+
 pub struct Client {
     _reader: Arc<Mutex<Option<Reader>>>,
     _writer: Arc<Mutex<Option<Writer>>>,
@@ -111,10 +116,7 @@ impl Client {
         }
     }
 
-    pub async fn run(
-        &mut self,
-        external_channel: Option<(BroadcastSender<HandlerOutput>, BroadcastReceiver<HandlerOutput>)>
-    ) -> AnyResult<()> {
+    pub async fn run(&mut self, options: RunOptions) -> AnyResult<()> {
         const BUFFER_SIZE: usize = 50;
 
         let notify = Arc::new(Notify::new());
@@ -122,7 +124,7 @@ impl Client {
         let (signal_sender, signal_receiver) = mpsc::channel::<Signal>(1);
         let (input_sender, input_receiver) = mpsc::channel::<Vec<u8>>(BUFFER_SIZE);
         let (output_sender, output_receiver) = mpsc::channel::<PacketOutcome>(BUFFER_SIZE);
-        let (query_sender, query_receiver) = match external_channel {
+        let (query_sender, query_receiver) = match options.external_channel {
             Some((sender, receiver)) => (sender, receiver),
             None => broadcast::<HandlerOutput>(BUFFER_SIZE)
         };
@@ -163,7 +165,7 @@ impl Client {
             },
         }?;
 
-        let mut features: Vec<Box<dyn Feature>> = vec![];
+        let mut features: Vec<Box<dyn Feature>> = options.external_features;
         cfg_if! {
             if #[cfg(feature = "ui")] {
                 use crate::features::ui::UI;
