@@ -26,6 +26,7 @@ mod warden;
 
 pub use characters::types::{Character};
 pub use movement::types::{MovementFlags, MovementFlagsExtra, SplineFlags, UnitMoveType};
+pub use crate::primary::parsers::position_parser::types::Position;
 pub use player::types::{Player, ObjectField, UnitField, PlayerField, FieldType, FieldValue};
 pub use realm::types::{Realm};
 pub use spell::types::{Spell, CooldownInfo};
