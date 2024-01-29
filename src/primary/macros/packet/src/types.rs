@@ -26,7 +26,7 @@ impl Imports {
             byteorder_write: quote!(byteorder::WriteBytesExt),
             cursor: quote!(std::io::Cursor),
             deflate_decoder: quote!(flate2::read::DeflateDecoder),
-            json_formatter: quote!(crate::features::ui::formatters::JsonFormatter),
+            json_formatter: quote!(crate::primary::serializers::formatters::JsonFormatter),
             // TODO: need to reorganize constants
             incoming_header_length: quote!(crate::primary::crypto::decryptor::INCOMING_HEADER_LENGTH),
             read: quote!(std::io::Read),

@@ -23,6 +23,7 @@ pub struct HandlerInput {
     pub opcode: Option<u16>,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum HandlerOutput {
     // data transfer

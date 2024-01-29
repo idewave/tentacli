@@ -34,7 +34,12 @@ impl PacketHandler for Handler {
             input.session.lock().unwrap().me.as_ref().unwrap().guid
         };
 
+        let my_name = {
+            input.session.lock().unwrap().me.as_ref().unwrap().name.to_string()
+        };
+
         response.push(HandlerOutput::Data(Outcome { guid: my_guid }.unpack()?));
+        response.push(HandlerOutput::SuccessMessage(format!("Enter World as {}", my_name), None));
 
         Ok(response)
     }

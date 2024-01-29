@@ -17,18 +17,17 @@ use crossterm::{
         LeaveAlternateScreen
     }
 };
-use futures::{StreamExt, FutureExt};
-use crossterm::event::{EventStream};
+use futures::{FutureExt, StreamExt};
+use crossterm::event::EventStream;
 use tokio::task::JoinHandle;
-use async_broadcast::{Sender as BroadcastSender, Receiver as BroadcastReceiver};
+use async_broadcast::{Receiver as BroadcastReceiver, Sender as BroadcastSender};
 use tokio::time::sleep;
-use tui::backend::{CrosstermBackend};
+use tui::backend::CrosstermBackend;
 use tui::layout::{Constraint, Direction, Layout};
 use tui::Terminal;
 
 mod characters_modal;
 mod debug_panel;
-pub mod formatters;
 mod info_panel;
 mod realm_modal;
 mod debug_details_panel;
@@ -43,7 +42,7 @@ use crate::features::ui::realm_modal::RealmModal;
 use crate::features::ui::title::Title;
 use crate::features::ui::types::{LoggerOutput, UIEventFlags};
 use crate::primary::traits::Feature;
-use crate::primary::types::{HandlerOutput};
+use crate::primary::types::HandlerOutput;
 
 pub const MARGIN: u16 = 1;
 

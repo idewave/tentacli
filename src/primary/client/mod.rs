@@ -515,7 +515,7 @@ mod tests {
     use tokio::net::TcpListener;
     use tokio::sync::mpsc;
 
-    use crate::Client;
+    use crate::primary::client::Client;
     use crate::primary::client::types::ClientFlags;
     use crate::primary::shared::session::types::{ActionFlags, StateFlags};
     use crate::primary::types::{HandlerOutput, PacketOutcome, Signal};

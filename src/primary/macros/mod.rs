@@ -1,1 +1,1 @@
-pub mod with_opcode;
+mod with_opcode;

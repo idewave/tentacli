@@ -1,5 +1,6 @@
 use async_broadcast::{Sender as BroadcastSender, Receiver as BroadcastReceiver};
 use tokio::task::JoinHandle;
+use colored::*;
 
 use crate::primary::traits::Feature;
 use crate::primary::types::HandlerOutput;
@@ -28,12 +29,25 @@ impl Feature for Console {
                 loop {
                     if let Ok(output) = receiver.recv().await {
                         match output {
-                            HandlerOutput::SuccessMessage(message, _)
-                            | HandlerOutput::ErrorMessage(message, _)
-                            | HandlerOutput::DebugMessage(message, _)
-                            | HandlerOutput::ResponseMessage(message, _)
-                            | HandlerOutput::RequestMessage(message, _) => {
-                                println!("{}", message);
+                            HandlerOutput::SuccessMessage(message, _) => {
+                                let text = format!("[SUCCESS]: {}", message);
+                                println!("{}", text.bright_green());
+                            },
+                            HandlerOutput::ErrorMessage(message, _) => {
+                                let text = format!("[ERROR]: {}", message);
+                                println!("{}", text.bright_red());
+                            },
+                            HandlerOutput::DebugMessage(message, _) => {
+                                let text = format!("[DEBUG]: {}", message);
+                                println!("{}", text.bright_black());
+                            },
+                            HandlerOutput::ResponseMessage(message, _) => {
+                                let text = format!("[RESPONSE]: {}", message);
+                                println!("{}", text.bright_magenta());
+                            },
+                            HandlerOutput::RequestMessage(message, _) => {
+                                let text = format!("[REQUEST]: {}", message);
+                                println!("{}", text.bright_cyan());
                             },
                             _ => {},
                         }
