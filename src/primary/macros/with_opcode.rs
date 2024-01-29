@@ -1,4 +1,3 @@
-#[macro_export]
 macro_rules! with_opcode {
     (
         $(@login_opcode($login_opcode:expr))?
@@ -37,3 +36,5 @@ macro_rules! with_opcode {
         }
     };
 }
+
+pub(crate) use with_opcode;

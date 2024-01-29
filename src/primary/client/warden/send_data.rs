@@ -1,7 +1,7 @@
 use std::io::{BufRead};
 use async_trait::async_trait;
 
-use crate::{with_opcode};
+use crate::primary::macros::with_opcode;
 use crate::primary::client::opcodes::Opcode;
 use crate::primary::client::WardenModuleInfo;
 use crate::primary::types::{HandlerInput, HandlerOutput, HandlerResult};

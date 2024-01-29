@@ -2,7 +2,7 @@ use std::net::Ipv4Addr;
 use anyhow::{Result as AnyResult};
 
 use crate::primary::client::Opcode;
-use crate::{with_opcode};
+use crate::primary::macros::with_opcode;
 use crate::primary::types::{PacketOutcome, TerminatedString};
 
 with_opcode! {

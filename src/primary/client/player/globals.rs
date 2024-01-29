@@ -1,4 +1,4 @@
-use crate::{with_opcode};
+use crate::primary::macros::with_opcode;
 use crate::primary::client::opcodes::Opcode;
 
 with_opcode! {

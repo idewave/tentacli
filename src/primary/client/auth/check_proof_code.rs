@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
 
-use crate::{with_opcode};
+use crate::primary::macros::with_opcode;
 use crate::primary::client::auth::types::AuthLogonResult;
 use crate::primary::client::Opcode;
 use crate::primary::types::{HandlerInput, HandlerOutput, HandlerResult};

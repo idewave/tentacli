@@ -6,7 +6,7 @@ authors = ["Sergio Ivanuzzo <sergio.ivanuzzo@gmail.com>"]
 description = "Smart wow-client (cli), you could use it as separate app or integrate into your own project."
 readme = "README.md"
 keywords = [
-    "idewave", "wowclient",
+    "idewave", "wow-client",
     "idewave-cli", "smart-cli",
     "console-client"
 ]

@@ -4,7 +4,7 @@ use flate2::Compression;
 use flate2::write::ZlibEncoder;
 use async_trait::async_trait;
 
-use crate::{with_opcode};
+use crate::primary::macros::with_opcode;
 use crate::primary::client::opcodes::Opcode;
 use crate::primary::config::types::AddonInfo;
 use crate::primary::types::{HandlerInput, HandlerOutput, HandlerResult, TerminatedString};

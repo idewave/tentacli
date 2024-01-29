@@ -1,7 +1,7 @@
 use anyhow::bail;
 use async_trait::async_trait;
 
-use crate::{with_opcode};
+use crate::primary::macros::with_opcode;
 use crate::primary::client::opcodes::Opcode;
 use crate::primary::errors::CharacterListError;
 use crate::primary::types::{HandlerInput, HandlerOutput, HandlerResult};

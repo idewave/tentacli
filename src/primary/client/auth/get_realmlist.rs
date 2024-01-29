@@ -2,7 +2,7 @@ use anyhow::bail;
 use async_trait::async_trait;
 use regex::Regex;
 
-use crate::{with_opcode};
+use crate::primary::macros::with_opcode;
 use crate::primary::client::{Realm, Opcode};
 use crate::primary::errors::RealmListError;
 use crate::primary::traits::packet_handler::PacketHandler;
