@@ -165,6 +165,7 @@ impl Client {
             },
         }?;
 
+        #[allow(unused_mut)]
         let mut features: Vec<Box<dyn Feature>> = options.external_features;
         cfg_if! {
             if #[cfg(feature = "ui")] {

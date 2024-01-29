@@ -17,6 +17,66 @@
 //! - if installed with `console` feature, it will displays only minimal output
 //! - if installed without any feature, client will output nothing (but you still can provide own output feature)
 //!
+//! ## Examples
+//!
+//! ```rust
+//! use async_broadcast::{Sender as BroadcastSender, Receiver as BroadcastReceiver, broadcast};
+//! use dotenv::dotenv;
+//! use tokio::task::JoinHandle;
+//! 
+//! use tentacli::{Client, RunOptions, Feature, HandlerOutput};
+//! 
+//! #[tokio::main]
+//! async fn main() {
+//!
+//!     let (query_sender, query_receiver) = broadcast::<HandlerOutput>(100);
+//! 
+//!     pub struct MyFeature {
+//!         _receiver: BroadcastReceiver<HandlerOutput>,
+//!         _sender: BroadcastSender<HandlerOutput>,
+//!     }
+//! 
+//!     impl Feature for MyFeature {
+//!         fn new(
+//!             sender: BroadcastSender<HandlerOutput>,
+//!             receiver: BroadcastReceiver<HandlerOutput>
+//!         ) -> Self where Self: Sized {
+//!             Self {
+//!                 _receiver: receiver,
+//!                 _sender: sender,
+//!             }
+//!         }
+//! 
+//!         fn get_tasks(&mut self) -> Vec<JoinHandle<()>> {
+//!             let mut receiver = self._receiver.clone();
+//! 
+//!             let handle_smth = || {
+//!                 tokio::spawn(async move {
+//!                     loop {
+//!                         if let Ok(output) = receiver.recv().await {
+//!                             match output {
+//!                                 HandlerOutput::SuccessMessage(message, _) => {
+//!                                     println!("{}", message);
+//!                                 },
+//!                                 _ => {},
+//!                             }
+//!                         }
+//!                     }
+//!                 })
+//!             };
+//! 
+//!             vec![handle_smth()]
+//!         }
+//!     }
+//! 
+//!     let options = RunOptions {
+//!         external_channel: Some((query_sender.clone(), query_receiver.clone())),
+//!         external_features: vec![Box::new(MyFeature::new(query_sender, query_receiver))],
+//!     };
+//!
+//!     // ... pass options to the client
+//! }
+//! ```
 
 extern crate chrono;
 #[macro_use]
