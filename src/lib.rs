@@ -14,3 +14,4 @@ mod primary;
 
 pub use primary::client::Client;
 pub use primary::traits::Feature;
+pub use primary::types::HandlerOutput;

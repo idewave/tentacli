@@ -111,7 +111,10 @@ impl Client {
         }
     }
 
-    pub async fn run(&mut self) -> AnyResult<()> {
+    pub async fn run(
+        &mut self,
+        external_channel: Option<(BroadcastSender<HandlerOutput>, BroadcastReceiver<HandlerOutput>)>
+    ) -> AnyResult<()> {
         const BUFFER_SIZE: usize = 50;
 
         let notify = Arc::new(Notify::new());
@@ -119,7 +122,10 @@ impl Client {
         let (signal_sender, signal_receiver) = mpsc::channel::<Signal>(1);
         let (input_sender, input_receiver) = mpsc::channel::<Vec<u8>>(BUFFER_SIZE);
         let (output_sender, output_receiver) = mpsc::channel::<PacketOutcome>(BUFFER_SIZE);
-        let (query_sender, query_receiver) = broadcast::<HandlerOutput>(BUFFER_SIZE);
+        let (query_sender, query_receiver) = match external_channel {
+            Some((sender, receiver)) => (sender, receiver),
+            None => broadcast::<HandlerOutput>(BUFFER_SIZE)
+        };
 
         let host = env::var("CURRENT_HOST").expect("CURRENT_HOST must be set");
         let port = env::var("CURRENT_PORT").expect("CURRENT_PORT must be set");
