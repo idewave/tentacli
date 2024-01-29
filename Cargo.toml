@@ -41,7 +41,7 @@ thiserror = "1.0"
 anyhow = "1.0"
 cfg-if = { version = "1.0.0", features = [] }
 async-broadcast = "0.6.0"
-idewave_packet = { path = "src/primary/macros/packet" }
+idewave_packet = { version = "0.1.0", path = "src/primary/macros/packet" }
 
 [dev-dependencies]
 rusty-hook = "0.11.2"
