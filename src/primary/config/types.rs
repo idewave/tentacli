@@ -39,16 +39,7 @@ impl AddonInfo {
 }
 
 #[derive(Clone)]
-pub struct BotChat {
-    pub greet: Vec<String>,
-    pub agree: Vec<String>,
-    pub disagree: Vec<String>,
-    pub follow_invite: Vec<String>,
-    pub stop: Vec<String>,
-}
-
-#[derive(Clone)]
-pub struct Channels {
+pub struct ChannelLabels {
     pub lfg: String,
     pub common: String,
     pub trade: String,
