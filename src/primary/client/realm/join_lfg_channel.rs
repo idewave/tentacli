@@ -17,7 +17,7 @@ impl PacketHandler for Handler {
             .unwrap()
             .get_config()
             .unwrap()
-            .channels.lfg.to_string();
+            .channel_labels.lfg.to_string();
 
         response.push(HandlerOutput::Data(JoinChannelOutcome {
             channel_id: CHANNEL_ID,

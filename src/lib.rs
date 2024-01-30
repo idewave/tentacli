@@ -8,9 +8,9 @@
 //! See `Feature` trait and `RunOptions`.
 //!
 //! What this client can do:
-//! - it can parse basic packet set, like SMSG_MESSAGECHAT or SMSG_UPDATE_OBJECT
+//! - it can parse basic packet set, such as SMSG_MESSAGECHAT or SMSG_UPDATE_OBJECT
 //! - it allows you to login on any server, but you can enter the world only on servers without Warden anti-cheat
-//! - you can use `autoselect` options in Config.yml to set default Realm/Character and avoid the step of selecting
+//! - you can use `autoselect` options in config file to set default Realm/Character and avoid the step of selecting
 //! this data manually
 //! - if installed with `ui` feature (installed by default), it allows scrolling the packets history using keyboard and
 //! seeing the details for each packet
@@ -21,7 +21,6 @@
 //!
 //! ```rust
 //! use async_broadcast::{Sender as BroadcastSender, Receiver as BroadcastReceiver, broadcast};
-//! use dotenv::dotenv;
 //! use tokio::task::JoinHandle;
 //! 
 //! use tentacli::{Client, RunOptions, Feature, HandlerOutput};
@@ -72,6 +71,9 @@
 //!     let options = RunOptions {
 //!         external_channel: Some((query_sender.clone(), query_receiver.clone())),
 //!         external_features: vec![Box::new(MyFeature::new(query_sender, query_receiver))],
+//!         account: "account_name",
+//!         config_path: "./dir/another_dir/ConfigFileName.yml",
+//!         dotenv_path: "./path/to/.env"
 //!     };
 //!
 //!     // ... pass options to the client
