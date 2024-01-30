@@ -41,10 +41,12 @@ impl Session {
         self.config.as_ref().ok_or(ConfigError::NotFound)
     }
 
-    pub fn set_config(&mut self, host: &str) -> Result<(), ConfigError> {
+    pub fn set_config(&mut self, host: &str, account: &str, config_path: &str) -> Result<(), ConfigError> {
         if self.config.is_none() {
             let config = Config::new(ConfigParams {
                 host,
+                account,
+                config_path,
             })?;
 
             self.config = Some(config);

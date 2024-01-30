@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 authors = ["Sergio Ivanuzzo <sergio.ivanuzzo@gmail.com>"]
 description = "Macro for implementing packet structures"
+license-file = "../../../../LICENSE"
 
 [lib]
 name = "idewave_packet"

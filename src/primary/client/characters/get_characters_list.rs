@@ -56,6 +56,10 @@ impl PacketHandler for Handler {
         } else {
             let re = Regex::new(format!(r#"{}"#, autoselect_character_name).as_str()).unwrap();
             if let Some(character) = characters.into_iter().find(|item| re.is_match(&item.name[..])) {
+                response.push(HandlerOutput::DebugMessage(
+                    format!("Selected \"{}\" Character", character.name),
+                    None,
+                ));
                 input.session.lock().unwrap().me = Some(Player::from(character));
             } else {
                 bail!(CharacterListError::NotFound);

@@ -46,6 +46,10 @@ impl PacketHandler for Handler {
         } else {
             let re = Regex::new(format!(r#"{}"#, autoselect_realm_name).as_str()).unwrap();
             if let Some(realm) = realms.into_iter().find(|item| re.is_match(&item.name[..])) {
+                response.push(HandlerOutput::DebugMessage(
+                    format!("Selected \"{}\" Realm", realm.name),
+                    None,
+                ));
                 input.session.lock().unwrap().selected_realm = Some(realm);
             } else {
                 bail!(RealmListError::NotFound);

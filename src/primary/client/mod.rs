@@ -1,4 +1,3 @@
-use std::env;
 use std::io::{Error, ErrorKind};
 use std::sync::{Arc, Mutex as SyncMutex};
 use std::time::Duration;
@@ -10,7 +9,6 @@ use tokio::task::{JoinHandle};
 use futures::future::{join_all};
 use tokio::time::sleep;
 use anyhow::{Result as AnyResult};
-use std::str::FromStr;
 
 mod auth;
 mod characters;
@@ -26,6 +24,7 @@ mod warden;
 
 pub use characters::types::{Character};
 pub use movement::types::{MovementFlags, MovementFlagsExtra, SplineFlags, UnitMoveType};
+pub use crate::primary::parsers::position_parser::types::Position;
 pub use player::types::{Player, ObjectField, UnitField, PlayerField, FieldType, FieldValue};
 pub use realm::types::{Realm};
 pub use spell::types::{Spell, CooldownInfo};
@@ -45,6 +44,7 @@ use auth::login_challenge;
 
 pub use crate::primary::client::opcodes::Opcode;
 use crate::primary::client::types::ClientFlags;
+use crate::primary::config::{EnvConfig, EnvConfigParams};
 use crate::primary::crypto::encryptor::OUTCOMING_HEADER_LENGTH;
 use crate::primary::crypto::warden_crypt::WardenCrypt;
 use crate::primary::shared::storage::DataStorage;
@@ -54,9 +54,12 @@ use crate::primary::traits::Feature;
 use crate::primary::traits::processor::Processor;
 use crate::primary::types::{HandlerInput, HandlerOutput, PacketOutcome, ProcessorFunction, ProcessorResult, Signal};
 
-pub struct RunOptions {
+pub struct RunOptions<'a> {
     pub external_channel: Option<(BroadcastSender<HandlerOutput>, BroadcastReceiver<HandlerOutput>)>,
     pub external_features: Vec<Box<dyn Feature>>,
+    pub config_path: &'a str,
+    pub account: &'a str,
+    pub dotenv_path: &'a str,
 }
 
 pub struct Client {
@@ -116,7 +119,9 @@ impl Client {
         }
     }
 
-    pub async fn run(&mut self, options: RunOptions) -> AnyResult<()> {
+    pub async fn run<'a>(&mut self, options: RunOptions<'a>) -> AnyResult<()> {
+        let EnvConfig { host, port } = EnvConfig::new(EnvConfigParams { dotenv_path: options.dotenv_path })?;
+
         const BUFFER_SIZE: usize = 50;
 
         let notify = Arc::new(Notify::new());
@@ -129,10 +134,7 @@ impl Client {
             None => broadcast::<HandlerOutput>(BUFFER_SIZE)
         };
 
-        let host = env::var("CURRENT_HOST").expect("CURRENT_HOST must be set");
-        let port = env::var("CURRENT_PORT").expect("CURRENT_PORT must be set");
-
-        match Self::connect_inner(&host, u16::from_str(&port)?).await {
+        match Self::connect_inner(&host, port).await {
             Ok(stream) => {
                 Self::set_stream_halves(
                     stream,
@@ -142,7 +144,7 @@ impl Client {
                     Arc::clone(&self._warden_crypt),
                 ).await;
 
-                match self.session.lock().unwrap().set_config(&host) {
+                match self.session.lock().unwrap().set_config(&host, &options.account, &options.config_path) {
                     Ok(_) => {},
                     Err(err) => {
                         query_sender.broadcast(HandlerOutput::ErrorMessage(err.to_string(), None)).await.unwrap();
@@ -501,11 +503,6 @@ impl Client {
                     None,
                     Arc::clone(&self._warden_crypt),
                 ).await;
-
-                match self.session.lock().unwrap().set_config(&host) {
-                    Ok(_) => {},
-                    Err(_) => {}
-                }
 
                 Ok(())
             },
