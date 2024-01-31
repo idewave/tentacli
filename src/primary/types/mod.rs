@@ -1,5 +1,6 @@
 use std::sync::{Arc, Mutex as SyncMutex};
 use anyhow::{Result as AnyResult};
+use tokio::sync::Mutex;
 
 mod fields;
 
@@ -17,7 +18,7 @@ pub enum Signal {
 
 #[derive(Debug)]
 pub struct HandlerInput {
-    pub session: Arc<SyncMutex<Session>>,
+    pub session: Arc<Mutex<Session>>,
     pub data: Option<Vec<u8>>,
     pub data_storage: Arc<SyncMutex<DataStorage>>,
     pub opcode: Option<u16>,

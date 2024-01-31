@@ -73,7 +73,7 @@ impl PacketHandler for Handler {
             Some(json),
         ));
 
-        let mut session = input.session.lock().unwrap();
+        let mut session = input.session.lock().await;
         let (account, password) = {
             let config = session.get_config()?;
             (&config.connection_data.account, &config.connection_data.password)

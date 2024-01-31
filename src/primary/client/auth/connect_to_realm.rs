@@ -16,7 +16,7 @@ impl PacketHandler for Handler {
 
         let realm_address = input.session
             .lock()
-            .unwrap()
+            .await
             .selected_realm.as_ref()
             .unwrap()
             .address.to_string();

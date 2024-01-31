@@ -68,7 +68,7 @@ pub struct Client {
     _warden_crypt: Arc<SyncMutex<Option<WardenCrypt>>>,
     _flags: Arc<SyncMutex<ClientFlags>>,
 
-    session: Arc<SyncMutex<Session>>,
+    session: Arc<Mutex<Session>>,
     data_storage: Arc<SyncMutex<DataStorage>>,
 }
 
@@ -80,7 +80,7 @@ impl Client {
             _warden_crypt: Arc::new(SyncMutex::new(None)),
             _flags: Arc::new(SyncMutex::new(ClientFlags::NONE)),
 
-            session: Arc::new(SyncMutex::new(Session::new())),
+            session: Arc::new(Mutex::new(Session::new())),
             data_storage: Arc::new(SyncMutex::new(DataStorage::new())),
         }
     }
@@ -144,7 +144,7 @@ impl Client {
                     Arc::clone(&self._warden_crypt),
                 ).await;
 
-                match self.session.lock().unwrap().set_config(&host, &options.account, &options.config_path) {
+                match self.session.lock().await.set_config(&host, &options.account, &options.config_path) {
                     Ok(_) => {},
                     Err(err) => {
                         query_sender.broadcast(HandlerOutput::ErrorMessage(err.to_string(), None)).await.unwrap();
@@ -184,7 +184,7 @@ impl Client {
         }
 
         let account = {
-            let guard = self.session.lock().unwrap();
+            let guard = self.session.lock().await;
             let config = guard.get_config()?;
             config.connection_data.account.to_string()
         };
@@ -318,7 +318,7 @@ impl Client {
                                         signal_sender.send(Signal::Reconnect).await.unwrap();
 
                                         let session_key = {
-                                            let guard = session.lock().unwrap();
+                                            let guard = session.lock().await;
                                             guard.session_key.clone()
                                         };
 
@@ -353,11 +353,11 @@ impl Client {
                                 break;
                             },
                             HandlerOutput::SelectRealm(realm) => {
-                                session.lock().unwrap().selected_realm = Some(realm);
+                                session.lock().await.selected_realm = Some(realm);
                                 notify.notify_one();
                             },
                             HandlerOutput::SelectCharacter(character) => {
-                                session.lock().unwrap().me = Some(Player::from(character));
+                                session.lock().await.me = Some(Player::from(character));
                                 notify.notify_one();
                             },
                             _ => {},
@@ -552,7 +552,7 @@ mod tests {
         let data_storage = &mut *client.data_storage.lock().unwrap();
         assert!(data_storage.players_map.is_empty());
 
-        let session = &mut *client.session.lock().unwrap();
+        let session = &mut *client.session.lock().await;
         assert!(session.session_key.is_none());
         assert!(session.me.is_none());
         assert!(session.warden_module_info.is_none());
