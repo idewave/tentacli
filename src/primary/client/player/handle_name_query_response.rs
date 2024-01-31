@@ -51,7 +51,7 @@ impl PacketHandler for Handler {
         let PackedGuid(guid) = packed_guid;
 
         let my_guid = {
-            input.session.lock().unwrap().me.as_ref().unwrap().guid
+            input.session.lock().await.me.as_ref().unwrap().guid
         };
 
         // modify/insert only another players

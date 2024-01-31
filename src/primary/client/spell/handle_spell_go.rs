@@ -26,10 +26,10 @@ impl PacketHandler for Handler {
         ));
 
         let my_guid = {
-            input.session.lock().unwrap().me.as_ref().unwrap().guid
+            input.session.lock().await.me.as_ref().unwrap().guid
         };
 
-        input.session.lock().unwrap().action_flags.set(
+        input.session.lock().await.action_flags.set(
             ActionFlags::IS_CASTING, my_guid == caster_guid
         );
 

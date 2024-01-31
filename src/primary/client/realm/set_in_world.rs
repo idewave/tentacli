@@ -10,7 +10,7 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let response = Vec::new();
 
-        input.session.lock().unwrap().state_flags.set(StateFlags::IN_WORLD, true);
+        input.session.lock().await.state_flags.set(StateFlags::IN_WORLD, true);
 
         Ok(response)
     }

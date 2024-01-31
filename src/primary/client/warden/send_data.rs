@@ -92,7 +92,7 @@ impl PacketHandler for Handler {
                     compressed_size
                 );
 
-                input.session.lock().unwrap().warden_module_info = Some(module_info);
+                input.session.lock().await.warden_module_info = Some(module_info);
 
                 Ok(vec![
                     HandlerOutput::Data(Outcome {
@@ -110,7 +110,7 @@ impl PacketHandler for Handler {
                     Some(json),
                 ));
 
-                if let Some(module_info) = input.session.lock().unwrap().warden_module_info.as_mut() {
+                if let Some(module_info) = input.session.lock().await.warden_module_info.as_mut() {
                     module_info.add_binary(partial);
 
                     if module_info.loaded() {
@@ -129,7 +129,7 @@ impl PacketHandler for Handler {
                 Ok(vec![])
             },
             WardenOpcode::WARDEN_SMSG_HASH_REQUEST => {
-                if let Some(module_info) = input.session.lock().unwrap().warden_module_info.as_mut() {
+                if let Some(module_info) = input.session.lock().await.warden_module_info.as_mut() {
                     let (HashRequestIncome { seed }, json) = HashRequestIncome::from_binary(
                         input.data.as_ref().unwrap()
                     )?;

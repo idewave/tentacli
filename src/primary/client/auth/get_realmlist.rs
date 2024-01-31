@@ -35,7 +35,7 @@ impl PacketHandler for Handler {
         ));
 
         let autoselect_realm_name = {
-            let guard = input.session.lock().unwrap();
+            let guard = input.session.lock().await;
             let config = guard.get_config()?;
             config.connection_data.autoselect_realm_name.to_string()
         };
@@ -50,7 +50,7 @@ impl PacketHandler for Handler {
                     format!("Selected \"{}\" Realm", realm.name),
                     None,
                 ));
-                input.session.lock().unwrap().selected_realm = Some(realm);
+                input.session.lock().await.selected_realm = Some(realm);
             } else {
                 bail!(RealmListError::NotFound);
             }

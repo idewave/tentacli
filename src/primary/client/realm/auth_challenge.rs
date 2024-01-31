@@ -55,7 +55,7 @@ impl PacketHandler for Handler {
         ));
 
         let (server_id, account, session_key, addons) = {
-            let guard = input.session.lock().unwrap();
+            let guard = input.session.lock().await;
             let config = guard.get_config()?;
             (
                 guard.selected_realm.as_ref().unwrap().server_id as u32,
