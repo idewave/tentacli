@@ -22,7 +22,7 @@ impl PacketHandler for Handler {
         let mut response = Vec::new();
 
         let me_exists = {
-            let guard = input.session.lock().unwrap();
+            let guard = input.session.lock().await;
             guard.me.is_some()
         };
         
@@ -31,7 +31,7 @@ impl PacketHandler for Handler {
         }
 
         let my_guid = {
-            input.session.lock().unwrap().me.as_ref().unwrap().guid
+            input.session.lock().await.me.as_ref().unwrap().guid
         };
 
         response.push(HandlerOutput::Data(Outcome { guid: my_guid }.unpack()?));

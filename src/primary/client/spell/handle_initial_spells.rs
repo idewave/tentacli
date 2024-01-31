@@ -26,7 +26,7 @@ impl PacketHandler for Handler {
         ));
 
         for spell in spells {
-            input.session.lock().unwrap().spells_map.insert(spell.spell_id);
+            input.session.lock().await.spells_map.insert(spell.spell_id);
         }
 
         Ok(response)

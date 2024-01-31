@@ -45,7 +45,7 @@ impl PacketHandler for Handler {
         ));
 
         let my_guid = {
-            input.session.lock().unwrap().me.as_ref().unwrap().guid
+            input.session.lock().await.me.as_ref().unwrap().guid
         };
 
         let mut players_map = {
@@ -138,16 +138,16 @@ impl PacketHandler for Handler {
             } else {
                 if let Some(movement_data) = parsed_block.movement_data {
                     if let Some(movement_info) = movement_data.movement_info {
-                        input.session.lock().unwrap().me.as_mut().unwrap().position = Some(movement_info.position);
+                        input.session.lock().await.me.as_mut().unwrap().position = Some(movement_info.position);
                     }
 
                     if !movement_data.movement_speed.is_empty() {
-                        input.session.lock().unwrap().me.as_mut().unwrap().movement_speed = movement_data.movement_speed;
+                        input.session.lock().await.me.as_mut().unwrap().movement_speed = movement_data.movement_speed;
                     }
                 }
 
                 if !parsed_block.update_fields.is_empty() {
-                    input.session.lock().unwrap().me.as_mut().unwrap().fields = parsed_block.update_fields;
+                    input.session.lock().await.me.as_mut().unwrap().fields = parsed_block.update_fields;
                 }
             }
         }

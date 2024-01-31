@@ -14,7 +14,7 @@ impl PacketHandler for Handler {
 
         let channel_name = input.session
             .lock()
-            .unwrap()
+            .await
             .get_config()
             .unwrap()
             .channel_labels.lfg.to_string();

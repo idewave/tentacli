@@ -8,7 +8,7 @@ pub mod packet_handler;
 pub mod paginator;
 pub mod processor;
 
-pub trait Feature {
+pub trait Feature: Send {
     fn new(
         sender: BroadcastSender<HandlerOutput>,
         receiver: BroadcastReceiver<HandlerOutput>,

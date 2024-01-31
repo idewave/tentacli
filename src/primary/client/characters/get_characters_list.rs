@@ -32,7 +32,7 @@ impl PacketHandler for Handler {
         ));
 
         let me_exists = {
-            let guard = input.session.lock().unwrap();
+            let guard = input.session.lock().await;
             guard.me.is_some()
         };
 
@@ -45,7 +45,7 @@ impl PacketHandler for Handler {
         }
 
         let autoselect_character_name = {
-            let guard = input.session.lock().unwrap();
+            let guard = input.session.lock().await;
             let config = guard.get_config()?;
             config.connection_data.autoselect_character_name.to_string()
         };
@@ -60,7 +60,7 @@ impl PacketHandler for Handler {
                     format!("Selected \"{}\" Character", character.name),
                     None,
                 ));
-                input.session.lock().unwrap().me = Some(Player::from(character));
+                input.session.lock().await.me = Some(Player::from(character));
             } else {
                 bail!(CharacterListError::NotFound);
             }
