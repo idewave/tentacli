@@ -39,7 +39,7 @@ impl PacketHandler for Handler {
             return Ok(response);
         }
 
-        let (Income { packed_guid, name, race, class, .. }, json) = Income::from_binary(
+        let (Income { packed_guid, name, race, class, gender, .. }, json) = Income::from_binary(
             input.data.as_ref().unwrap(),
         )?;
 
@@ -61,7 +61,8 @@ impl PacketHandler for Handler {
                 p.name = name.to_string();
                 p.race = race;
                 p.class = class;
-            }).or_insert_with(|| Player::new(guid, name.to_string(), race, class));
+                p.gender = gender;
+            }).or_insert_with(|| Player::new(guid, name.to_string(), race, class, gender, 1));
         }
 
         Ok(response)

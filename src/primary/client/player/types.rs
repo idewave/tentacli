@@ -1,7 +1,8 @@
 use std::collections::BTreeMap;
 use std::fmt::{Debug, Formatter};
-use serde::{Serialize, Serializer};
-use crate::primary::client::Character;
+use bitflags::bitflags;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::ser::SerializeStruct;
 
 use crate::primary::parsers::position_parser::types::Position;
 
@@ -11,33 +12,25 @@ pub struct Player {
     pub name: String,
     pub race: u8,
     pub class: u8,
+    pub gender: u8,
+    pub level: u8,
     pub fields: BTreeMap<u32, FieldValue>,
     pub movement_speed: BTreeMap<u8, f32>,
     pub position: Option<Position>,
 }
 
 impl Player {
-    pub fn new(guid: u64, name: String, race: u8, class: u8) -> Self {
+    pub fn new(guid: u64, name: String, race: u8, class: u8, gender: u8, level: u8) -> Self {
         Self {
             guid,
             name,
             race,
             class,
+            gender,
+            level,
             fields: BTreeMap::new(),
             movement_speed: BTreeMap::new(),
             position: None,
-        }
-    }
-
-    pub fn from(character: Character) -> Self {
-        Self {
-            guid: character.guid,
-            name: character.name,
-            race: character.race,
-            class: character.class,
-            fields: BTreeMap::new(),
-            movement_speed: BTreeMap::new(),
-            position: Some(character.position),
         }
     }
 }
@@ -57,6 +50,37 @@ impl Debug for Player {
             self.movement_speed,
         )
     }
+}
+
+impl<'de> Deserialize<'de> for Player {
+    fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
+        todo!()
+    }
+}
+
+impl Serialize for Player {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+        const FIELDS_AMOUNT: usize = 7;
+        let mut state = serializer.serialize_struct("Character", FIELDS_AMOUNT)?;
+        state.serialize_field("guid", &self.guid)?;
+        state.serialize_field("name", &self.name)?;
+        state.serialize_field("race", &self.race)?;
+        state.serialize_field("class", &self.class)?;
+        state.serialize_field("gender", &self.gender)?;
+        state.serialize_field("level", &self.level)?;
+        state.serialize_field("position", &self.position)?;
+        state.end()
+    }
+}
+
+#[non_exhaustive]
+pub struct Gender;
+
+#[allow(dead_code)]
+impl Gender {
+    pub const GENDER_MALE: u8 = 0;
+    pub const GENDER_FEMALE: u8 = 1;
+    pub const GENDER_NONE: u8 = 2;
 }
 
 #[non_exhaustive]
@@ -1396,5 +1420,146 @@ impl PlayerField {
             PlayerField::PET_SPELL_POWER => String::from("PlayerField::PET_SPELL_POWER"),
             _ => String::new(),
         }
+    }
+}
+
+bitflags! {
+    #[derive(Default, Clone, Debug, PartialEq)]
+    pub struct UnitFlags: u32 {
+        // Movement checks disabled; likely paired with loss of client control packet.
+        // We use it to add custom cliffwalking to GM mode until actual usecases will be known.
+        const UNK_0 = 0x00000001;
+        // not attackable
+        const SPAWNING = 0x00000002;
+        // Generic unspecified loss of control initiated by server script,
+        // movement checks disabled; paired with loss of client control packet.
+        const CLIENT_CONTROL_LOST = 0x00000004;
+        // players, pets, totems, guardians, companions, charms; any units associated with players
+        const PLAYER_CONTROLLED = 0x00000008;
+        const RENAME = 0x00000010;
+        // don't take reagents for spells with SPELL_ATTR_EX5_NO_REAGENT_WHILE_PREP
+        const PREPARATION = 0x00000020;
+        const UNK_6 = 0x00000040;
+        // ?? (UNIT_FLAG_PVP_ATTACKABLE | UNIT_FLAG_NOT_ATTACKABLE_1) is NON_PVP_ATTACKABLE
+        const NOT_ATTACKABLE_1 = 0x00000080;
+        // Target is immune to players
+        const IMMUNE_TO_PLAYER = 0x00000100;
+        // Target is immune to Non-Player Characters
+        const IMMUNE_TO_NPC = 0x00000200;
+        // loot animation
+        const LOOTING = 0x00000400;
+        // in combat?; 2.0.8
+        const PET_IN_COMBAT = 0x00000800;
+        // changed in 3.0.3
+        const PVP_DEPRECATED = 0x00001000;
+        // silenced; 2.1.1
+        const SILENCED = 0x00002000;
+        // 2.0.8
+        const UNK_14 = 0x00004000;
+        // related to jerky movement in water?
+        const SWIMMING = 0x00008000;
+        // is not targetable by attack or spell
+        const UNTARGETABLE = 0x00010000;
+        // 3.0.3 ok
+        const PACIFIED = 0x00020000;
+        // Unit is a subject to stun; turn and strafe movement disabled
+        const STUNNED = 0x00040000;
+        const IN_COMBAT = 0x00080000;
+        // Unit is on taxi; paired with a duplicate loss of client control packet (likely a legacy serverside hack).
+        // Disables any spellcasts not allowed in taxi flight client-side.
+        const TAXI_FLIGHT = 0x00100000;
+        // 3.0.3, disable melee spells casting...; "Required melee weapon" added to melee spells tooltip.
+        const DISARMED = 0x00200000;
+        // Unit is a subject to confused movement, movement checks disabled; paired with loss of client control packet.
+        const CONFUSED = 0x00400000;
+        // Unit is a subject to fleeing movement, movement checks disabled; paired with loss of client control packet.
+        const FLEEING = 0x00800000;
+        // Unit is under remote control by another unit, movement checks disabled;
+        // paired with loss of client control packet. New master is allowed to use melee attack
+        // and can't select this unit via mouse in the world (as if it was own character).
+        const POSSESSED = 0x01000000;
+        const UNINTERACTIBLE = 0x02000000;
+        const SKINNABLE = 0x04000000;
+        const MOUNT = 0x08000000;
+        const UNK_28 = 0x10000000;
+        // used in Feing Death spell
+        const PREVENT_ANIM = 0x20000000;
+        const SHEATHE = 0x40000000;
+        const IMMUNE = 0x80000000;
+    }
+}
+
+bitflags! {
+    #[derive(Default, Clone, Debug, PartialEq)]
+    pub struct UnitFlags2: u32 {
+        const FEIGN_DEATH = 0x00000001;
+        // Hides body and body armor. Weapons and shoulder and head armor still visible
+        const HIDE_BODY = 0x00000002;
+        const IGNORE_REPUTATION = 0x00000004;
+        const COMPREHEND_LANG = 0x00000008;
+         // Used in SPELL_AURA_MIRROR_IMAGE
+        const CLONED = 0x00000010;
+        const DO_NOT_FADE_IN = 0x00000020;
+        const FORCE_MOVE = 0x00000040;
+        // also shield case
+        const DISARM_OFFHAND = 0x00000080;
+        const UNK8 = 0x00000100;
+        const UNK9 = 0x00000200;
+        const DISARM_RANGED = 0x00000400;
+        const REGENERATE_POWER = 0x00000800;
+        const SPELL_CLICK_IN_GROUP = 0x00001000;
+        const SPELL_CLICK_DISABLED = 0x00002000;
+        const INTERACT_ANY_REACTION = 0x00004000;
+        const UNK15 = 0x00008000;
+        const UNK16 = 0x00010000;
+        const ALLOW_CHEAT_SPELLS = 0x00040000;
+    }
+}
+
+bitflags! {
+    #[derive(Default, Clone, Debug, PartialEq)]
+    pub struct PlayerFlags: u32 {
+        const NONE = 0x00000000;
+        const GROUP_LEADER = 0x00000001;
+        const AFK = 0x00000002;
+        const DND = 0x00000004;
+        const GM = 0x00000008;
+        const GHOST = 0x00000010;
+        const RESTING = 0x00000020;
+        const UNK7 = 0x00000040;
+        // pre-3.0.3 PLAYER_FLAGS_FFA_PVP flag for FFA PVP state
+        const UNK8 = 0x00000080;
+        // Player has been involved in a PvP combat and will be attacked by contested guards
+        const CONTESTED_PVP = 0x00000100;
+        // Stores player's permanent PvP flag preference
+        const PVP_DESIRED = 0x00000200;
+        const HIDE_HELM = 0x00000400;
+        const HIDE_CLOAK = 0x00000800;
+        // played long time
+        const PARTIAL_PLAY_TIME = 0x00001000;
+        // played too long time
+        const NO_PLAY_TIME = 0x00002000;
+        // Lua_IsOutOfBounds
+        const IS_OUT_OF_BOUNDS = 0x00004000;
+        // <Dev> chat tag; name prefix
+        const DEVELOPER = 0x00008000;
+        // triggers lua event EVENT_ENABLE_LOW_LEVEL_RAID
+        const ENABLE_LOW_LEVEL_RAID = 0x00010000;
+        // taxi benchmark mode (on/off) (2.0.1)
+        const TAXI_BENCHMARK = 0x00020000;
+        // 3.0.2; pvp timer active (after you disable pvp manually or leave pvp zones)
+        const PVP_TIMER = 0x00040000;
+        // first appeared in TBC
+        const COMMENTATOR = 0x00080000;
+        const UNK21 = 0x00100000;
+        const UNK22 = 0x00200000;
+        // something like COMMENTATOR_CAN_USE_INSTANCE_COMMAND
+        const COMMENTATOR_UBER = 0x00400000;
+        // EVENT_SPELL_UPDATE_USABLE and EVENT_UPDATE_SHAPESHIFT_USABLE; disabled all abilitys on tab except autoattack
+        const ALLOW_ONLY_ABILITY = 0x00800000;
+        // EVENT_SPELL_UPDATE_USABLE and EVENT_UPDATE_SHAPESHIFT_USABLE;
+        // disabled all melee ability on tab include autoattack
+        const UNK25 = 0x01000000;
+        const XP_USER_DISABLED = 0x02000000;
     }
 }

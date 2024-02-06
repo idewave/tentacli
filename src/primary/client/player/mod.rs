@@ -5,6 +5,8 @@ pub mod globals;
 mod handle_name_query_response;
 mod handle_update_data;
 pub mod types;
+pub mod get_characters_list;
+pub mod player_login;
 
 use crate::primary::client::opcodes::Opcode;
 use crate::primary::traits::processor::Processor;
@@ -61,6 +63,13 @@ impl Processor for PlayerProcessor {
             Opcode::SMSG_ACHIEVEMENT_EARNED => {
                 input.opcode = Some(opcode);
                 vec![]
+            },
+            Opcode::SMSG_CHAR_ENUM => {
+                input.opcode = Some(opcode);
+                vec![
+                    Box::new(get_characters_list::Handler),
+                    Box::new(player_login::Handler),
+                ]
             },
             _ => vec![],
         };

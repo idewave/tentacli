@@ -11,7 +11,6 @@ use tokio::time::sleep;
 use anyhow::{Result as AnyResult};
 
 mod auth;
-mod characters;
 mod chat;
 mod movement;
 mod opcodes;
@@ -22,7 +21,6 @@ mod trade;
 pub mod types;
 mod warden;
 
-pub use characters::types::{Character};
 pub use movement::types::{MovementFlags, MovementFlagsExtra, SplineFlags, UnitMoveType};
 pub use crate::primary::parsers::position_parser::types::Position;
 pub use player::types::{Player, ObjectField, UnitField, PlayerField, FieldType, FieldValue};
@@ -31,7 +29,6 @@ pub use spell::types::{Spell, CooldownInfo};
 pub use warden::types::{WardenModuleInfo};
 
 use auth::AuthProcessor;
-use characters::CharactersProcessor;
 use chat::ChatProcessor;
 use movement::MovementProcessor;
 use player::PlayerProcessor;
@@ -480,7 +477,6 @@ impl Client {
 
     fn get_realm_processors() -> Vec<ProcessorFunction> {
         vec![
-            Box::new(CharactersProcessor::process_input),
             Box::new(ChatProcessor::process_input),
             Box::new(MovementProcessor::process_input),
             Box::new(PlayerProcessor::process_input),

@@ -3,6 +3,7 @@ use async_trait::async_trait;
 use crate::primary::client::{FieldValue, ObjectField, Player};
 use crate::primary::client::opcodes::Opcode;
 use crate::primary::client::player::globals::NameQueryOutcome;
+use crate::primary::client::player::types::Gender;
 use crate::primary::parsers::update_block_parser::types::{ObjectTypeMask, ParsedBlock};
 use crate::primary::types::{HandlerInput, HandlerOutput, HandlerResult};
 use crate::primary::traits::packet_handler::PacketHandler;
@@ -101,7 +102,7 @@ impl PacketHandler for Handler {
                     },
                     None => {
                         if players_map.get(&guid).is_none() {
-                            let mut player = Player::new(guid, String::new(), 0, 0);
+                            let mut player = Player::new(guid, String::new(), 0, 0, Gender::GENDER_NONE, 1);
 
                             if let Some(movement_data) = parsed_block.movement_data {
                                 if let Some(movement_info) = movement_data.movement_info {
@@ -149,6 +150,9 @@ impl PacketHandler for Handler {
                 if !parsed_block.update_fields.is_empty() {
                     input.session.lock().await.me.as_mut().unwrap().fields = parsed_block.update_fields;
                 }
+
+                let me = input.session.lock().await.me.clone().unwrap();
+                response.push(HandlerOutput::UpdatePlayer(me));
             }
         }
 

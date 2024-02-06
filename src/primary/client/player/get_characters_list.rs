@@ -10,12 +10,11 @@ use crate::primary::types::{
     HandlerResult,
 };
 use crate::primary::traits::packet_handler::PacketHandler;
-use super::types::Character;
 
 #[derive(WorldPacket, Serialize, Deserialize, Debug)]
 #[options(no_opcode)]
 struct Income {
-    characters: Vec<Character>,
+    characters: Vec<Player>,
 }
 
 pub struct Handler;
