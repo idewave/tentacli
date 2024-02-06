@@ -4,23 +4,23 @@ use tui::style::{Color, Modifier, Style};
 use tui::text::{Span, Spans};
 use tui::widgets::{ListItem, ListState};
 
-use crate::primary::client::{Character};
+use crate::primary::client::{Player};
 use crate::features::ui::traits::ui_component::{UIModalComponent};
 use crate::features::ui::types::{UIEventFlags};
 use crate::primary::types::HandlerOutput;
 
 pub struct CharactersModal {
     state: ListState,
-    characters: Vec<Character>,
+    characters: Vec<Player>,
 }
 
 impl CharactersModal {
-    pub fn set_items(&mut self, characters: Vec<Character>) -> &mut Self {
+    pub fn set_items(&mut self, characters: Vec<Player>) -> &mut Self {
         self.characters = characters;
         self
     }
 
-    pub fn get_selected(&mut self) -> Option<Character> {
+    pub fn get_selected(&mut self) -> Option<Player> {
         if self.state.selected().is_some() {
             let index = self.state.selected().unwrap();
             let realm = self.characters.remove(index);

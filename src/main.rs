@@ -8,8 +8,8 @@ async fn main() -> AnyResult<()> {
         external_channel: None,
         external_features: vec![],
         account: "bot",
-        config_path: "./conf/Config.yml",
-        dotenv_path: "./conf/.env"
+        config_path: "Config.yml",
+        dotenv_path: ".env"
     }).await?;
 
     Ok(())

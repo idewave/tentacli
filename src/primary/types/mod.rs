@@ -5,7 +5,7 @@ use tokio::sync::Mutex;
 mod fields;
 
 pub use fields::{PackedGuid, TerminatedString};
-use crate::primary::client::{Character, Realm};
+use crate::primary::client::{Player, Realm};
 
 use crate::primary::shared::storage::DataStorage;
 use crate::primary::shared::session::Session;
@@ -29,15 +29,16 @@ pub struct HandlerInput {
 pub enum HandlerOutput {
     // data transfer
     Data(PacketOutcome),
-    TransferCharactersList(Vec<Character>),
+    TransferCharactersList(Vec<Player>),
     TransferRealmsList(Vec<Realm>),
+    UpdatePlayer(Player),
 
     // commands
     ConnectionRequest(String, u16),
     Freeze,
     Drop,
     SelectRealm(Realm),
-    SelectCharacter(Character),
+    SelectCharacter(Player),
 
     // messages
     ResponseMessage(String, Option<String>),

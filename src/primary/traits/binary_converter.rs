@@ -1,7 +1,7 @@
 use std::io::{BufRead, Write};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use crate::primary::client::{Character, CooldownInfo, Realm, Spell};
+use crate::primary::client::{CooldownInfo, Player, Realm, Spell};
 use crate::primary::errors::FieldError;
 use crate::primary::parsers::movement_parser::MovementParser;
 use crate::primary::parsers::movement_parser::types::MovementInfo;
@@ -211,7 +211,7 @@ impl BinaryConverter for Vec<Realm> {
     }
 }
 
-impl BinaryConverter for Vec<Character> {
+impl BinaryConverter for Vec<Player> {
     fn write_into(&mut self, _buffer: &mut Vec<u8>) -> Result<(), FieldError> {
         todo!()
     }
@@ -293,14 +293,16 @@ impl BinaryConverter for Vec<Character> {
                     .map_err(|e| FieldError::CannotRead(e, format!("inventory:u32_2 ({})", label)))?;
             }
 
-            characters.push(Character {
+            characters.push(Player {
                 guid,
                 name,
                 race,
                 class,
                 gender,
                 level,
-                position: Position::new(x, y, z, 0.0),
+                fields: Default::default(),
+                movement_speed: Default::default(),
+                position: Some(Position::new(x, y, z, 0.0)),
             });
         }
 

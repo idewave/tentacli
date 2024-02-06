@@ -94,6 +94,6 @@ extern crate cfg_if;
 mod features;
 mod primary;
 
-pub use primary::client::{Character, Client, Position, RunOptions, Realm};
+pub use primary::client::{Player, Client, Position, RunOptions, Realm, ObjectField, UnitField, PlayerField};
 pub use primary::traits::Feature;
 pub use primary::types::HandlerOutput;

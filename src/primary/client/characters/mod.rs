@@ -1,11 +1,8 @@
 use std::io::Cursor;
 use byteorder::{LittleEndian, ReadBytesExt};
 
-mod get_characters_list;
-mod player_login;
-pub mod types;
-
 use crate::primary::client::opcodes::Opcode;
+use crate::primary::client::player::player_login;
 use crate::primary::traits::processor::Processor;
 use crate::primary::types::{HandlerInput, ProcessorResult};
 
