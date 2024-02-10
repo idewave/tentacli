@@ -7,6 +7,7 @@ impl Opcode {
     pub const LOGIN_PROOF: u8 = 1;
     pub const REALM_LIST: u8 = 16;
 
+    pub const CMSG_CHAR_CREATE: u32 = 54;
     pub const CMSG_CHAR_ENUM: u32 = 55;
     pub const CMSG_PLAYER_LOGIN: u32 = 61;
     pub const CMSG_LOGOUT_REQUEST: u32 = 75;

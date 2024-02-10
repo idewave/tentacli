@@ -22,19 +22,50 @@ impl Processor for ChatProcessor {
                 input.opcode = Some(opcode);
                 vec![
                     Box::new(query_unknown_player::Handler),
-                    // Box::new(handle_order::Handler),
                     Box::new(log_chat_message::Handler),
                 ]
             },
             Opcode::SMSG_TEXT_EMOTE => {
                 input.opcode = Some(opcode);
-                vec![
-                    // Box::new(handle_emote::Handler),
-                ]
+                vec![]
             },
             _ => vec![]
         };
 
         handlers
+    }
+}
+
+pub mod packet {
+    use crate::primary::client::Opcode;
+    use crate::primary::macros::with_opcode;
+    use crate::primary::types::TerminatedString;
+
+    with_opcode! {
+        @world_opcode(Opcode::CMSG_MESSAGECHAT)
+        #[derive(WorldPacket, Serialize, Deserialize, Debug)]
+        pub struct ChatOutcome {
+            message_type: u32,
+            language: u32,
+            message: TerminatedString,
+        }
+    }
+
+    with_opcode! {
+        @world_opcode(Opcode::CMSG_EMOTE)
+        #[derive(WorldPacket, Serialize, Deserialize, Debug)]
+        pub struct EmoteOutcome {
+            emote_type: u32,
+        }
+    }
+
+    with_opcode! {
+        @world_opcode(Opcode::CMSG_TEXT_EMOTE)
+        #[derive(WorldPacket, Serialize, Deserialize, Debug)]
+        pub struct TextEmoteOutcome {
+            text_emote_type: u32,
+            emote_num: u32,
+            guid: u64,
+        }
     }
 }

@@ -11,19 +11,24 @@ use tokio::time::sleep;
 use anyhow::{Result as AnyResult};
 
 mod auth;
-mod chat;
-mod movement;
+pub mod chat;
+pub mod movement;
 mod opcodes;
-mod player;
+pub mod player;
 mod realm;
 mod spell;
 mod trade;
 pub mod types;
 mod warden;
 
+#[allow(unused_imports)]
+pub use chat::types::{Language, MessageType, EmoteType, TextEmoteType};
 pub use movement::types::{MovementFlags, MovementFlagsExtra, SplineFlags, UnitMoveType};
 pub use crate::primary::parsers::position_parser::types::Position;
-pub use player::types::{Player, ObjectField, UnitField, PlayerField, FieldType, FieldValue};
+pub use player::types::{
+    Player, ObjectField, UnitField, PlayerField, FieldType, FieldValue,
+    Race, Class, Gender,
+};
 pub use realm::types::{Realm};
 pub use spell::types::{Spell, CooldownInfo};
 pub use warden::types::{WardenModuleInfo};
@@ -424,7 +429,7 @@ impl Client {
                             }
                         }
                     },
-                };
+                }
             }
         })
     }
