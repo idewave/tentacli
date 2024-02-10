@@ -42,11 +42,11 @@ impl Feature for Console {
                                 println!("{}", text.bright_black());
                             },
                             HandlerOutput::ResponseMessage(message, _) => {
-                                let text = format!("[RESPONSE]: {}", message);
+                                let text = format!("[RECV]: {}", message);
                                 println!("{}", text.bright_magenta());
                             },
                             HandlerOutput::RequestMessage(message, _) => {
-                                let text = format!("[REQUEST]: {}", message);
+                                let text = format!("[SEND]: {}", message);
                                 println!("{}", text.bright_cyan());
                             },
                             _ => {},
