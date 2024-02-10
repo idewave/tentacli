@@ -77,3 +77,25 @@ impl Processor for PlayerProcessor {
         handlers
     }
 }
+
+pub mod packet {
+    use crate::primary::client::Opcode;
+    use crate::primary::macros::with_opcode;
+
+    with_opcode! {
+        @world_opcode(Opcode::CMSG_CHAR_CREATE)
+        #[derive(WorldPacket, Serialize, Deserialize, Debug)]
+        pub struct CharCreateOutcome {
+            name: String,
+            race: u8,
+            class: u8,
+            gender: u8,
+            skin: u8,
+            face: u8,
+            hair_style: u8,
+            hair_color: u8,
+            facial_hair: u8,
+            outfit_id: u8,
+        }
+    }
+}

@@ -397,3 +397,29 @@ impl TextEmoteType {
     pub const EYEBROW: u32 = 377;
     pub const TOAST: u32 = 378;
 }
+
+
+#[non_exhaustive]
+pub struct Language;
+
+#[allow(dead_code)]
+impl Language {
+    pub const UNIVERSAL: u32 = 0;
+    pub const ORCISH: u32 = 1;
+    pub const DARNASSIAN: u32 = 2;
+    pub const TAURAHE: u32 = 3;
+    pub const DWARVISH: u32 = 6;
+    pub const COMMON: u32 = 7;
+    pub const DEMONIC: u32 = 8;
+    pub const TITAN: u32 = 9;
+    pub const THALASSIAN: u32 = 10;
+    pub const DRACONIC: u32 = 11;
+    pub const KALIMAG: u32 = 12;
+    pub const GNOMISH: u32 = 13;
+    pub const TROLL: u32 = 14;
+    pub const GUTTERSPEAK: u32 = 33;
+    pub const DRAENEI: u32 = 35;
+    pub const ZOMBIE: u32 = 36;
+    pub const GNOMISH_BINARY: u32 = 37;
+    pub const GOBLIN_BINARY: u32 = 38;
+}

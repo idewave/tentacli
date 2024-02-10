@@ -96,3 +96,49 @@ impl Processor for MovementProcessor {
         handlers
     }
 }
+
+pub mod packet {
+    use crate::primary::client::Opcode;
+    use crate::primary::types::PackedGuid;
+
+    #[non_exhaustive]
+    pub struct MovementOpcodes;
+
+    #[allow(dead_code)]
+    impl MovementOpcodes {
+        pub const MSG_MOVE_START_FORWARD: u16 = Opcode::MSG_MOVE_START_FORWARD;
+        pub const MSG_MOVE_START_BACKWARD: u16 = Opcode::MSG_MOVE_START_BACKWARD;
+        pub const MSG_MOVE_STOP: u16 = Opcode::MSG_MOVE_STOP;
+        pub const MSG_MOVE_START_STRAFE_LEFT: u16 = Opcode::MSG_MOVE_START_STRAFE_LEFT;
+        pub const MSG_MOVE_START_STRAFE_RIGHT: u16 = Opcode::MSG_MOVE_START_STRAFE_RIGHT;
+        pub const MSG_MOVE_STOP_STRAFE: u16 = Opcode::MSG_MOVE_STOP_STRAFE;
+        pub const MSG_MOVE_JUMP: u16 = Opcode::MSG_MOVE_JUMP;
+        pub const MSG_MOVE_START_TURN_LEFT: u16 = Opcode::MSG_MOVE_START_TURN_LEFT;
+        pub const MSG_MOVE_START_TURN_RIGHT: u16 = Opcode::MSG_MOVE_START_TURN_RIGHT;
+        pub const MSG_MOVE_STOP_TURN: u16 = Opcode::MSG_MOVE_STOP_TURN;
+        pub const MSG_MOVE_START_PITCH_UP: u16 = Opcode::MSG_MOVE_START_PITCH_UP;
+        pub const MSG_MOVE_START_PITCH_DOWN: u16 = Opcode::MSG_MOVE_START_PITCH_DOWN;
+        pub const MSG_MOVE_STOP_PITCH: u16 = Opcode::MSG_MOVE_STOP_PITCH;
+        pub const MSG_MOVE_FALL_LAND: u16 = Opcode::MSG_MOVE_FALL_LAND;
+        pub const MSG_MOVE_START_SWIM: u16 = Opcode::MSG_MOVE_START_SWIM;
+        pub const MSG_MOVE_STOP_SWIM: u16 = Opcode::MSG_MOVE_STOP_SWIM;
+        pub const MSG_MOVE_SET_FACING: u16 = Opcode::MSG_MOVE_SET_FACING;
+        pub const MSG_MOVE_SET_PITCH: u16 = Opcode::MSG_MOVE_SET_PITCH;
+        pub const MSG_MOVE_WORLDPORT_ACK: u16 = Opcode::MSG_MOVE_WORLDPORT_ACK;
+        pub const MSG_MOVE_HEARTBEAT: u16 = Opcode::MSG_MOVE_HEARTBEAT;
+    }
+
+    #[derive(WorldPacket, Serialize, Deserialize, Debug)]
+    #[options(no_opcode)]
+    pub struct MovementOutcome {
+        guid: PackedGuid,
+        movement_flags: u32,
+        movement_flags2: u16,
+        time: u32,
+        x: f32,
+        y: f32,
+        z: f32,
+        direction: f32,
+        unknown: u32,
+    }
+}

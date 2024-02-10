@@ -23,7 +23,9 @@
 //! use async_broadcast::{Sender as BroadcastSender, Receiver as BroadcastReceiver, broadcast};
 //! use tokio::task::JoinHandle;
 //! 
-//! use tentacli::{Client, RunOptions, Feature, HandlerOutput};
+//! use tentacli::{Client, RunOptions};
+//! use tentacli::traits::Feature;
+//! use tentacli::types::HandlerOutput;
 //! 
 //! #[tokio::main]
 //! async fn main() {
@@ -94,6 +96,44 @@ extern crate cfg_if;
 mod features;
 mod primary;
 
-pub use primary::client::{Player, Client, Position, RunOptions, Realm, ObjectField, UnitField, PlayerField};
-pub use primary::traits::Feature;
-pub use primary::types::HandlerOutput;
+pub use primary::client::{Client, RunOptions};
+
+pub mod chat {
+    pub use crate::primary::client::chat::types::{Language, MessageType, TextEmoteType, EmoteType};
+}
+
+pub mod movement {
+    pub use crate::primary::client::movement::types::{MovementFlags, MovementFlagsExtra};
+}
+
+pub mod player {
+    pub use crate::primary::client::{
+        ObjectField, Player, PlayerField, Position, UnitField, Race, Class, Gender
+    };
+}
+
+pub mod realm {
+    pub use crate::primary::client::{Realm};
+}
+
+pub mod packet {
+    pub mod chat {
+        pub use crate::primary::client::chat::packet::{ChatOutcome, EmoteOutcome, TextEmoteOutcome};
+    }
+    
+    pub mod movement {
+        pub use crate::primary::client::movement::packet::{MovementOutcome, MovementOpcodes};
+    }
+
+    pub mod player {
+        pub use crate::primary::client::player::packet::CharCreateOutcome;
+    }
+}
+
+pub mod traits {
+    pub use crate::primary::traits::Feature;
+}
+
+pub mod types {
+    pub use crate::primary::types::HandlerOutput;
+}

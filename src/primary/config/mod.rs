@@ -167,3 +167,52 @@ impl EnvConfig {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+    use std::path::Path;
+    use tempdir::TempDir;
+    use yaml_rust::YamlLoader;
+
+    use crate::primary::config::{Config, CONFIG_CONTENT, create_config_file};
+    use crate::primary::errors::ConfigError;
+
+    const HOST: &str = "another.server.com";
+    const ACCOUNT: &str = "account_name";
+    const PASSWORD: &str = "safe_password";
+
+    #[test]
+    fn test_data_parsing() {
+        let temp_dir = TempDir::new("_tmp").unwrap();
+        let path_buf = temp_dir.path().join("Config.yml");
+        let path = path_buf.to_str().unwrap();
+
+        create_config_file(path, CONFIG_CONTENT);
+        assert!(Path::new(path).exists());
+
+        let file_content = fs::read_to_string(path)
+            .expect(&format!("Failed to read the \"{}\"", path));
+        assert_eq!(file_content, CONFIG_CONTENT);
+
+        let docs = YamlLoader::load_from_str(&file_content)
+            .map_err(ConfigError::ScanError).unwrap();
+
+        let connection_data = Config::parse_connection_data(
+            &docs[0]["connection_data"][HOST],
+            ACCOUNT,
+        );
+
+        assert_eq!(connection_data.account, ACCOUNT.to_uppercase());
+        assert_eq!(connection_data.password, PASSWORD.to_uppercase());
+        assert_eq!(connection_data.autoselect_character_name, "");
+        assert_eq!(connection_data.autoselect_realm_name, "");
+
+        let channel_labels = Config::parse_channels_data(&docs[0]["channel_labels"]);
+        assert_eq!(channel_labels.common, "COMMON");
+        assert_eq!(channel_labels.lfg, "LFG");
+        assert_eq!(channel_labels.trade, "TRADE");
+
+        temp_dir.close().unwrap();
+    }
+}
