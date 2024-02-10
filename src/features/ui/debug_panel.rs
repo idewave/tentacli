@@ -109,7 +109,7 @@ impl DebugPanel {
                     title,
                     local_time,
                     details,
-                    label: "[RESPONSE]".to_string(),
+                    label: "[RECV]".to_string(),
                     color: Color::LightMagenta,
                 })
             },
@@ -120,7 +120,7 @@ impl DebugPanel {
                     title,
                     local_time,
                     details,
-                    label: "[REQUEST]".to_string(),
+                    label: "[SEND]".to_string(),
                     color: Color::LightBlue,
                 })
             },
