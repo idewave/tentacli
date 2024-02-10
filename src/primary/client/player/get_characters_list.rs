@@ -59,7 +59,7 @@ impl PacketHandler for Handler {
                     format!("Selected \"{}\" Character", character.name),
                     None,
                 ));
-                input.session.lock().await.me = Some(Player::from(character));
+                input.session.lock().await.me = Some(character);
             } else {
                 bail!(CharacterListError::NotFound);
             }

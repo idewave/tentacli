@@ -361,7 +361,7 @@ impl Client {
                                 notify.notify_one();
                             },
                             HandlerOutput::SelectCharacter(character) => {
-                                session.lock().await.me = Some(Player::from(character));
+                                session.lock().await.me = Some(character);
                                 notify.notify_one();
                             },
                             _ => {},
