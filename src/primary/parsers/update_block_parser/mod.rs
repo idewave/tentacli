@@ -164,15 +164,15 @@ impl UpdateBlocksParser {
                         };
 
                         if let Some(value) = match field_type {
-                            FieldType::LONG => {
-                                Some(FieldValue::LONG(reader.read_u64::<LittleEndian>()?))
-                            },
-                            FieldType::INT => {
-                                Some(FieldValue::INT(reader.read_u32::<LittleEndian>()?))
-                            },
-                            FieldType::FLOAT => {
-                                Some(FieldValue::FLOAT(reader.read_f32::<LittleEndian>()?))
-                            },
+                            FieldType::Long => {
+                                Some(FieldValue::Long(reader.read_u64::<LittleEndian>()?))
+                            }
+                            FieldType::Integer => {
+                                Some(FieldValue::Integer(reader.read_u32::<LittleEndian>()?))
+                            }
+                            FieldType::Float => {
+                                Some(FieldValue::Float(reader.read_f32::<LittleEndian>()?))
+                            }
                             _ => None,
                         } {
                             update_fields.insert(index, value);

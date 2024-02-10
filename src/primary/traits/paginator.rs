@@ -23,12 +23,10 @@ pub trait Paginator {
         let start = page * per_page;
         let end = (page + 1) * per_page - 1;
 
-        let mut counter = 0;
-        for i in start..=end {
+        for (counter, i) in (start..=end).enumerate() {
             if index == i {
                 return Ok(counter);
             }
-            counter += 1;
         }
 
         Err(Error::new(

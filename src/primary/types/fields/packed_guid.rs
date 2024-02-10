@@ -37,7 +37,7 @@ impl Serialize for PackedGuid {
 impl BinaryConverter for PackedGuid {
     fn write_into(&mut self, buffer: &mut Vec<u8>) -> Result<(), FieldError> {
         let PackedGuid(mut guid) = self;
-        let mut packed_guid = vec![0u8; 9];
+        let mut packed_guid = [0u8; 9];
         let mut size = 1;
         let mut index = 0;
 
@@ -52,7 +52,7 @@ impl BinaryConverter for PackedGuid {
             guid >>= 8;
         }
 
-        buffer.write_all(&packed_guid[..size].to_vec())
+        buffer.write_all(&packed_guid[..size])
             .map_err(|e| FieldError::CannotWrite(e, "bytes (PackedGuid)".to_string()))?;
 
         Ok(())

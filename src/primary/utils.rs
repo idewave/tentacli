@@ -5,7 +5,7 @@ use flate2::read::ZlibDecoder;
 
 #[allow(dead_code)]
 pub fn decode_hex(s: &str) -> Result<Vec<u8>, ParseIntError> {
-    let str = s.replace(" ", "");
+    let str = s.replace(' ', "");
     (0..str.len())
         .step_by(2)
         .map(|i| u8::from_str_radix(&str[i..i + 2], 16))

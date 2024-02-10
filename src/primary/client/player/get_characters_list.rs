@@ -53,7 +53,7 @@ impl PacketHandler for Handler {
             response.push(HandlerOutput::TransferCharactersList(characters));
             response.push(HandlerOutput::Freeze);
         } else {
-            let re = Regex::new(format!(r#"{}"#, autoselect_character_name).as_str()).unwrap();
+            let re = Regex::new(&autoselect_character_name).unwrap();
             if let Some(character) = characters.into_iter().find(|item| re.is_match(&item.name[..])) {
                 response.push(HandlerOutput::DebugMessage(
                     format!("Selected \"{}\" Character", character.name),

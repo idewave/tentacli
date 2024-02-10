@@ -119,13 +119,17 @@ impl Feature for UI {
                                         sender.broadcast(output).await.unwrap();
                                     }
 
-                                    if code == KeyCode::Char('c') {
-                                        if modifiers.contains(KeyModifiers::CONTROL) {
-                                            // TODO: probably need exit from app in different way
-                                            disable_raw_mode().unwrap();
-                                            execute!(std::io::stdout(), LeaveAlternateScreen, DisableMouseCapture).unwrap();
-                                            exit(0);
-                                        }
+                                    if code == KeyCode::Char('c') &&
+                                    modifiers.contains(KeyModifiers::CONTROL) {
+                                        // TODO: probably need exit from app in different way
+                                        disable_raw_mode().unwrap();
+                                        execute!(
+                                            std::io::stdout(),
+                                            LeaveAlternateScreen,
+                                            DisableMouseCapture
+                                        ).unwrap();
+
+                                        exit(0);
                                     }
                                 } else if let Event::Resize(_, _) = event {
                                     terminal.lock().unwrap().autoresize().unwrap();

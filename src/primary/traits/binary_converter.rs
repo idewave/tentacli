@@ -230,8 +230,8 @@ impl BinaryConverter for Vec<Player> {
             reader.read_until(0, &mut name_buf)
                 .map_err(|e| FieldError::CannotRead(e, format!("name_buf:Vec<u8> ({})", label)))?;
             let name = String::from_utf8(
-                name_buf[..(name_buf.len() - 1) as usize].to_vec()
-            ).map_err(|e| FieldError::InvalidString(e, format!("{}", label)))?;
+                name_buf[..(name_buf.len() - 1)].to_vec()
+            ).map_err(|e| FieldError::InvalidString(e, label.to_owned()))?;
 
             let race = reader.read_u8()
                 .map_err(|e| FieldError::CannotRead(e, format!("race:u8 ({})", label)))?;
