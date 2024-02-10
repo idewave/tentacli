@@ -40,7 +40,7 @@ dotenv = "0.15.0"
 thiserror = "1.0"
 anyhow = "1.0"
 cfg-if = { version = "1.0.0", features = [] }
-async-broadcast = "0.6.0"
+async-broadcast = "0.7.0"
 idewave_packet = "0.1.0"
 
 [dev-dependencies]
