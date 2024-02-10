@@ -19,7 +19,7 @@ pub struct DebugDetailsPanel {
     panel_height: u16,
 }
 
-impl<'a> DebugDetailsPanel {
+impl DebugDetailsPanel {
     pub fn set_output(&mut self, output: String) -> &mut Self {
         self.scroll_offset = 0;
         self.output = output;
@@ -35,12 +35,12 @@ impl<'a> DebugDetailsPanel {
         let text = Text::styled(self.output.clone(), Style::default());
         match key_code {
             KeyCode::Down if key_modifiers.contains(KeyModifiers::CONTROL) => {
-                if text.height() > (self.panel_height as usize) {
-                    if (self.scroll_offset as usize) <
-                        text.height() - (self.panel_height as usize)
-                    {
-                        self.scroll_offset += 1;
-                    }
+                let text_height = text.height();
+                let panel_height = self.panel_height as usize;
+
+                if text_height > panel_height &&
+                    (self.scroll_offset as usize) < text_height - panel_height {
+                    self.scroll_offset += 1;
                 }
             },
             KeyCode::Up if key_modifiers.contains(KeyModifiers::CONTROL) => {

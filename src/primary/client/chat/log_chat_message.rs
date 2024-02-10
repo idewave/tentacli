@@ -27,7 +27,7 @@ impl Income {
         let mut buffer = vec![0u8; initial.message_length as usize];
         match reader.read_exact(&mut buffer) {
             Ok(_) => TerminatedString::from(buffer),
-            Err(err) => TerminatedString::from(format!("Cannot parse message: \"{}\"", err.to_string()))
+            Err(err) => TerminatedString::from(format!("Cannot parse message: \"{}\"", err))
         }
     }
 

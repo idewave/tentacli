@@ -36,7 +36,7 @@ impl RC4 {
 
     pub fn encrypt(&mut self, data: &[u8]) -> Vec<u8> {
         let mut encrypted = Vec::new();
-        for (_, x) in data.iter().enumerate() {
+        for x in data.iter() {
             encrypted.push(x ^ self.next());
         }
 

@@ -39,7 +39,7 @@ pub trait UIModalComponent {
     }
 
     fn render<B: Backend>(&mut self, frame: &mut Frame<B>, rect: Rect) {
-        let (items, mut state) = self.get_items_and_state();
+        let (items, state) = self.get_items_and_state();
 
         let block = Block::default()
             .title(Self::get_title())
@@ -55,6 +55,6 @@ pub trait UIModalComponent {
             .highlight_symbol(">> ");
 
         frame.render_widget(Clear, rect);
-        frame.render_stateful_widget(list, rect, &mut state);
+        frame.render_stateful_widget(list, rect, state);
     }
 }

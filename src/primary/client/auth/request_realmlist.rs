@@ -17,8 +17,7 @@ pub struct Handler;
 #[async_trait]
 impl PacketHandler for Handler {
     async fn handle(&mut self, _: &mut HandlerInput) -> HandlerResult {
-        let mut response = Vec::new();
-        response.push(HandlerOutput::Data(Outcome::default().unpack()?));
+        let response = vec![HandlerOutput::Data(Outcome::default().unpack()?)];
 
         Ok(response)
     }

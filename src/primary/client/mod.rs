@@ -1,3 +1,5 @@
+#![allow(clippy::new_without_default)]
+
 use std::io::{Error, ErrorKind};
 use std::sync::{Arc, Mutex as SyncMutex};
 use std::time::Duration;
@@ -146,7 +148,7 @@ impl Client {
                     Arc::clone(&self._warden_crypt),
                 ).await;
 
-                match self.session.lock().await.set_config(&host, &options.account, &options.config_path) {
+                match self.session.lock().await.set_config(&host, options.account, options.config_path) {
                     Ok(_) => {},
                     Err(err) => {
                         query_sender.broadcast(HandlerOutput::ErrorMessage(err.to_string(), None)).await.unwrap();
@@ -209,7 +211,7 @@ impl Client {
         ];
 
         let features_tasks: Vec<JoinHandle<()>> =
-            features.into_iter().map(|mut feature| feature.get_tasks()).flatten().collect();
+            features.into_iter().flat_map(|mut feature| feature.get_tasks()).collect();
 
         all_tasks.extend(features_tasks);
 

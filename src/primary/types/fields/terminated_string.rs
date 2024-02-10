@@ -54,7 +54,7 @@ impl BinaryConverter for TerminatedString {
             .map_err(|e| FieldError::CannotRead(e, format!("bytes ({})", label)))?;
         match String::from_utf8(internal_buf[..internal_buf.len() - 1].to_vec()) {
             Ok(string) => Ok(Self(string)),
-            Err(err) => Err(FieldError::InvalidString(err, format!("{}", label))),
+            Err(err) => Err(FieldError::InvalidString(err, label.to_owned())),
         }
     }
 }

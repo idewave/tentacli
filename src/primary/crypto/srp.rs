@@ -55,8 +55,8 @@ impl Srp {
             .chain(self.calculate_xor_hash::<D>())
             .chain(Self::calculate_account_hash::<D>(account))
             .chain(salt)
-            .chain(&self.public_ephemeral.to_bytes_le().1)
-            .chain(&self.server_ephemeral.to_bytes_le().1)
+            .chain(self.public_ephemeral.to_bytes_le().1)
+            .chain(self.server_ephemeral.to_bytes_le().1)
             .chain(&self.session_key)
             .finalize()
             .to_vec()
@@ -79,8 +79,8 @@ impl Srp {
     where
         D: Digest,
     {
-        let n_hash = D::new().chain(&self.modulus.to_bytes_le().1).finalize();
-        let g_hash = D::new().chain(&self.generator.to_bytes_le().1).finalize();
+        let n_hash = D::new().chain(self.modulus.to_bytes_le().1).finalize();
+        let g_hash = D::new().chain(self.generator.to_bytes_le().1).finalize();
 
         let mut xor_hash = Vec::new();
         for (index, value) in g_hash.iter().enumerate() {
@@ -113,8 +113,8 @@ impl Srp {
         D: Digest,
     {
         let u = D::new()
-            .chain(&self.public_ephemeral.to_bytes_le().1)
-            .chain(&self.server_ephemeral.to_bytes_le().1)
+            .chain(self.public_ephemeral.to_bytes_le().1)
+            .chain(self.server_ephemeral.to_bytes_le().1)
             .finalize()
             .to_vec();
 
@@ -162,8 +162,8 @@ impl Srp {
         let part1 = even.iter().map(|(_, v)| *v).collect::<Vec<u8>>();
         let part2 = odd.iter().map(|(_, v)| *v).collect::<Vec<u8>>();
 
-        let hashed1 = D::new().chain(&part1).finalize();
-        let hashed2 = D::new().chain(&part2).finalize();
+        let hashed1 = D::new().chain(part1).finalize();
+        let hashed2 = D::new().chain(part2).finalize();
 
         let mut session_key = Vec::new();
         for (index, _) in hashed1.iter().enumerate() {

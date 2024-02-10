@@ -103,7 +103,7 @@ impl Writer {
             _ => packet.to_vec(),
         };
 
-        return match self._stream.write(&packet).await {
+        match self._stream.write(&packet).await {
             Ok(bytes_amount) => {
                 let _ = &self._stream.flush().await.unwrap();
                 Ok(bytes_amount)
