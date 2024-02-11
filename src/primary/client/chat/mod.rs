@@ -45,9 +45,9 @@ pub mod packet {
         @world_opcode(Opcode::CMSG_MESSAGECHAT)
         #[derive(WorldPacket, Serialize, Deserialize, Debug)]
         pub struct ChatOutcome {
-            message_type: u32,
-            language: u32,
-            message: TerminatedString,
+            pub message_type: u32,
+            pub language: u32,
+            pub message: TerminatedString,
         }
     }
 
@@ -55,7 +55,7 @@ pub mod packet {
         @world_opcode(Opcode::CMSG_EMOTE)
         #[derive(WorldPacket, Serialize, Deserialize, Debug)]
         pub struct EmoteOutcome {
-            emote_type: u32,
+            pub emote_type: u32,
         }
     }
 
@@ -63,9 +63,9 @@ pub mod packet {
         @world_opcode(Opcode::CMSG_TEXT_EMOTE)
         #[derive(WorldPacket, Serialize, Deserialize, Debug)]
         pub struct TextEmoteOutcome {
-            text_emote_type: u32,
-            emote_num: u32,
-            guid: u64,
+            pub text_emote_type: u32,
+            pub emote_num: u32,
+            pub guid: u64,
         }
     }
 }

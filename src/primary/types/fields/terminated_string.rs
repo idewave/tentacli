@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use std::io::{BufRead, Write};
 use byteorder::{WriteBytesExt};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -27,10 +28,10 @@ impl From<Vec<u8>> for TerminatedString {
     }
 }
 
-impl ToString for TerminatedString {
-    fn to_string(&self) -> String {
+impl Display for TerminatedString {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let Self(string) = self;
-        string.to_string()
+        write!(f, "{}", string.to_string())
     }
 }
 
