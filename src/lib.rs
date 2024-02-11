@@ -20,23 +20,23 @@
 //! ## Examples
 //!
 //! ```rust
-//! use async_broadcast::{Sender as BroadcastSender, Receiver as BroadcastReceiver, broadcast};
 //! use tokio::task::JoinHandle;
-//! 
+//!
+//! use tentacli::async_broadcast::{broadcast, BroadcastSender, BroadcastReceiver};
 //! use tentacli::{Client, RunOptions};
 //! use tentacli::traits::Feature;
 //! use tentacli::types::HandlerOutput;
-//! 
+//!
 //! #[tokio::main]
 //! async fn main() {
 //!
 //!     let (query_sender, query_receiver) = broadcast::<HandlerOutput>(100);
-//! 
+//!
 //!     pub struct MyFeature {
 //!         _receiver: BroadcastReceiver<HandlerOutput>,
 //!         _sender: BroadcastSender<HandlerOutput>,
 //!     }
-//! 
+//!
 //!     impl Feature for MyFeature {
 //!         fn new(
 //!             sender: BroadcastSender<HandlerOutput>,
@@ -47,10 +47,10 @@
 //!                 _sender: sender,
 //!             }
 //!         }
-//! 
+//!
 //!         fn get_tasks(&mut self) -> Vec<JoinHandle<()>> {
 //!             let mut receiver = self._receiver.clone();
-//! 
+//!
 //!             let handle_smth = || {
 //!                 tokio::spawn(async move {
 //!                     loop {
@@ -65,11 +65,11 @@
 //!                     }
 //!                 })
 //!             };
-//! 
+//!
 //!             vec![handle_smth()]
 //!         }
 //!     }
-//! 
+//!
 //!     let options = RunOptions {
 //!         external_channel: Some((query_sender.clone(), query_receiver.clone())),
 //!         external_features: vec![Box::new(MyFeature::new(query_sender, query_receiver))],
@@ -97,6 +97,10 @@ mod features;
 mod primary;
 
 pub use primary::client::{Client, RunOptions};
+
+pub mod async_broadcast {
+    pub use async_broadcast::{broadcast, Sender as BroadcastSender, Receiver as BroadcastReceiver};
+}
 
 pub mod chat {
     pub use crate::primary::client::chat::types::{Language, MessageType, TextEmoteType, EmoteType};
