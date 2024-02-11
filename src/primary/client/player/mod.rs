@@ -86,16 +86,16 @@ pub mod packet {
         @world_opcode(Opcode::CMSG_CHAR_CREATE)
         #[derive(WorldPacket, Serialize, Deserialize, Debug)]
         pub struct CharCreateOutcome {
-            name: String,
-            race: u8,
-            class: u8,
-            gender: u8,
-            skin: u8,
-            face: u8,
-            hair_style: u8,
-            hair_color: u8,
-            facial_hair: u8,
-            outfit_id: u8,
+            pub name: String,
+            pub race: u8,
+            pub class: u8,
+            pub gender: u8,
+            pub skin: u8,
+            pub face: u8,
+            pub hair_style: u8,
+            pub hair_color: u8,
+            pub facial_hair: u8,
+            pub outfit_id: u8,
         }
     }
 }

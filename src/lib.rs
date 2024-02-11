@@ -14,7 +14,7 @@
 //! this data manually
 //! - if installed with `ui` feature (installed by default), it allows scrolling the packets history using keyboard and
 //! seeing the details for each packet
-//! - if installed with `console` feature, it will displays only minimal output
+//! - if installed with `console` feature, it will display only minimal output
 //! - if installed without any feature, client will output nothing (but you still can provide own output feature)
 //!
 //! ## Examples
@@ -122,6 +122,11 @@ pub mod realm {
 }
 
 pub mod packet {
+    pub mod custom_fields {
+        pub use crate::primary::types::PackedGuid;
+        pub use crate::primary::types::TerminatedString;
+    }
+
     pub mod chat {
         pub use crate::primary::client::chat::packet::{ChatOutcome, EmoteOutcome, TextEmoteOutcome};
     }
@@ -137,6 +142,7 @@ pub mod packet {
 
 pub mod traits {
     pub use crate::primary::traits::Feature;
+    pub use crate::primary::traits::binary_converter::BinaryConverter;
 }
 
 pub mod types {

@@ -1,3 +1,13 @@
+#[derive(Clone, Debug, Default)]
+pub struct Message {
+    pub message_type: u8,
+    pub language: u32,
+    pub sender_guid: u64,
+    pub channel_name: String,
+    pub target_guid: u64,
+    pub message: String,
+}
+
 #[non_exhaustive]
 pub struct MessageType;
 

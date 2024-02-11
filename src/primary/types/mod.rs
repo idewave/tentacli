@@ -5,7 +5,7 @@ use tokio::sync::Mutex;
 mod fields;
 
 pub use fields::{PackedGuid, TerminatedString};
-use crate::primary::client::{Player, Realm};
+use crate::primary::client::{Message, Player, Realm};
 
 use crate::primary::shared::storage::DataStorage;
 use crate::primary::shared::session::Session;
@@ -32,6 +32,7 @@ pub enum HandlerOutput {
     TransferCharactersList(Vec<Player>),
     TransferRealmsList(Vec<Realm>),
     UpdatePlayer(Player),
+    ChatMessage(Message),
 
     // commands
     ConnectionRequest(String, u16),
