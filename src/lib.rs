@@ -79,6 +79,7 @@
 //!     };
 //!
 //!     // ... pass options to the client
+//!     // Client::new().run(options).await.unwrap();
 //! }
 //! ```
 
