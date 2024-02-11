@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use std::io::BufRead;
 
 use crate::primary::client::chat::types::{MessageType};
-use crate::primary::client::Opcode;
+use crate::primary::client::{Message, Opcode};
 use crate::primary::types::{HandlerInput, HandlerOutput, HandlerResult, TerminatedString};
 use crate::primary::traits::packet_handler::PacketHandler;
 
@@ -27,7 +27,7 @@ impl Income {
         let mut buffer = vec![0u8; initial.message_length as usize];
         match reader.read_exact(&mut buffer) {
             Ok(_) => TerminatedString::from(buffer),
-            Err(err) => TerminatedString::from(format!("Cannot parse message: \"{}\"", err))
+            Err(err) => TerminatedString::from(format!("Cannot parse chat message: \"{}\"", err))
         }
     }
 
@@ -48,12 +48,29 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let mut response = Vec::new();
 
-        let (Income { .. }, json) = Income::from_binary(input.data.as_ref().unwrap())?;
+        let (Income {
+            language,
+            sender_guid,
+            channel_name,
+            target_guid,
+            message,
+            message_type,
+            ..
+        }, json) = Income::from_binary(input.data.as_ref().unwrap())?;
 
         response.push(HandlerOutput::ResponseMessage(
             Opcode::get_server_opcode_name(input.opcode.unwrap()),
             Some(json),
         ));
+
+        response.push(HandlerOutput::ChatMessage(Message {
+            message_type,
+            language,
+            sender_guid,
+            channel_name: channel_name.to_string(),
+            target_guid,
+            message: message.to_string(),
+        }));
 
         Ok(response)
     }
