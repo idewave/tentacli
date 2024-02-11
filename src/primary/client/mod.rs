@@ -24,7 +24,7 @@ pub mod types;
 mod warden;
 
 #[allow(unused_imports)]
-pub use chat::types::{Language, MessageType, EmoteType, TextEmoteType};
+pub use chat::types::{Language, MessageType, EmoteType, TextEmoteType, Message};
 pub use movement::types::{MovementFlags, MovementFlagsExtra, SplineFlags, UnitMoveType};
 pub use crate::primary::parsers::position_parser::types::Position;
 pub use player::types::{
