@@ -131,14 +131,14 @@ pub mod packet {
     #[derive(WorldPacket, Serialize, Deserialize, Debug)]
     #[options(no_opcode)]
     pub struct MovementOutcome {
-        guid: PackedGuid,
-        movement_flags: u32,
-        movement_flags2: u16,
-        time: u32,
-        x: f32,
-        y: f32,
-        z: f32,
-        direction: f32,
-        unknown: u32,
+        pub guid: PackedGuid,
+        pub movement_flags: u32,
+        pub movement_flags2: u16,
+        pub time: u32,
+        pub x: f32,
+        pub y: f32,
+        pub z: f32,
+        pub direction: f32,
+        pub unknown: u32,
     }
 }
