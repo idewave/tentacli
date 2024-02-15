@@ -31,7 +31,7 @@ pub fn read_packed_guid<R: BufRead>(reader: &mut R) -> u64 {
     let mut i = 0;
 
     while i < 8 {
-        if (mask & (1 << i)) != 0 {
+        if (mask & 1 << i) != 0 {
             guid |= (reader.read_u8().unwrap() as u64) << (i * 8);
         }
 

@@ -7,6 +7,8 @@ use serde::ser::SerializeStruct;
 use crate::primary::client::{FieldValue, ObjectField, PlayerField, UnitField};
 use crate::primary::parsers::movement_parser::types::MovementInfo;
 
+pub type UpdateFields = BTreeMap<u32, FieldValue>;
+
 #[derive(Clone, Default, Debug)]
 pub struct MovementData {
     pub movement_info: Option<MovementInfo>,
@@ -52,7 +54,7 @@ pub struct ParsedBlock {
     pub guid: Option<u64>,
     pub out_of_range_guids: Vec<u64>,
     pub near_object_guids: Vec<u64>,
-    pub update_fields: BTreeMap<u32, FieldValue>,
+    pub update_fields: UpdateFields,
     pub movement_data: Option<MovementData>,
 }
 
@@ -152,17 +154,17 @@ pub struct ObjectTypeMask;
 
 #[allow(dead_code)]
 impl ObjectTypeMask {
-    pub const TYPEMASK_OBJECT: u64 = 0x0001;
-    pub const TYPEMASK_ITEM: u64 = 0x0002;
-    pub const TYPEMASK_CONTAINER: u64 = 0x0004;
-    pub const TYPEMASK_UNIT: u64 = 0x0008;
-    pub const TYPEMASK_PLAYER: u64 = 0x0010;
-    pub const TYPEMASK_GAMEOBJECT: u64 = 0x0020;
-    pub const TYPEMASK_DYNAMICOBJECT: u64 = 0x0040;
-    pub const TYPEMASK_CORPSE: u64 = 0x0080;
+    pub const TYPEMASK_OBJECT: u32 = 0x0001;
+    pub const TYPEMASK_ITEM: u32 = 0x0002;
+    pub const TYPEMASK_CONTAINER: u32 = 0x0004;
+    pub const TYPEMASK_UNIT: u32 = 0x0008;
+    pub const TYPEMASK_PLAYER: u32 = 0x0010;
+    pub const TYPEMASK_GAMEOBJECT: u32 = 0x0020;
+    pub const TYPEMASK_DYNAMICOBJECT: u32 = 0x0040;
+    pub const TYPEMASK_CORPSE: u32 = 0x0080;
 
-    pub const IS_UNIT: u64 = ObjectTypeMask::TYPEMASK_OBJECT | ObjectTypeMask::TYPEMASK_UNIT;
-    pub const IS_PLAYER: u64 = ObjectTypeMask::IS_UNIT | ObjectTypeMask::TYPEMASK_PLAYER;
+    pub const IS_UNIT: u32 = ObjectTypeMask::TYPEMASK_OBJECT | ObjectTypeMask::TYPEMASK_UNIT;
+    pub const IS_PLAYER: u32 = ObjectTypeMask::IS_UNIT | ObjectTypeMask::TYPEMASK_PLAYER;
 }
 
 bitflags! {
