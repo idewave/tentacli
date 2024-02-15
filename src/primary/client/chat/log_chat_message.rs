@@ -69,7 +69,7 @@ impl PacketHandler for Handler {
             sender_guid,
             channel_name: channel_name.to_string(),
             target_guid,
-            message: message.to_string(),
+            text: message.to_string(),
         }));
 
         Ok(response)

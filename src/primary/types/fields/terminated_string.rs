@@ -31,7 +31,7 @@ impl From<Vec<u8>> for TerminatedString {
 impl Display for TerminatedString {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let Self(string) = self;
-        write!(f, "{}", string.to_string())
+        write!(f, "{}", string)
     }
 }
 
