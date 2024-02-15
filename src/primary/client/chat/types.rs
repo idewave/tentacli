@@ -5,7 +5,7 @@ pub struct Message {
     pub sender_guid: u64,
     pub channel_name: String,
     pub target_guid: u64,
-    pub message: String,
+    pub text: String,
 }
 
 #[non_exhaustive]
