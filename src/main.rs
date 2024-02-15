@@ -7,7 +7,7 @@ async fn main() -> AnyResult<()> {
     Client::new().run(RunOptions {
         external_channel: None,
         external_features: vec![],
-        account: "bot",
+        account: "bot1",
         config_path: "Config.yml",
         dotenv_path: ".env"
     }).await?;
