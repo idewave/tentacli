@@ -319,3 +319,65 @@ impl UpdateBlocksParser {
         Ok(movement_data)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::io::Cursor;
+    use flate2::read::DeflateDecoder;
+
+    use crate::player::{ObjectField, PlayerField, UnitField};
+    use crate::primary::client::FieldValue;
+    use crate::primary::parsers::update_block_parser::UpdateBlocksParser;
+
+    const COMPRESSED_PACKET: [u8; 339] = [99, 100, 96, 96, 96,
+        226, 223, 188, 53, 140, 157, 165, 16, 200, 132, 1, 227, 199, 181, 110, 179, 100, 235, 220,
+        106, 18, 155, 29, 127, 199, 100, 58, 64, 196, 21, 128, 244, 3, 32, 158, 224, 80, 40, 51, 29,
+        72, 35, 248, 15, 248, 61, 29, 14, 127, 245, 112, 208, 7, 42, 212, 18, 101, 104, 16, 22, 103,
+        60, 240, 227, 62, 195, 71, 70, 14, 6, 6, 127, 54, 6, 22, 54, 160, 56, 185, 96, 71, 238, 237,
+        109, 185, 36, 104, 86, 120, 84, 207, 192, 224, 0, 212, 192, 2, 215, 196, 196, 240, 15, 196,
+        118, 0, 11, 52, 128, 72, 123, 32, 6, 249, 90, 18, 196, 97, 104, 176, 231, 98, 101, 96, 112,
+        7, 178, 182, 3, 113, 10, 16, 195, 216, 47, 152, 33, 252, 79, 111, 30, 58, 48, 2, 197, 189,
+        128, 62, 1, 250, 9, 74, 56, 48, 92, 96, 103, 128, 227, 201, 18, 71, 236, 24, 24, 14, 216,
+        151, 216, 48, 48, 128, 48, 16, 56, 0, 17, 16, 55, 216, 11, 2, 57, 98, 64, 44, 12, 196, 82,
+        80, 182, 14, 144, 246, 4, 98, 19, 32, 102, 0, 26, 14, 52, 138, 129, 7, 136, 239, 108, 211,
+        117, 184, 179, 45, 215, 1, 164, 143, 133, 147, 157, 17, 104, 37, 227, 4, 160, 188, 25, 88,
+        25, 43, 131, 5, 144, 102, 5, 66, 63, 40, 29, 15, 21, 7, 5, 146, 14, 163, 14, 99, 7, 148,
+        223, 9, 229, 47, 130, 242, 159, 64, 233, 249, 64, 179, 24, 129, 48, 149, 9, 98, 206, 23,
+        32, 13, 226, 3, 41, 134, 34, 145, 5, 14, 51, 119, 47, 112, 120, 93, 60, 31, 140, 173, 239,
+        111, 117, 192, 133, 193, 225, 224, 192, 192, 144, 7, 212, 7, 114, 43, 46, 252, 31, 8, 2,
+        128, 42, 68, 129, 24, 20, 6, 226, 64, 44, 1, 196, 160, 176, 7, 133, 5, 0, 2, 177, 96, 33];
+
+    const TEST_GUID: u64 = 123123123;
+    const TEST_HEALTH: u32 = 71;
+    const TEST_XP: u32 = 400;
+
+    #[test]
+    fn test_parsing_compressed_packet() {
+        let mut buffer = Vec::new();
+        let mut decoder = DeflateDecoder::new(&COMPRESSED_PACKET[..]);
+        std::io::Read::read_to_end(&mut decoder, &mut buffer).expect("Cannot read");
+
+        let parsed = UpdateBlocksParser::parse(&mut Cursor::new(buffer)).expect("Cannot parse");
+        assert_eq!(parsed[0].guid, Some(TEST_GUID));
+
+        if let Some(FieldValue::Long(guid)) = parsed[0].update_fields.get(&ObjectField::GUID) {
+            assert_eq!(*guid, TEST_GUID);
+        } else {
+            panic!("GUID was not parsed correctly !");
+        }
+
+        if let Some(FieldValue::Integer(health)) = parsed[0].update_fields.get(&UnitField::HEALTH) {
+            assert_eq!(*health, TEST_HEALTH);
+        } else {
+            panic!("HEALTH was not parsed correctly !");
+        }
+
+        if let Some(FieldValue::Integer(xp)) = parsed[0]
+            .update_fields.get(&PlayerField::NEXT_LEVEL_XP)
+        {
+            assert_eq!(*xp, TEST_XP);
+        } else {
+            panic!("NEXT_LEVEL_XP was not parsed correctly !");
+        }
+    }
+}
