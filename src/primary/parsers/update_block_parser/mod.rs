@@ -7,7 +7,7 @@ pub mod types;
 use crate::primary::client::{FieldType, FieldValue, MovementFlags, ObjectField, PlayerField, SplineFlags, UnitField, UnitMoveType};
 use crate::primary::parsers::movement_parser::MovementParser;
 use crate::primary::parsers::position_parser::PositionParser;
-use crate::primary::parsers::update_block_parser::types::{MovementData, ObjectUpdateFlags, ObjectUpdateType, ParsedBlock};
+use crate::primary::parsers::update_block_parser::types::{MovementData, ObjectUpdateFlags, ObjectUpdateType, ParsedBlock, UpdateFields};
 
 use crate::primary::utils::read_packed_guid;
 
@@ -39,8 +39,8 @@ impl UpdateBlocksParser {
                         parsed_blocks.push(parsed_block);
                     }
                 },
-                _ => {
-                    break;
+                Err(err) => {
+                    return Err(err);
                 },
             }
         }
@@ -138,9 +138,10 @@ impl UpdateBlocksParser {
 
     fn parse_updated_values<R: BufRead>(
         reader: &mut R
-    ) -> Result<BTreeMap<u32, FieldValue>, Error> {
-        let blocks_amount = reader.read_u8().unwrap_or(0);
-        let mut update_fields: BTreeMap<u32, FieldValue> = BTreeMap::new();
+    ) -> Result<UpdateFields, Error> {
+        let blocks_amount = reader.read_u8()?;
+        let mut update_blocks: BTreeMap<u32, u32> = BTreeMap::new();
+        let mut update_fields: UpdateFields = BTreeMap::new();
 
         if blocks_amount > 0 {
             let mut update_mask = vec![0i32; blocks_amount as usize];
@@ -155,31 +156,49 @@ impl UpdateBlocksParser {
 
                 for _ in 0..32 {
                     if bitmask & 1 != 0 {
-                        let field_type = if index < ObjectField::LIMIT {
-                            ObjectField::get_field_type(index)
-                        } else if index < UnitField::LIMIT {
-                            UnitField::get_field_type(index)
-                        } else {
-                            PlayerField::get_field_type(index)
-                        };
-
-                        if let Some(value) = match field_type {
-                            FieldType::Long => {
-                                Some(FieldValue::Long(reader.read_u64::<LittleEndian>()?))
-                            }
-                            FieldType::Integer => {
-                                Some(FieldValue::Integer(reader.read_u32::<LittleEndian>()?))
-                            }
-                            FieldType::Float => {
-                                Some(FieldValue::Float(reader.read_f32::<LittleEndian>()?))
-                            }
-                            _ => None,
-                        } {
-                            update_fields.insert(index, value);
-                        }
+                        update_blocks.insert(index, reader.read_u32::<LittleEndian>()?);
                     }
                     bitmask >>= 1;
                     index += 1;
+                }
+            }
+
+            for (k, v) in update_blocks.clone().into_iter() {
+                let field_type = if k < ObjectField::LIMIT {
+                    ObjectField::get_field_type(k)
+                } else if k < UnitField::LIMIT {
+                    UnitField::get_field_type(k)
+                } else {
+                    PlayerField::get_field_type(k)
+                };
+
+                let value = match field_type {
+                    FieldType::Integer => {
+                        Some(FieldValue::Integer(v))
+                    },
+                    FieldType::Bytes => {
+                        Some(FieldValue::Bytes(v))
+                    },
+                    FieldType::Long => {
+                        if let Some(next_v) = update_blocks.get(&(k + 1)) {
+                            Some(FieldValue::Long((u64::from(*next_v) << 32) | u64::from(v)))
+                        } else {
+                            Some(FieldValue::Long(u64::from(v)))
+                        }
+                    },
+                    FieldType::Float => {
+                        Some(FieldValue::Float(f32::from_bits(v)))
+                    },
+                    FieldType::TwoShorts => {
+                        let first: u16 = (v & 0xFFFF) as u16;
+                        let second: u16 = ((v >> 16) & 0xFFFF) as u16;
+                        Some(FieldValue::TwoShorts(first, second))
+                    },
+                    FieldType::None => None,
+                };
+
+                if let Some(value) = value {
+                    update_fields.insert(k, value);
                 }
             }
 
@@ -217,26 +236,29 @@ impl UpdateBlocksParser {
 
                 if spline_flags.contains(SplineFlags::FINAL_ANGLE) {
                     let _spline_facing_angle = reader.read_f32::<LittleEndian>()?;
-                } else if spline_flags.contains(SplineFlags::FINAL_TARGET) {
+                }
+
+                if spline_flags.contains(SplineFlags::FINAL_TARGET) {
                     let _spline_facing_target_guid = reader.read_u64::<LittleEndian>()?;
-                } else if spline_flags.contains(SplineFlags::FINAL_POINT) {
+                }
+
+                if spline_flags.contains(SplineFlags::FINAL_POINT) {
                     let _spline_facing_point_x = reader.read_f32::<LittleEndian>()?;
                     let _spline_facing_point_y = reader.read_f32::<LittleEndian>()?;
                     let _spline_facing_point_z = reader.read_f32::<LittleEndian>()?;
                 }
 
-                let _spline_time_passed = reader.read_i32::<LittleEndian>()?;
-                let _spline_duration = reader.read_i32::<LittleEndian>()?;
-                let _spline_id = reader.read_u32::<LittleEndian>()?;
+                let _ = reader.read_u32::<LittleEndian>()?;
+                let _ = reader.read_u32::<LittleEndian>()?;
+                let _ = reader.read_u32::<LittleEndian>()?;
 
-                // omit
-                reader.read_f64::<LittleEndian>()?;
-
-                let _spline_vertical_acceleration = reader.read_i32::<LittleEndian>()?;
-
-                let _spline_effect_start_time = reader.read_i32::<LittleEndian>()?;
+                let _ = reader.read_u32::<LittleEndian>()?;
+                let _ = reader.read_u32::<LittleEndian>()?;
+                let _ = reader.read_u32::<LittleEndian>()?;
+                let _ = reader.read_u32::<LittleEndian>()?;
 
                 let spline_amount = reader.read_u32::<LittleEndian>()?;
+
                 for _ in 0..spline_amount {
                     let _spline_point_x = reader.read_f32::<LittleEndian>()?;
                     let _spline_point_y = reader.read_f32::<LittleEndian>()?;
@@ -255,36 +277,41 @@ impl UpdateBlocksParser {
             if object_update_flags.contains(ObjectUpdateFlags::POSITION) {
                 let _transport_guid = read_packed_guid(reader);
 
-                let _position_x = reader.read_f32::<LittleEndian>()?;
-                let _position_y = reader.read_f32::<LittleEndian>()?;
-                let _position_z = reader.read_f32::<LittleEndian>()?;
+                let _ = reader.read_f32::<LittleEndian>()?;
+                let _ = reader.read_f32::<LittleEndian>()?;
+                let _ = reader.read_f32::<LittleEndian>()?;
 
                 // transport offset x, y, z, orientation
                 let _position = PositionParser::parse(reader)?;
-                let _corpse_orientation = reader.read_f32::<LittleEndian>()?;
+                let _ = reader.read_f32::<LittleEndian>()?;
             }
             if object_update_flags.contains(ObjectUpdateFlags::STATIONARY_POSITION) {
                 let _position = PositionParser::parse(reader)?;
             }
         }
 
-        if object_update_flags.contains(ObjectUpdateFlags::HIGHGUID) {
-            movement_data.high_guid = reader.read_u32::<LittleEndian>().ok();
-        }
         if object_update_flags.contains(ObjectUpdateFlags::LOWGUID) {
             movement_data.low_guid = reader.read_u32::<LittleEndian>().ok();
         }
+
+        if object_update_flags.contains(ObjectUpdateFlags::HIGHGUID) {
+            movement_data.high_guid = reader.read_u32::<LittleEndian>().ok();
+        }
+
         if object_update_flags.contains(ObjectUpdateFlags::HAS_TARGET) {
             let target_guid = read_packed_guid(reader);
             movement_data.target_guid = Some(target_guid);
         }
+
         if object_update_flags.contains(ObjectUpdateFlags::TRANSPORT) {
             let _transport_timer = reader.read_u32::<LittleEndian>()?;
         }
+
         if object_update_flags.contains(ObjectUpdateFlags::VEHICLE) {
             let _vehicle_id = reader.read_u32::<LittleEndian>()?;
             let _vehicle_orientation = reader.read_f32::<LittleEndian>()?;
         }
+
         if object_update_flags.contains(ObjectUpdateFlags::ROTATION) {
             let _go_rotation = reader.read_i64::<LittleEndian>()?;
         }

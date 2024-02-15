@@ -64,7 +64,8 @@ impl PacketHandler for Handler {
             if my_guid != guid {
                 match parsed_block.update_fields.get(&ObjectField::TYPE) {
                     Some(type_mask) => {
-                        if let FieldValue::Long(mask) = type_mask {
+
+                        if let FieldValue::Integer(mask) = type_mask {
                             match *mask {
                                 ObjectTypeMask::IS_PLAYER => {
                                     if players_map.get(&guid).is_none() {
