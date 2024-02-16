@@ -47,6 +47,7 @@ use warden::WardenProcessor;
 use auth::login_challenge;
 
 pub use crate::primary::client::opcodes::Opcode;
+use crate::primary::client::realm::packet::LogoutOutcome;
 use crate::primary::client::types::{ClientFlags};
 use crate::primary::config::{EnvConfig, EnvConfigParams};
 use crate::primary::crypto::warden_crypt::WardenCrypt;
@@ -55,7 +56,7 @@ use crate::primary::shared::session::Session;
 use crate::primary::network::stream::{Reader, Writer};
 use crate::primary::traits::Feature;
 use crate::primary::traits::processor::Processor;
-use crate::primary::types::{HandlerInput, HandlerOutput, IncomePacket, OutcomePacket, ProcessorFunction, ProcessorResult, Signal};
+use crate::primary::types::{HandlerInput, HandlerOutput, IncomingPacket, OutgoingPacket, ProcessorFunction, ProcessorResult, Signal};
 
 pub struct RunOptions<'a> {
     pub external_channel: Option<(BroadcastSender<HandlerOutput>, BroadcastReceiver<HandlerOutput>)>,
@@ -130,8 +131,8 @@ impl Client {
         let notify = Arc::new(Notify::new());
 
         let (signal_sender, signal_receiver) = mpsc::channel::<Signal>(1);
-        let (input_sender, input_receiver) = mpsc::channel::<IncomePacket>(BUFFER_SIZE);
-        let (output_sender, output_receiver) = mpsc::channel::<OutcomePacket>(BUFFER_SIZE);
+        let (input_sender, input_receiver) = mpsc::channel::<IncomingPacket>(BUFFER_SIZE);
+        let (output_sender, output_receiver) = mpsc::channel::<OutgoingPacket>(BUFFER_SIZE);
         let (query_sender, query_receiver) = match options.external_channel {
             Some((sender, receiver)) => (sender, receiver),
             None => broadcast::<HandlerOutput>(BUFFER_SIZE)
@@ -221,7 +222,7 @@ impl Client {
 
     fn handle_packet(
         &mut self,
-        mut input_receiver: Receiver<IncomePacket>,
+        mut input_receiver: Receiver<IncomingPacket>,
         query_sender: BroadcastSender<HandlerOutput>,
         notify: Arc<Notify>,
     ) -> JoinHandle<()> {
@@ -243,7 +244,7 @@ impl Client {
                         }
                     };
 
-                    let IncomePacket { opcode, body: data, .. } = packet;
+                    let IncomingPacket { opcode, body: data, .. } = packet;
 
                     let mut input = HandlerInput {
                         session: Arc::clone(&session),
@@ -273,7 +274,9 @@ impl Client {
                                 }
                             },
                             Err(err) => {
-                                query_sender.broadcast(HandlerOutput::ErrorMessage(err.to_string(), None)).await.unwrap();
+                                query_sender.broadcast(
+                                    HandlerOutput::ErrorMessage(err.to_string(), None)
+                                ).await.unwrap();
                             },
                         };
                     }
@@ -285,7 +288,7 @@ impl Client {
     fn handle_output(
         &mut self,
         signal_sender: Sender<Signal>,
-        output_sender: Sender<OutcomePacket>,
+        output_sender: Sender<OutgoingPacket>,
         query_sender: BroadcastSender<HandlerOutput>,
         mut query_receiver: BroadcastReceiver<HandlerOutput>,
         notify: Arc<Notify>,
@@ -301,6 +304,11 @@ impl Client {
                 let result = query_receiver.recv().await;
                 match result {
                     Ok(output) => {
+                        let connected_to_realm = {
+                            client_flags.lock().unwrap()
+                                .contains(ClientFlags::IS_CONNECTED_TO_REALM)
+                        };
+
                         match output {
                             HandlerOutput::Data(packet) => {
                                 output_sender.send(packet).await.unwrap();
@@ -345,6 +353,22 @@ impl Client {
                             HandlerOutput::Drop => {
                                 break;
                             },
+                            HandlerOutput::ExitRequest => {
+                                if connected_to_realm {
+                                    query_sender.broadcast(
+                                        HandlerOutput::DebugMessage(
+                                            "Starting logout, please wait...".to_string(),
+                                            None
+                                        )
+                                    ).await.unwrap();
+
+                                    let packet = LogoutOutcome {}.unpack().unwrap();
+                                    output_sender.send(packet).await.unwrap();
+                                } else {
+                                    query_sender
+                                        .broadcast(HandlerOutput::ExitConfirmed).await.unwrap();
+                                }
+                            }
                             HandlerOutput::SelectRealm(realm) => {
                                 session.lock().await.selected_realm = Some(realm);
                                 notify.notify_one();
@@ -357,7 +381,9 @@ impl Client {
                         };
                     },
                     Err(err) => {
-                        query_sender.broadcast(HandlerOutput::ErrorMessage(err.to_string(), None)).await.unwrap();
+                        query_sender.broadcast(
+                            HandlerOutput::ErrorMessage(err.to_string(), None)
+                        ).await.unwrap();
                     },
                 };
             }
@@ -366,7 +392,7 @@ impl Client {
 
     fn handle_write(
         &mut self,
-        mut output_receiver: Receiver<OutcomePacket>,
+        mut output_receiver: Receiver<OutgoingPacket>,
         query_sender: BroadcastSender<HandlerOutput>,
     ) -> JoinHandle<()> {
         let writer = Arc::clone(&self._writer);
@@ -405,7 +431,7 @@ impl Client {
 
     fn handle_read(
         &mut self,
-        input_sender: Sender<IncomePacket>,
+        input_sender: Sender<IncomingPacket>,
         mut signal_receiver: Receiver<Signal>,
         query_sender: BroadcastSender<HandlerOutput>,
     ) -> JoinHandle<()> {
@@ -431,7 +457,7 @@ impl Client {
         })
     }
 
-    async fn read_packet(reader: &Arc<Mutex<Option<Reader>>>) -> Result<IncomePacket, Error> {
+    async fn read_packet(reader: &Arc<Mutex<Option<Reader>>>) -> Result<IncomingPacket, Error> {
         let error = Error::new(ErrorKind::NotFound, "Not connected to TCP");
 
         if let Some(reader) = &mut *reader.lock().await {
@@ -447,7 +473,7 @@ impl Client {
 
     async fn write_packet(
         writer: &Arc<Mutex<Option<Writer>>>,
-        packet: &OutcomePacket
+        packet: &OutgoingPacket
     ) -> Result<usize, Error> {
         let mut error = Error::new(ErrorKind::NotFound, "Not connected to TCP");
 
@@ -516,7 +542,7 @@ mod tests {
     use crate::primary::client::Client;
     use crate::primary::client::types::{ClientFlags};
     use crate::primary::shared::session::types::{ActionFlags, StateFlags};
-    use crate::primary::types::{HandlerOutput, IncomePacket, OutcomePacket, Signal};
+    use crate::primary::types::{HandlerOutput, IncomingPacket, OutgoingPacket, Signal};
 
     const HOST: &str = "127.0.0.1";
     // https://users.rust-lang.org/t/async-tests-sometimes-fails/78451
@@ -580,7 +606,7 @@ mod tests {
             client.connect(HOST, local_addr.port()).await.ok();
 
             let (_, signal_receiver) = mpsc::channel::<Signal>(1);
-            let (input_sender, mut input_receiver) = mpsc::channel::<IncomePacket>(1);
+            let (input_sender, mut input_receiver) = mpsc::channel::<IncomingPacket>(1);
             let (query_sender, _) = broadcast::<HandlerOutput>(1);
 
             if let Some((mut stream, _)) = listener.accept().await.ok() {
@@ -613,11 +639,11 @@ mod tests {
             let local_addr = listener.local_addr().unwrap();
             client.connect(HOST, local_addr.port()).await.ok();
 
-            let (output_sender, output_receiver) = mpsc::channel::<OutcomePacket>(1);
+            let (output_sender, output_receiver) = mpsc::channel::<OutgoingPacket>(1);
             let (query_sender, _) = broadcast::<HandlerOutput>(1);
 
             output_sender.send(
-                OutcomePacket { opcode: 0, data: PACKET.to_vec(), json_details: String::new() }
+                OutgoingPacket { opcode: 0, data: PACKET.to_vec(), json_details: String::new() }
             ).await.unwrap();
 
             if let Some((stream, _)) = listener.accept().await.ok() {

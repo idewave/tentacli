@@ -7,6 +7,7 @@ mod realm_split;
 mod request_characters;
 mod set_in_world;
 pub mod types;
+mod logout;
 
 use crate::primary::client::opcodes::Opcode;
 use crate::primary::traits::processor::Processor;
@@ -62,11 +63,25 @@ impl Processor for RealmProcessor {
             Opcode::SMSG_SET_FORCED_REACTIONS => {
                 vec![]
             },
+            Opcode::SMSG_LOGOUT_COMPLETE => {
+                vec![Box::new(logout::Handler)]
+            }
             _ => {
                 vec![]
             },
         };
 
         handlers
+    }
+}
+
+pub mod packet {
+    use crate::primary::client::Opcode;
+    use crate::primary::macros::with_opcode;
+
+    with_opcode! {
+        @world_opcode(Opcode::CMSG_LOGOUT_REQUEST)
+        #[derive(WorldPacket, Serialize, Deserialize, Debug)]
+        pub struct LogoutOutcome {}
     }
 }

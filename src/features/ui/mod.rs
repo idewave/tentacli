@@ -51,6 +51,14 @@ pub struct UI {
     _sender: BroadcastSender<HandlerOutput>,
 }
 
+impl UI {
+    fn handle_exit() {
+        disable_raw_mode().unwrap();
+        execute!(std::io::stdout(), LeaveAlternateScreen, DisableMouseCapture).unwrap();
+        exit(0);
+    }
+}
+
 impl Feature for UI {
     fn new(
         sender: BroadcastSender<HandlerOutput>,
@@ -121,15 +129,20 @@ impl Feature for UI {
 
                                     if code == KeyCode::Char('c') &&
                                     modifiers.contains(KeyModifiers::CONTROL) {
-                                        // TODO: probably need exit from app in different way
-                                        disable_raw_mode().unwrap();
-                                        execute!(
-                                            std::io::stdout(),
-                                            LeaveAlternateScreen,
-                                            DisableMouseCapture
-                                        ).unwrap();
+                                        let is_exit_requested = {
+                                            event_flags.lock().unwrap()
+                                            .contains(UIEventFlags::IS_EXIT_REQUESTED)
+                                        };
 
-                                        exit(0);
+                                        if is_exit_requested {
+                                            // force exit by double ctrl+c
+                                            Self::handle_exit();
+                                        } else {
+                                            event_flags.lock().unwrap().set(
+                                                UIEventFlags::IS_EXIT_REQUESTED, true
+                                            );
+                                            sender.broadcast(HandlerOutput::ExitRequest).await.unwrap();
+                                        }
                                     }
                                 } else if let Event::Resize(_, _) = event {
                                     terminal.lock().unwrap().autoresize().unwrap();
@@ -152,28 +165,45 @@ impl Feature for UI {
                     if let Ok(output) = receiver.recv().await {
                         match output {
                             HandlerOutput::SuccessMessage(message, details) => {
-                                debug_panel.lock().unwrap().add_item(LoggerOutput::Success(message, details));
+                                debug_panel.lock().unwrap().add_item(
+                                    LoggerOutput::Success(message, details)
+                                );
                             },
                             HandlerOutput::ErrorMessage(message, details) => {
-                                debug_panel.lock().unwrap().add_item(LoggerOutput::Error(message, details));
+                                debug_panel.lock().unwrap().add_item(
+                                    LoggerOutput::Error(message, details)
+                                );
                             },
                             HandlerOutput::DebugMessage(message, details) => {
-                                debug_panel.lock().unwrap().add_item(LoggerOutput::Debug(message, details));
+                                debug_panel.lock().unwrap().add_item(
+                                    LoggerOutput::Debug(message, details)
+                                );
                             },
                             HandlerOutput::ResponseMessage(message, details) => {
-                                debug_panel.lock().unwrap().add_item(LoggerOutput::Response(message, details));
+                                debug_panel.lock().unwrap().add_item(
+                                    LoggerOutput::Response(message, details)
+                                );
                             },
                             HandlerOutput::RequestMessage(message, details) => {
-                                debug_panel.lock().unwrap().add_item(LoggerOutput::Request(message, details));
+                                debug_panel.lock().unwrap().add_item(
+                                    LoggerOutput::Request(message, details)
+                                );
                             },
                             HandlerOutput::TransferCharactersList(characters) => {
-                                event_flags.lock().unwrap().set(UIEventFlags::IS_CHARACTERS_MODAL_OPENED, true);
+                                event_flags.lock().unwrap().set(
+                                    UIEventFlags::IS_CHARACTERS_MODAL_OPENED, true
+                                );
                                 characters_modal.lock().unwrap().set_items(characters);
                             },
                             HandlerOutput::TransferRealmsList(realms) => {
-                                event_flags.lock().unwrap().set(UIEventFlags::IS_REALM_MODAL_OPENED, true);
+                                event_flags.lock().unwrap().set(
+                                    UIEventFlags::IS_REALM_MODAL_OPENED, true
+                                );
                                 realm_modal.lock().unwrap().set_items(realms);
                             },
+                            HandlerOutput::ExitConfirmed => {
+                                Self::handle_exit();
+                            }
                             _ => {},
                         }
                     }
