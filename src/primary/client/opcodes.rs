@@ -50,6 +50,8 @@ impl Opcode {
 
     pub const SMSG_CHAR_ENUM: u16 = 59;
     pub const SMSG_LOGIN_SETTIMESPEED: u16 = 66;
+    pub const SMSG_LOGOUT_RESPONSE: u16 = 76;
+    pub const SMSG_LOGOUT_COMPLETE: u16 = 77;
     pub const SMSG_NAME_QUERY_RESPONSE: u16 = 81;
     pub const SMSG_ITEM_QUERY_SINGLE_RESPONSE: u16 = 88;
     pub const SMSG_GAMEOBJECT_QUERY_RESPONSE: u16 = 95;

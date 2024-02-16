@@ -8,7 +8,7 @@ use crate::primary::client::Opcode;
 use crate::primary::crypto::decryptor::{Decryptor};
 use crate::primary::crypto::encryptor::{Encryptor};
 use crate::primary::crypto::warden_crypt::WardenCrypt;
-use crate::primary::types::{IncomePacket, OutcomePacket};
+use crate::primary::types::{IncomingPacket, OutgoingPacket};
 
 pub const INCOME_WORLD_OPCODE_LENGTH: usize = 2;
 pub const OUTCOME_WORLD_PACKET_HEADER_LENGTH: usize = 6;
@@ -36,7 +36,7 @@ impl Reader {
         self._need_sync = true;
     }
 
-    pub async fn read(&mut self) -> Result<IncomePacket, Error> {
+    pub async fn read(&mut self) -> Result<IncomingPacket, Error> {
         let (opcode, body) = if let Some(decryptor) = self._decryptor.as_mut() {
             if self._need_sync {
                 self._need_sync = false;
@@ -94,7 +94,7 @@ impl Reader {
             (opcode, body)
         };
 
-        Ok(IncomePacket { opcode, body })
+        Ok(IncomingPacket { opcode, body })
     }
 }
 
@@ -121,7 +121,7 @@ impl Writer {
         self._need_sync = true;
     }
 
-    pub async fn write(&mut self, packet: &OutcomePacket) -> Result<usize, Error> {
+    pub async fn write(&mut self, packet: &OutgoingPacket) -> Result<usize, Error> {
         let packet_bytes = match self._encryptor.as_mut() {
             Some(encryptor) => {
                 if self._need_sync {

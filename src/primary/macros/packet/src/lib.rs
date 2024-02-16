@@ -90,8 +90,8 @@ pub fn derive_login_packet(input: TokenStream) -> TokenStream {
                 Ok([header, body].concat())
             }
 
-            pub fn unpack(&mut self) -> #result<#types::OutcomePacket> {
-                Ok(#types::OutcomePacket {
+            pub fn unpack(&mut self) -> #result<#types::OutgoingPacket> {
+                Ok(#types::OutgoingPacket {
                     opcode: Self::opcode() as u32,
                     data: self.to_binary()?,
                     json_details: self.get_json_details()?,
@@ -246,8 +246,8 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
                 Ok([header, body].concat())
             }
 
-            pub fn unpack_with_opcode(&mut self, opcode: u32) -> #result<#types::OutcomePacket> {
-                Ok(#types::OutcomePacket {
+            pub fn unpack_with_opcode(&mut self, opcode: u32) -> #result<#types::OutgoingPacket> {
+                Ok(#types::OutgoingPacket {
                     opcode,
                     data: self.to_binary_with_opcode(opcode)?,
                     json_details: self.get_json_details()?,
@@ -302,8 +302,8 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
                     Ok([header, body].concat())
                 }
 
-                pub fn unpack(&mut self) -> #result<#types::OutcomePacket> {
-                    Ok(#types::OutcomePacket {
+                pub fn unpack(&mut self) -> #result<#types::OutgoingPacket> {
+                    Ok(#types::OutgoingPacket {
                         opcode: Self::opcode(),
                         data: self.to_binary()?,
                         json_details: self.get_json_details()?,

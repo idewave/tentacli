@@ -16,5 +16,6 @@ bitflags! {
         const IS_CHARACTERS_MODAL_OPENED = 0x00000001;
         const IS_REALM_MODAL_OPENED = 0x00000010;
         const IS_EVENT_HANDLED = 0x00000100;
+        const IS_EXIT_REQUESTED = 0x00001000;
     }
 }

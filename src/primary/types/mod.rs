@@ -28,18 +28,20 @@ pub struct HandlerInput {
 #[derive(Debug, Clone)]
 pub enum HandlerOutput {
     // data transfer
-    Data(OutcomePacket),
+    ChatMessage(Message),
+    Data(OutgoingPacket),
     TransferCharactersList(Vec<Player>),
     TransferRealmsList(Vec<Realm>),
     UpdatePlayer(Player),
-    ChatMessage(Message),
 
     // commands
     ConnectionRequest(String, u16),
-    Freeze,
     Drop,
-    SelectRealm(Realm),
+    ExitConfirmed,
+    ExitRequest,
+    Freeze,
     SelectCharacter(Player),
+    SelectRealm(Realm),
 
     // messages
     ResponseMessage(String, Option<String>),
@@ -56,13 +58,13 @@ pub type ProcessorResult = Vec<Box<dyn PacketHandler + Send>>;
 pub type ProcessorFunction = Box<dyn Fn(&mut HandlerInput) -> ProcessorResult + Send>;
 
 #[derive(Default, Debug)]
-pub struct IncomePacket {
+pub struct IncomingPacket {
     pub opcode: u16,
     pub body: Vec<u8>,
 }
 
 #[derive(Default, Debug, Clone)]
-pub struct OutcomePacket {
+pub struct OutgoingPacket {
     pub opcode: u32,
     pub data: Vec<u8>,
     pub json_details: String,
