@@ -26,22 +26,20 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let mut response = Vec::new();
 
-        let (parsed_blocks, json) = if input.opcode == Some(Opcode::SMSG_UPDATE_OBJECT) {
-            let (Income { parsed_blocks }, json) = Income::from_binary(
-                input.data.as_ref().unwrap()
-            )?;
+        let (parsed_blocks, json) = if input.opcode == Opcode::SMSG_UPDATE_OBJECT {
+            let (Income { parsed_blocks }, json) = Income::from_binary(&input.data)?;
 
             (parsed_blocks, json)
         } else {
-            let (CompressedIncome { parsed_blocks }, json) = CompressedIncome::from_binary(
-                input.data.as_ref().unwrap()
-            )?;
+            let (CompressedIncome {
+                parsed_blocks
+            }, json) = CompressedIncome::from_binary(&input.data)?;
 
             (parsed_blocks, json)
         };
 
         response.push(HandlerOutput::ResponseMessage(
-            Opcode::get_server_opcode_name(input.opcode.unwrap()),
+            Opcode::get_server_opcode_name(input.opcode),
             Some(json),
         ));
 

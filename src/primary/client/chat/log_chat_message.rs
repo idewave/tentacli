@@ -56,10 +56,10 @@ impl PacketHandler for Handler {
             message,
             message_type,
             ..
-        }, json) = Income::from_binary(input.data.as_ref().unwrap())?;
+        }, json) = Income::from_binary(&input.data)?;
 
         response.push(HandlerOutput::ResponseMessage(
-            Opcode::get_server_opcode_name(input.opcode.unwrap()),
+            Opcode::get_server_opcode_name(input.opcode),
             Some(json),
         ));
 
