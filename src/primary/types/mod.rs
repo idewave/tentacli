@@ -19,16 +19,16 @@ pub enum Signal {
 #[derive(Debug)]
 pub struct HandlerInput {
     pub session: Arc<Mutex<Session>>,
-    pub data: Option<Vec<u8>>,
+    pub data: Vec<u8>,
     pub data_storage: Arc<SyncMutex<DataStorage>>,
-    pub opcode: Option<u16>,
+    pub opcode: u16,
 }
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum HandlerOutput {
     // data transfer
-    Data(PacketOutcome),
+    Data(OutcomePacket),
     TransferCharactersList(Vec<Player>),
     TransferRealmsList(Vec<Realm>),
     UpdatePlayer(Player),
@@ -55,4 +55,15 @@ pub type ProcessorResult = Vec<Box<dyn PacketHandler + Send>>;
 
 pub type ProcessorFunction = Box<dyn Fn(&mut HandlerInput) -> ProcessorResult + Send>;
 
-pub type PacketOutcome = (u32, Vec<u8>, String);
+#[derive(Default, Debug)]
+pub struct IncomePacket {
+    pub opcode: u16,
+    pub body: Vec<u8>,
+}
+
+#[derive(Default, Debug, Clone)]
+pub struct OutcomePacket {
+    pub opcode: u32,
+    pub data: Vec<u8>,
+    pub json_details: String,
+}

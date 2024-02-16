@@ -94,11 +94,13 @@ impl Opcode {
     pub const SMSG_SET_PCT_SPELL_MODIFIER: u16 = 615;
     pub const SMSG_SET_FORCED_REACTIONS: u16 = 677;
     pub const SMSG_SPELL_FAILED_OTHER: u16 = 678;
+    pub const SMSG_INIT_WORLD_STATES: u16 = 706;
     pub const SMSG_WARDEN_DATA: u16 = 742;
     pub const SMSG_ADDON_INFO: u16 = 751;
     pub const SMSG_EXPECTED_SPAM_RECORDS: u16 = 818;
     pub const SMSG_MOTD: u16 = 829;
     pub const SMSG_REALM_SPLIT: u16 = 907;
+    pub const SMSG_TIME_SYNC_REQ: u16 = 912;
     pub const SMSG_FEATURE_SYSTEM_STATUS: u16 = 969;
     pub const SMSG_QUESTGIVER_STATUS_MULTIPLE: u16 = 1048;
     pub const SMSG_ACHIEVEMENT_EARNED: u16 = 1128;

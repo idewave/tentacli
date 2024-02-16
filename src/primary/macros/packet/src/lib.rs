@@ -69,13 +69,12 @@ pub fn derive_login_packet(input: TokenStream) -> TokenStream {
     let output = quote! {
         impl #ident {
             pub fn from_binary(buffer: &[u8]) -> #result<(Self, String)> {
-                let mut omit_bytes = Self::opcode().to_le_bytes().len();
-                let mut initial_reader = #cursor::new(buffer[omit_bytes..].to_vec());
+                let mut initial_reader = #cursor::new(buffer.to_vec());
                 let mut initial = Self {
                     #(#field_names: #initial_initializers),*
                 };
 
-                let mut reader = #cursor::new(buffer[omit_bytes..].to_vec());
+                let mut reader = #cursor::new(buffer.to_vec());
                 let mut instance = Self {
                     #(#field_names: #initializers),*
                 };
@@ -91,8 +90,12 @@ pub fn derive_login_packet(input: TokenStream) -> TokenStream {
                 Ok([header, body].concat())
             }
 
-            pub fn unpack(&mut self) -> #result<#types::PacketOutcome> {
-                Ok((Self::opcode() as u32, self.to_binary()?, self.get_json_details()?))
+            pub fn unpack(&mut self) -> #result<#types::OutcomePacket> {
+                Ok(#types::OutcomePacket {
+                    opcode: Self::opcode() as u32,
+                    data: self.to_binary()?,
+                    json_details: self.get_json_details()?,
+                })
             }
 
             pub fn get_json_details(&mut self) -> #result<String> {
@@ -138,7 +141,6 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
         byteorder_write,
         cursor,
         deflate_decoder,
-        incoming_header_length,
         json_formatter,
         read,
         result,
@@ -209,21 +211,18 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
     let mut output = quote! {
         impl #ident {
             pub fn from_binary(buffer: &[u8]) -> #result<(Self, String)> {
-                let mut omit_bytes = #incoming_header_length;
-
                 let mut buffer = match #is_compressed {
                     true => {
                         let mut internal_buffer: Vec<u8> = Vec::new();
                         // 4 bytes uncompressed + 2 bytes used by zlib
-                        omit_bytes += 6;
-
+                        let omit_bytes = 6;
                         let data = &buffer[omit_bytes..];
                         let mut decoder = #deflate_decoder::new(data);
                         #read::read_to_end(&mut decoder, &mut internal_buffer)?;
 
                         internal_buffer.to_vec()
                     },
-                    false => buffer[omit_bytes..].to_vec(),
+                    false => buffer.to_vec(),
                 };
 
                 let mut initial_reader = #cursor::new(buffer.to_vec());
@@ -247,8 +246,12 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
                 Ok([header, body].concat())
             }
 
-            pub fn unpack_with_opcode(&mut self, opcode: u32) -> #result<#types::PacketOutcome> {
-                Ok((opcode, self.to_binary_with_opcode(opcode)?, self.get_json_details()?))
+            pub fn unpack_with_opcode(&mut self, opcode: u32) -> #result<#types::OutcomePacket> {
+                Ok(#types::OutcomePacket {
+                    opcode,
+                    data: self.to_binary_with_opcode(opcode)?,
+                    json_details: self.get_json_details()?,
+                })
             }
 
             pub fn get_json_details(&mut self) -> #result<String> {
@@ -299,8 +302,12 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
                     Ok([header, body].concat())
                 }
 
-                pub fn unpack(&mut self) -> #result<#types::PacketOutcome> {
-                    Ok((Self::opcode(), self.to_binary()?, self.get_json_details()?))
+                pub fn unpack(&mut self) -> #result<#types::OutcomePacket> {
+                    Ok(#types::OutcomePacket {
+                        opcode: Self::opcode(),
+                        data: self.to_binary()?,
+                        json_details: self.get_json_details()?,
+                    })
                 }
             }
         }

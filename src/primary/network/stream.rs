@@ -5,9 +5,13 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 
 use crate::primary::client::Opcode;
-use crate::primary::crypto::decryptor::{Decryptor, INCOMING_HEADER_LENGTH, INCOMING_OPCODE_LENGTH};
-use crate::primary::crypto::encryptor::Encryptor;
+use crate::primary::crypto::decryptor::{Decryptor};
+use crate::primary::crypto::encryptor::{Encryptor};
 use crate::primary::crypto::warden_crypt::WardenCrypt;
+use crate::primary::types::{IncomePacket, OutcomePacket};
+
+pub const INCOME_WORLD_OPCODE_LENGTH: usize = 2;
+pub const OUTCOME_WORLD_PACKET_HEADER_LENGTH: usize = 6;
 
 pub struct Reader {
     _stream: BufReader<OwnedReadHalf>,
@@ -32,47 +36,72 @@ impl Reader {
         self._need_sync = true;
     }
 
-    pub async fn read(&mut self) -> Result<Vec<u8>, Error> {
-        if let Some(decryptor) = self._decryptor.as_mut() {
+    pub async fn read(&mut self) -> Result<IncomePacket, Error> {
+        let (opcode, body) = if let Some(decryptor) = self._decryptor.as_mut() {
             if self._need_sync {
                 self._need_sync = false;
-            } else {
-                let mut header = [0u8; INCOMING_HEADER_LENGTH];
-                self._stream.read_exact(&mut header).await?;
 
-                let mut header_reader = Cursor::new(decryptor.decrypt(&header));
-                let size = ReadBytesExt::read_u16::<BigEndian>(&mut header_reader)?;
+                let mut buffer = [0u8; 65536];
+                let bytes_count = self._stream.read(&mut buffer).await?;
+
+                let mut header_reader = Cursor::new(&buffer[2..4]);
                 let opcode = ReadBytesExt::read_u16::<LittleEndian>(&mut header_reader)?;
 
-                let mut body = vec![0u8; size as usize - INCOMING_OPCODE_LENGTH];
+                (opcode, buffer[4..bytes_count].to_vec())
+            } else {
+                let mut buffer = [0u8; 1];
+                self._stream.read_exact(&mut buffer).await?;
+
+                let mut first_byte = buffer[0];
+                first_byte = decryptor.decrypt(&[first_byte])[0];
+
+                let is_long_packet = first_byte >= 0x80;
+
+                let buffer_size = if is_long_packet { 4 } else { 3 };
+                let mut buffer = vec![0u8; buffer_size];
+                self._stream.read_exact(&mut buffer).await?;
+
+                let mut header = decryptor.decrypt(&buffer);
+                if is_long_packet {
+                    first_byte = first_byte & 0x7Fu8;
+                }
+                header.insert(0, first_byte);
+
+                let mut header_reader = Cursor::new(&header);
+                let size = if is_long_packet {
+                    ReadBytesExt::read_u24::<BigEndian>(&mut header_reader)? as usize
+                } else {
+                    ReadBytesExt::read_u16::<BigEndian>(&mut header_reader)? as usize
+                };
+
+                let opcode = ReadBytesExt::read_u16::<LittleEndian>(&mut header_reader).unwrap();
+
+                let mut body = vec![0u8; size - INCOME_WORLD_OPCODE_LENGTH];
                 self._stream.read_exact(&mut body).await?;
 
                 if opcode == Opcode::SMSG_WARDEN_DATA {
                     body = self._warden_crypt.lock().unwrap().as_mut().unwrap().decrypt(&body);
                 }
 
-                let mut packet: Vec<u8> = Vec::new();
-                packet.append(&mut size.to_be_bytes().to_vec());
-                packet.append(&mut opcode.to_le_bytes().to_vec());
-                packet.append(&mut body);
-
-                return Ok(packet);
+                (opcode, body)
             }
-        }
+        } else {
+            let mut buffer = [0u8; 65536];
+            let bytes_count = self._stream.read(&mut buffer).await?;
+            let body = buffer[1..bytes_count].to_vec();
+            let opcode = buffer[0] as u16;
 
-        let mut buffer = [0u8; 65536];
-        match self._stream.read(&mut buffer).await {
-            Ok(bytes_count) => {
-                Ok(buffer[..bytes_count].to_vec())
-            },
-            Err(err) => Err(err),
-        }
+            (opcode, body)
+        };
+
+        Ok(IncomePacket { opcode, body })
     }
 }
 
 pub struct Writer {
     _stream: OwnedWriteHalf,
     _encryptor: Option<Encryptor>,
+    _warden_crypt: Arc<SyncMutex<Option<WardenCrypt>>>,
     _need_sync: bool,
 }
 
@@ -81,29 +110,42 @@ impl Writer {
         Self {
             _stream: writer,
             _encryptor: None,
+            _warden_crypt: Arc::new(SyncMutex::new(None)),
             _need_sync: false,
         }
     }
 
-    pub fn init(&mut self, session_key: &[u8]) {
+    pub fn init(&mut self, session_key: &[u8], warden_crypt: Arc<SyncMutex<Option<WardenCrypt>>>) {
         self._encryptor = Some(Encryptor::new(session_key));
+        self._warden_crypt = warden_crypt;
         self._need_sync = true;
     }
 
-    pub async fn write(&mut self, packet: &[u8]) -> Result<usize, Error> {
-        let packet = match self._encryptor.as_mut() {
+    pub async fn write(&mut self, packet: &OutcomePacket) -> Result<usize, Error> {
+        let packet_bytes = match self._encryptor.as_mut() {
             Some(encryptor) => {
                 if self._need_sync {
                     self._need_sync = false;
-                    packet.to_vec()
+                    packet.data.to_vec()
                 } else {
-                    encryptor.encrypt(packet)
+                    let header = encryptor.encrypt(
+                        &packet.data[..OUTCOME_WORLD_PACKET_HEADER_LENGTH]
+                    );
+
+                    let body = if packet.opcode == Opcode::CMSG_WARDEN_DATA {
+                        self._warden_crypt.lock().unwrap().as_mut().unwrap()
+                            .encrypt(&packet.data[OUTCOME_WORLD_PACKET_HEADER_LENGTH..])
+                    } else {
+                        packet.data[OUTCOME_WORLD_PACKET_HEADER_LENGTH..].to_vec()
+                    };
+
+                    [header.to_vec(), body.to_vec()].concat()
                 }
             },
-            _ => packet.to_vec(),
+            _ => packet.data.to_vec(),
         };
 
-        match self._stream.write(&packet).await {
+        match self._stream.write(&packet_bytes).await {
             Ok(bytes_amount) => {
                 let _ = &self._stream.flush().await.unwrap();
                 Ok(bytes_amount)

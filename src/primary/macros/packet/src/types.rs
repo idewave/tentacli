@@ -10,7 +10,6 @@ pub struct Imports {
     pub cursor: TokenStream2,
     pub deflate_decoder: TokenStream2,
     pub json_formatter: TokenStream2,
-    pub incoming_header_length: TokenStream2,
     pub read: TokenStream2,
     pub result: TokenStream2,
     pub serialize: TokenStream2,
@@ -28,7 +27,6 @@ impl Imports {
             deflate_decoder: quote!(flate2::read::DeflateDecoder),
             json_formatter: quote!(crate::primary::serializers::formatters::JsonFormatter),
             // TODO: need to reorganize constants
-            incoming_header_length: quote!(crate::primary::crypto::decryptor::INCOMING_HEADER_LENGTH),
             read: quote!(std::io::Read),
             result: quote!(anyhow::Result),
             serialize: quote!(serde::Serialize),

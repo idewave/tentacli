@@ -65,9 +65,9 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let mut response = Vec::new();
 
-        let (OpcodeIncome { opcode }, json) = OpcodeIncome::from_binary(input.data.as_ref().unwrap())?;
+        let (OpcodeIncome { opcode }, json) = OpcodeIncome::from_binary(&input.data)?;
         response.push(HandlerOutput::ResponseMessage(
-            Opcode::get_server_opcode_name(input.opcode.unwrap()),
+            Opcode::get_server_opcode_name(input.opcode),
             Some(json),
         ));
 
@@ -77,12 +77,10 @@ impl PacketHandler for Handler {
                     module_md5,
                     module_decrypt_key,
                     compressed_size
-                }, json) = ModuleUseIncome::from_binary(
-                    input.data.as_ref().unwrap()
-                )?;
+                }, json) = ModuleUseIncome::from_binary(&input.data)?;
 
                 response.push(HandlerOutput::ResponseMessage(
-                    Opcode::get_server_opcode_name(input.opcode.unwrap()),
+                    Opcode::get_server_opcode_name(input.opcode),
                     Some(json),
                 ));
 
@@ -101,12 +99,13 @@ impl PacketHandler for Handler {
                 ])
             },
             WardenOpcode::WARDEN_SMSG_MODULE_CACHE => {
-                let (ModuleCacheIncome { partial, .. }, json) = ModuleCacheIncome::from_binary(
-                    input.data.as_ref().unwrap()
-                )?;
+                let (ModuleCacheIncome {
+                    partial,
+                    ..
+                }, json) = ModuleCacheIncome::from_binary(&input.data)?;
 
                 response.push(HandlerOutput::ResponseMessage(
-                    Opcode::get_server_opcode_name(input.opcode.unwrap()),
+                    Opcode::get_server_opcode_name(input.opcode),
                     Some(json),
                 ));
 
@@ -130,12 +129,12 @@ impl PacketHandler for Handler {
             },
             WardenOpcode::WARDEN_SMSG_HASH_REQUEST => {
                 if let Some(module_info) = input.session.lock().await.warden_module_info.as_mut() {
-                    let (HashRequestIncome { seed }, json) = HashRequestIncome::from_binary(
-                        input.data.as_ref().unwrap()
-                    )?;
+                    let (HashRequestIncome {
+                        seed
+                    }, json) = HashRequestIncome::from_binary(&input.data)?;
 
                     response.push(HandlerOutput::ResponseMessage(
-                        Opcode::get_server_opcode_name(input.opcode.unwrap()),
+                        Opcode::get_server_opcode_name(input.opcode),
                         Some(json),
                     ));
 
