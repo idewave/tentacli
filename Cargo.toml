@@ -31,7 +31,7 @@ dotenv = "0.15.0"
 flate2 = "1.0.24"
 futures = "0.3.21"
 hmac-sha = "0.6.1"
-idewave_packet = { path = "./src/primary/macros/packet" }
+idewave_packet = "1.0.1"
 num-bigint = "0.4.3"
 rand = "0.8.5"
 regex = "1.5.6"
