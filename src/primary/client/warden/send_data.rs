@@ -67,7 +67,8 @@ impl PacketHandler for Handler {
 
         let (OpcodeIncome { opcode }, json) = OpcodeIncome::from_binary(&input.data)?;
         response.push(HandlerOutput::ResponseMessage(
-            Opcode::get_server_opcode_name(input.opcode),
+            Opcode::get_opcode_name(input.opcode as u32)
+                .unwrap_or(format!("Unknown opcode: {}", input.opcode)),
             Some(json),
         ));
 
@@ -80,7 +81,8 @@ impl PacketHandler for Handler {
                 }, json) = ModuleUseIncome::from_binary(&input.data)?;
 
                 response.push(HandlerOutput::ResponseMessage(
-                    Opcode::get_server_opcode_name(input.opcode),
+                    Opcode::get_opcode_name(input.opcode as u32)
+                        .unwrap_or(format!("Unknown opcode: {}", input.opcode)),
                     Some(json),
                 ));
 
@@ -104,8 +106,9 @@ impl PacketHandler for Handler {
                     ..
                 }, json) = ModuleCacheIncome::from_binary(&input.data)?;
 
-                response.push(HandlerOutput::ResponseMessage(
-                    Opcode::get_server_opcode_name(input.opcode),
+                response.push(HandlerOutput::DebugMessage(
+                    Opcode::get_opcode_name(input.opcode as u32)
+                        .unwrap_or(format!("Unknown opcode: {}", input.opcode)),
                     Some(json),
                 ));
 
@@ -133,8 +136,9 @@ impl PacketHandler for Handler {
                         seed
                     }, json) = HashRequestIncome::from_binary(&input.data)?;
 
-                    response.push(HandlerOutput::ResponseMessage(
-                        Opcode::get_server_opcode_name(input.opcode),
+                    response.push(HandlerOutput::DebugMessage(
+                        Opcode::get_opcode_name(input.opcode as u32)
+                            .unwrap_or(format!("Unknown opcode: {}", input.opcode)),
                         Some(json),
                     ));
 
