@@ -12,7 +12,7 @@ use crate::primary::types::{HandlerInput, ProcessorResult};
 pub struct PlayerProcessor;
 
 impl Processor for PlayerProcessor {
-    fn process_input(input: &mut HandlerInput) -> ProcessorResult {
+    fn get_handlers(input: &mut HandlerInput) -> ProcessorResult {
         let handlers: ProcessorResult = match input.opcode {
             Opcode::SMSG_COMPRESSED_UPDATE_OBJECT |
             Opcode::SMSG_UPDATE_OBJECT => {

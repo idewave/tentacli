@@ -9,7 +9,7 @@ use crate::primary::types::{HandlerInput, ProcessorResult};
 pub struct SpellProcessor;
 
 impl Processor for SpellProcessor {
-    fn process_input(input: &mut HandlerInput) -> ProcessorResult {
+    fn get_handlers(input: &mut HandlerInput) -> ProcessorResult {
         let handlers: ProcessorResult = match input.opcode {
             Opcode::SMSG_SPELL_GO => {
                 vec![Box::new(handle_spell_go::Handler)]

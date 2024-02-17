@@ -10,7 +10,7 @@ use crate::primary::types::{HandlerInput, ProcessorResult};
 pub struct ChatProcessor;
 
 impl Processor for ChatProcessor {
-    fn process_input(input: &mut HandlerInput) -> ProcessorResult {
+    fn get_handlers(input: &mut HandlerInput) -> ProcessorResult {
         let handlers: ProcessorResult = match input.opcode {
             Opcode::SMSG_MESSAGECHAT => {
                 vec![

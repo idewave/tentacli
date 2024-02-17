@@ -6,7 +6,7 @@ use crate::primary::types::{HandlerInput, ProcessorResult};
 pub struct TradeProcessor;
 
 impl Processor for TradeProcessor {
-    fn process_input(_: &mut HandlerInput) -> ProcessorResult {
+    fn get_handlers(_: &mut HandlerInput) -> ProcessorResult {
         let handlers: ProcessorResult = vec![];
 
         handlers

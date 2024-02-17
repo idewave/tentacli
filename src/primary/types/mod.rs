@@ -57,7 +57,7 @@ pub type ProcessorResult = Vec<Box<dyn PacketHandler + Send>>;
 
 pub type ProcessorFunction = Box<dyn Fn(&mut HandlerInput) -> ProcessorResult + Send>;
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct IncomingPacket {
     pub opcode: u16,
     pub body: Vec<u8>,
