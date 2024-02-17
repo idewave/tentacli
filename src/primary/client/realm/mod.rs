@@ -16,7 +16,7 @@ use crate::primary::types::{HandlerInput, ProcessorResult};
 pub struct RealmProcessor;
 
 impl Processor for RealmProcessor {
-    fn process_input(input: &mut HandlerInput) -> ProcessorResult {
+    fn get_handlers(input: &mut HandlerInput) -> ProcessorResult {
         let handlers: ProcessorResult = match input.opcode {
             Opcode::SMSG_AUTH_CHALLENGE => {
                 vec![

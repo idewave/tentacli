@@ -16,7 +16,7 @@ use crate::primary::types::{HandlerInput, ProcessorResult};
 pub struct AuthProcessor;
 
 impl Processor for AuthProcessor {
-    fn process_input(input: &mut HandlerInput) -> ProcessorResult {
+    fn get_handlers(input: &mut HandlerInput) -> ProcessorResult {
         let opcode = input.opcode as u8;
 
         let handlers: ProcessorResult = match opcode {

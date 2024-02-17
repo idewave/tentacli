@@ -8,7 +8,7 @@ use crate::primary::types::{HandlerInput, ProcessorResult};
 pub struct MovementProcessor;
 
 impl Processor for MovementProcessor {
-    fn process_input(input: &mut HandlerInput) -> ProcessorResult {
+    fn get_handlers(input: &mut HandlerInput) -> ProcessorResult {
         let handlers: ProcessorResult = vec![
             Box::new(detect_motion::Handler),
         ];

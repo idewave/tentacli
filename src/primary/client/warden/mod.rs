@@ -9,7 +9,7 @@ use crate::primary::types::{HandlerInput, ProcessorResult};
 pub struct WardenProcessor;
 
 impl Processor for WardenProcessor {
-    fn process_input(input: &mut HandlerInput) -> ProcessorResult {
+    fn get_handlers(input: &mut HandlerInput) -> ProcessorResult {
         let handlers: ProcessorResult = match input.opcode {
             Opcode::SMSG_WARDEN_DATA => {
                 vec![Box::new(send_data::Handler)]
