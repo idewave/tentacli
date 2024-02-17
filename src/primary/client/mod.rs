@@ -407,7 +407,8 @@ impl Client {
                             Ok(bytes_sent) => {
                                 let message = format!(
                                     "{}: {} bytes sent",
-                                    Opcode::get_client_opcode_name(packet.opcode),
+                                    Opcode::get_opcode_name(packet.opcode)
+                                        .unwrap_or(packet.opcode.to_string()),
                                     bytes_sent,
                                 );
 

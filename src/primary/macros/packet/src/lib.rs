@@ -30,7 +30,7 @@ pub fn derive_login_packet(input: TokenStream) -> TokenStream {
     for field in fields.iter() {
         let ident = format_ident!("{}", field.ident.as_ref().unwrap());
 
-        if field.attrs.iter().any(|attr| attr.path.is_ident("dynamic_field")) {
+        if field.attrs.iter().any(|attr| attr.path().is_ident("dynamic_field")) {
             dynamic_fields.push(Some(ident));
         }
     }
@@ -151,7 +151,7 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
 
     let mut is_compressed = quote!(false);
     let mut has_opcode = true;
-    if attrs.iter().any(|attr| attr.path.is_ident("options")) {
+    if attrs.iter().any(|attr| attr.path().is_ident("options")) {
         let attributes = attrs.iter().next().unwrap();
         let attrs: Attributes = attributes.parse_args().unwrap();
 
@@ -172,7 +172,7 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
     for field in fields.iter() {
         let ident = format_ident!("{}", field.ident.as_ref().unwrap());
 
-        if field.attrs.iter().any(|attr| attr.path.is_ident("dynamic_field")) {
+        if field.attrs.iter().any(|attr| attr.path().is_ident("dynamic_field")) {
             dynamic_fields.push(Some(ident));
         }
     }

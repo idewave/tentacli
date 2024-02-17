@@ -21,7 +21,8 @@ impl PacketHandler for Handler {
         let (Income { caster_guid, .. }, json) = Income::from_binary(&input.data)?;
 
         response.push(HandlerOutput::ResponseMessage(
-            Opcode::get_server_opcode_name(input.opcode),
+            Opcode::get_opcode_name(input.opcode as u32)
+                .unwrap_or(format!("Unknown opcode: {}", input.opcode)),
             Some(json),
         ));
 
