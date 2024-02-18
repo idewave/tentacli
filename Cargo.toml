@@ -1,6 +1,6 @@
 [package]
 name = "tentacli"
-version = "5.2.1"
+version = "6.0.0"
 edition = "2021"
 authors = ["Sergio Ivanuzzo <sergio.ivanuzzo@gmail.com>"]
 description = "Smart wow-client (cli), you could use it as separate app or integrate into your own project."
