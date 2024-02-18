@@ -250,6 +250,7 @@ impl DebugPanel {
         } else {
             self.selected_output = String::new();
         }
+        self.details_panel.set_output(self.selected_output.clone());
     }
 }
 
@@ -280,8 +281,6 @@ impl UIComponent for DebugPanel {
         let total_errors_amount = { self.get_total_errors_amount() };
         let total_items = { self.get_total_items() };
         let selected_index = { self.get_selected_index() };
-
-        self.details_panel.set_output(self.selected_output.clone());
 
         let horizontal_chunks = Layout::default()
             .direction(Direction::Horizontal)
