@@ -146,5 +146,5 @@ pub mod traits {
 }
 
 pub mod types {
-    pub use crate::primary::types::HandlerOutput;
+    pub use crate::primary::types::{HandlerOutput, IncomingPacket, OutgoingPacket};
 }

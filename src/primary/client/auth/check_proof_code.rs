@@ -22,9 +22,7 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let mut response = Vec::new();
 
-        let (Income { code, .. }, _) = Income::from_binary(
-            input.data.as_ref().unwrap()
-        )?;
+        let (Income { code, .. }, _) = Income::from_binary(&input.data)?;
 
         if code != AuthLogonResult::AUTH_LOGON_SUCCESS {
             let message = match code {

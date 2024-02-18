@@ -19,12 +19,11 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let mut response = Vec::new();
 
-        let (Income { packed_guid, movement_info }, json) = Income::from_binary(
-            &input.data.as_ref().unwrap().to_vec()
-        )?;
+        let (Income { packed_guid, movement_info }, json) = Income::from_binary(&input.data)?;
 
         response.push(HandlerOutput::ResponseMessage(
-            Opcode::get_server_opcode_name(input.opcode.unwrap()),
+            Opcode::get_opcode_name(input.opcode as u32)
+                .unwrap_or(format!("Unknown opcode: {}", input.opcode)),
             Some(json),
         ));
 

@@ -47,16 +47,17 @@ use warden::WardenProcessor;
 use auth::login_challenge;
 
 pub use crate::primary::client::opcodes::Opcode;
-use crate::primary::client::types::ClientFlags;
+use crate::primary::client::realm::packet::LogoutOutcome;
+use crate::primary::client::types::{ClientFlags};
 use crate::primary::config::{EnvConfig, EnvConfigParams};
-use crate::primary::crypto::encryptor::OUTCOMING_HEADER_LENGTH;
 use crate::primary::crypto::warden_crypt::WardenCrypt;
 use crate::primary::shared::storage::DataStorage;
 use crate::primary::shared::session::Session;
 use crate::primary::network::stream::{Reader, Writer};
 use crate::primary::traits::Feature;
 use crate::primary::traits::processor::Processor;
-use crate::primary::types::{HandlerInput, HandlerOutput, PacketOutcome, ProcessorFunction, ProcessorResult, Signal};
+use crate::primary::types::{HandlerInput, HandlerOutput, IncomingPacket, OutgoingPacket, ProcessorFunction, ProcessorResult, Signal};
+use crate::primary::utils::encode_hex;
 
 pub struct RunOptions<'a> {
     pub external_channel: Option<(BroadcastSender<HandlerOutput>, BroadcastReceiver<HandlerOutput>)>,
@@ -118,7 +119,7 @@ impl Client {
             *reader.lock().await = Some(_reader);
 
             let mut _writer = Writer::new(tx);
-            _writer.init(&session_key);
+            _writer.init(&session_key, Arc::clone(&warden_crypt));
             *writer.lock().await = Some(_writer);
         }
     }
@@ -131,8 +132,7 @@ impl Client {
         let notify = Arc::new(Notify::new());
 
         let (signal_sender, signal_receiver) = mpsc::channel::<Signal>(1);
-        let (input_sender, input_receiver) = mpsc::channel::<Vec<u8>>(BUFFER_SIZE);
-        let (output_sender, output_receiver) = mpsc::channel::<PacketOutcome>(BUFFER_SIZE);
+        let (output_sender, output_receiver) = mpsc::channel::<OutgoingPacket>(BUFFER_SIZE);
         let (query_sender, query_receiver) = match options.external_channel {
             Some((sender, receiver)) => (sender, receiver),
             None => broadcast::<HandlerOutput>(BUFFER_SIZE)
@@ -202,12 +202,12 @@ impl Client {
         output_sender.send(login_challenge(&account)?).await?;
 
         let mut all_tasks = vec![
-            self.handle_read(input_sender.clone(), signal_receiver, query_sender.clone()),
-            self.handle_write(output_receiver, query_sender.clone()),
-            self.handle_packet(input_receiver, query_sender.clone(), notify.clone()),
+            self.handle_read(signal_receiver, query_sender.clone(), notify.clone()),
             self.handle_output(
-                signal_sender.clone(), output_sender.clone(), query_sender.clone(), query_receiver, notify.clone()
+                signal_sender.clone(), output_sender.clone(), query_sender.clone(),
+                query_receiver, notify.clone(),
             ),
+            self.handle_write(output_receiver, query_sender.clone()),
         ];
 
         let features_tasks: Vec<JoinHandle<()>> =
@@ -220,62 +220,91 @@ impl Client {
         Ok(())
     }
 
-    fn handle_packet(
+    fn handle_read(
         &mut self,
-        mut input_receiver: Receiver<Vec<u8>>,
+        mut signal_receiver: Receiver<Signal>,
         query_sender: BroadcastSender<HandlerOutput>,
         notify: Arc<Notify>,
     ) -> JoinHandle<()> {
+        let reader = Arc::clone(&self._reader);
         let session = Arc::clone(&self.session);
         let client_flags = Arc::clone(&self._flags);
         let data_storage = Arc::clone(&self.data_storage);
 
         tokio::spawn(async move {
             loop {
-                if let Some(packet) = input_receiver.recv().await {
-                    let processors = {
-                        let connected_to_realm = {
-                            client_flags.lock().unwrap().contains(ClientFlags::IS_CONNECTED_TO_REALM)
-                        };
+                tokio::select! {
+                    _ = signal_receiver.recv() => {},
+                    result = Self::read_packet(&reader) => {
+                        match result {
+                            Ok(packet) => {
+                                let processors = {
+                                    let connected_to_realm = {
+                                        client_flags.lock().unwrap().contains(
+                                            ClientFlags::IS_CONNECTED_TO_REALM
+                                        )
+                                    };
 
-                        match connected_to_realm {
-                            true => Self::get_realm_processors(),
-                            false => Self::get_login_processors(),
-                        }
-                    };
-
-                    let mut input = HandlerInput {
-                        session: Arc::clone(&session),
-                        data: Some(packet),
-                        data_storage: Arc::clone(&data_storage),
-                        opcode: None,
-                    };
-
-                    let handler_list = processors
-                        .iter()
-                        .flat_map(|processor| processor(&mut input))
-                        .collect::<ProcessorResult>();
-
-                    for mut handler in handler_list {
-                        let response = handler.handle(&mut input).await;
-                        match response {
-                            Ok(outputs) => {
-                                for output in outputs {
-                                    match output {
-                                        HandlerOutput::Freeze => {
-                                            notify.notified().await;
-                                        },
-                                        _ => {
-                                            query_sender.broadcast(output).await.unwrap();
-                                        },
+                                    match connected_to_realm {
+                                        true => Self::get_realm_processors(),
+                                        false => Self::get_login_processors(),
                                     }
+                                };
+
+                                let IncomingPacket { opcode, body: data, .. } = packet.clone();
+
+                                let mut input = HandlerInput {
+                                    session: Arc::clone(&session),
+                                    data,
+                                    data_storage: Arc::clone(&data_storage),
+                                    opcode,
+                                };
+
+                                let handler_list = processors
+                                    .iter()
+                                    .flat_map(|processor| processor(&mut input))
+                                    .collect::<ProcessorResult>();
+
+                                if handler_list.is_empty() {
+                                    let opcode_name = Opcode::get_opcode_name(
+                                        packet.opcode as u32
+                                    ).unwrap_or(format!("Unknown opcode: {}", input.opcode));
+
+                                    query_sender.broadcast(HandlerOutput::ResponseMessage(
+                                        opcode_name,
+                                        Some(encode_hex(&packet.body)),
+                                    )).await.unwrap();
+                                }
+
+                                for mut handler in handler_list {
+                                    let response = handler.handle(&mut input).await;
+                                    match response {
+                                        Ok(outputs) => {
+                                            for output in outputs {
+                                                match output {
+                                                    HandlerOutput::Freeze => {
+                                                        notify.notified().await;
+                                                    },
+                                                    _ => {
+                                                        query_sender.broadcast(output).await.unwrap();
+                                                    },
+                                                }
+                                            }
+                                        },
+                                        Err(err) => {
+                                            query_sender.broadcast(
+                                                HandlerOutput::ErrorMessage(err.to_string(), None)
+                                            ).await.unwrap();
+                                        },
+                                    };
                                 }
                             },
                             Err(err) => {
                                 query_sender.broadcast(HandlerOutput::ErrorMessage(err.to_string(), None)).await.unwrap();
-                            },
-                        };
-                    }
+                                sleep(Duration::from_secs(1)).await;
+                            }
+                        }
+                    },
                 }
             }
         })
@@ -284,7 +313,7 @@ impl Client {
     fn handle_output(
         &mut self,
         signal_sender: Sender<Signal>,
-        output_sender: Sender<PacketOutcome>,
+        output_sender: Sender<OutgoingPacket>,
         query_sender: BroadcastSender<HandlerOutput>,
         mut query_receiver: BroadcastReceiver<HandlerOutput>,
         notify: Arc<Notify>,
@@ -300,21 +329,14 @@ impl Client {
                 let result = query_receiver.recv().await;
                 match result {
                     Ok(output) => {
+                        let connected_to_realm = {
+                            client_flags.lock().unwrap()
+                                .contains(ClientFlags::IS_CONNECTED_TO_REALM)
+                        };
+
                         match output {
-                            HandlerOutput::Data((opcode, packet, json)) => {
-                                let packet = match opcode {
-                                    Opcode::CMSG_WARDEN_DATA => {
-                                        let header = &packet[..OUTCOMING_HEADER_LENGTH];
-                                        let body = warden_crypt.lock()
-                                            .unwrap().as_mut()
-                                            .unwrap().encrypt(&packet[OUTCOMING_HEADER_LENGTH..]);
-
-                                        [header.to_vec(), body.to_vec()].concat()
-                                    },
-                                    _ => packet,
-                                };
-
-                                output_sender.send((opcode, packet, json)).await.unwrap();
+                            HandlerOutput::Data(packet) => {
+                                output_sender.send(packet).await.unwrap();
                             },
                             HandlerOutput::ConnectionRequest(host, port) => {
                                 match Self::connect_inner(&host, port).await {
@@ -356,6 +378,22 @@ impl Client {
                             HandlerOutput::Drop => {
                                 break;
                             },
+                            HandlerOutput::ExitRequest => {
+                                if connected_to_realm {
+                                    query_sender.broadcast(
+                                        HandlerOutput::DebugMessage(
+                                            "Starting logout, please wait...".to_string(),
+                                            None
+                                        )
+                                    ).await.unwrap();
+
+                                    let packet = LogoutOutcome {}.unpack().unwrap();
+                                    output_sender.send(packet).await.unwrap();
+                                } else {
+                                    query_sender
+                                        .broadcast(HandlerOutput::ExitConfirmed).await.unwrap();
+                                }
+                            }
                             HandlerOutput::SelectRealm(realm) => {
                                 session.lock().await.selected_realm = Some(realm);
                                 notify.notify_one();
@@ -368,7 +406,9 @@ impl Client {
                         };
                     },
                     Err(err) => {
-                        query_sender.broadcast(HandlerOutput::ErrorMessage(err.to_string(), None)).await.unwrap();
+                        query_sender.broadcast(
+                            HandlerOutput::ErrorMessage(err.to_string(), None)
+                        ).await.unwrap();
                     },
                 };
             }
@@ -377,29 +417,36 @@ impl Client {
 
     fn handle_write(
         &mut self,
-        mut output_receiver: Receiver<PacketOutcome>,
+        mut output_receiver: Receiver<OutgoingPacket>,
         query_sender: BroadcastSender<HandlerOutput>,
     ) -> JoinHandle<()> {
         let writer = Arc::clone(&self._writer);
 
         tokio::spawn(async move {
             loop {
-                if let Some((opcode, packet, json)) = output_receiver.recv().await {
-                    if !packet.is_empty() {
-                        let result = Self::write_packet(&writer, packet).await;
+                if let Some(packet) = output_receiver.recv().await {
+                    if !packet.data.is_empty() {
+                        let result = Self::write_packet(&writer, &packet).await;
 
                         match result {
                             Ok(bytes_sent) => {
                                 let message = format!(
                                     "{}: {} bytes sent",
-                                    Opcode::get_client_opcode_name(opcode),
+                                    Opcode::get_opcode_name(packet.opcode)
+                                        .unwrap_or(packet.opcode.to_string()),
                                     bytes_sent,
                                 );
 
-                                query_sender.broadcast(HandlerOutput::RequestMessage(message, Some(json))).await.unwrap();
+                                query_sender.broadcast(
+                                    HandlerOutput::RequestMessage(
+                                        message, Some(packet.json_details)
+                                    )
+                                ).await.unwrap();
                             },
                             Err(err) => {
-                                query_sender.broadcast(HandlerOutput::ErrorMessage(err.to_string(), None)).await.unwrap();
+                                query_sender.broadcast(
+                                    HandlerOutput::ErrorMessage(err.to_string(), None)
+                                ).await.unwrap();
                             }
                         }
                     }
@@ -408,49 +455,15 @@ impl Client {
         })
     }
 
-    fn handle_read(
-        &mut self,
-        input_sender: Sender<Vec<u8>>,
-        mut signal_receiver: Receiver<Signal>,
-        query_sender: BroadcastSender<HandlerOutput>,
-    ) -> JoinHandle<()> {
-        let reader = Arc::clone(&self._reader);
-
-        tokio::spawn(async move {
-            loop {
-                tokio::select! {
-                    _ = signal_receiver.recv() => {},
-                    result = Self::read_packet(&reader) => {
-                        match result {
-                            Ok(packets) => {
-                                input_sender.send(packets).await.unwrap();
-                            },
-                            Err(err) => {
-                                query_sender.broadcast(HandlerOutput::ErrorMessage(err.to_string(), None)).await.unwrap();
-                                sleep(Duration::from_secs(1)).await;
-                            }
-                        }
-                    },
-                }
-            }
-        })
-    }
-
-    async fn read_packet(reader: &Arc<Mutex<Option<Reader>>>) -> Result<Vec<u8>, Error> {
-        let mut error = Error::new(ErrorKind::NotFound, "Not connected to TCP");
+    async fn read_packet(reader: &Arc<Mutex<Option<Reader>>>) -> Result<IncomingPacket, Error> {
+        let error = Error::new(ErrorKind::NotFound, "Not connected to TCP");
 
         if let Some(reader) = &mut *reader.lock().await {
             let result = reader.read().await;
-            match result {
-                Ok(packet) => {
-                    if !packet.is_empty() {
-                        return Ok(packet);
-                    }
-                }
-                Err(err) => {
-                    error = err;
-                },
-            }
+            return match result {
+                Ok(packet) => Ok(packet),
+                Err(err) => Err(err),
+            };
         }
 
         Err(error)
@@ -458,12 +471,12 @@ impl Client {
 
     async fn write_packet(
         writer: &Arc<Mutex<Option<Writer>>>,
-        packet: Vec<u8>
+        packet: &OutgoingPacket
     ) -> Result<usize, Error> {
         let mut error = Error::new(ErrorKind::NotFound, "Not connected to TCP");
 
         if let Some(writer) = &mut *writer.lock().await {
-            match writer.write(&packet).await {
+            match writer.write(packet).await {
                 Ok(bytes_sent) => {
                     return Ok(bytes_sent);
                 },
@@ -478,18 +491,18 @@ impl Client {
 
     fn get_login_processors() -> Vec<ProcessorFunction> {
         vec![
-            Box::new(AuthProcessor::process_input),
+            Box::new(AuthProcessor::get_handlers),
         ]
     }
 
     fn get_realm_processors() -> Vec<ProcessorFunction> {
         vec![
-            Box::new(ChatProcessor::process_input),
-            Box::new(MovementProcessor::process_input),
-            Box::new(PlayerProcessor::process_input),
-            Box::new(RealmProcessor::process_input),
-            Box::new(SpellProcessor::process_input),
-            Box::new(WardenProcessor::process_input),
+            Box::new(ChatProcessor::get_handlers),
+            Box::new(MovementProcessor::get_handlers),
+            Box::new(PlayerProcessor::get_handlers),
+            Box::new(RealmProcessor::get_handlers),
+            Box::new(SpellProcessor::get_handlers),
+            Box::new(WardenProcessor::get_handlers),
         ]
     }
 }
@@ -519,15 +532,14 @@ impl Client {
 #[cfg(test)]
 mod tests {
     use async_broadcast::broadcast;
-    use futures::FutureExt;
-    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::io::{AsyncReadExt};
     use tokio::net::TcpListener;
-    use tokio::sync::mpsc;
+    use tokio::sync::{mpsc};
 
     use crate::primary::client::Client;
-    use crate::primary::client::types::ClientFlags;
+    use crate::primary::client::types::{ClientFlags};
     use crate::primary::shared::session::types::{ActionFlags, StateFlags};
-    use crate::primary::types::{HandlerOutput, PacketOutcome, Signal};
+    use crate::primary::types::{HandlerOutput, OutgoingPacket};
 
     const HOST: &str = "127.0.0.1";
     // https://users.rust-lang.org/t/async-tests-sometimes-fails/78451
@@ -584,50 +596,18 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_client_read_incoming_data() {
-        let mut client = Client::new();
-        if let Some(listener) = TcpListener::bind(format!("{}:{}", HOST, PORT)).await.ok() {
-            let local_addr = listener.local_addr().unwrap();
-            client.connect(HOST, local_addr.port()).await.ok();
-
-            let (_, signal_receiver) = mpsc::channel::<Signal>(1);
-            let (input_sender, mut input_receiver) = mpsc::channel::<Vec<u8>>(1);
-            let (query_sender, _) = broadcast::<HandlerOutput>(1);
-
-            if let Some((mut stream, _)) = listener.accept().await.ok() {
-                stream.write(&PACKET).await.unwrap();
-                stream.flush().await.unwrap();
-
-                let read_task = client.handle_read(input_sender, signal_receiver, query_sender);
-
-                let test_task = tokio::spawn(async move {
-                    loop {
-                        if let Some(packet) = input_receiver.recv().await {
-                            assert_eq!(PACKET.to_vec(), packet);
-                            break;
-                        }
-                    }
-                });
-
-                tokio::select! {
-                    _ = read_task.fuse() => {},
-                    _ = test_task.fuse() => {},
-                }
-            }
-        }
-    }
-
-    #[tokio::test]
     async fn test_client_write_outcoming_data() {
         let mut client = Client::new();
         if let Some(listener) = TcpListener::bind(format!("{}:{}", HOST, PORT)).await.ok() {
             let local_addr = listener.local_addr().unwrap();
             client.connect(HOST, local_addr.port()).await.ok();
 
-            let (output_sender, output_receiver) = mpsc::channel::<PacketOutcome>(1);
+            let (output_sender, output_receiver) = mpsc::channel::<OutgoingPacket>(1);
             let (query_sender, _) = broadcast::<HandlerOutput>(1);
 
-            output_sender.send((0, PACKET.to_vec(), String::new())).await.unwrap();
+            output_sender.send(
+                OutgoingPacket { opcode: 0, data: PACKET.to_vec(), json_details: String::new() }
+            ).await.unwrap();
 
             if let Some((stream, _)) = listener.accept().await.ok() {
                 let buffer_size = PACKET.to_vec().len();

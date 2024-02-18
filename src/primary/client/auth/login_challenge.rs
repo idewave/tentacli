@@ -3,7 +3,7 @@ use anyhow::{Result as AnyResult};
 
 use crate::primary::client::Opcode;
 use crate::primary::macros::with_opcode;
-use crate::primary::types::{PacketOutcome, TerminatedString};
+use crate::primary::types::{OutgoingPacket, TerminatedString};
 
 with_opcode! {
     @login_opcode(Opcode::LOGIN_CHALLENGE)
@@ -28,7 +28,7 @@ with_opcode! {
 const PACKET_LENGTH_WITHOUT_ACCOUNT: u16 = 30;
 
 // TODO: need to refactor endianness converting for strings
-pub fn handler(account: &str) -> AnyResult<PacketOutcome> {
+pub fn handler(account: &str) -> AnyResult<OutgoingPacket> {
     let account_length = account.chars().count() as u8;
     let packet_size = PACKET_LENGTH_WITHOUT_ACCOUNT + account_length as u16;
 

@@ -29,9 +29,7 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let mut response = Vec::new();
 
-        let (CheckEmptyIncome { unknown, .. }, _) = CheckEmptyIncome::from_binary(
-            input.data.as_ref().unwrap(),
-        )?;
+        let (CheckEmptyIncome { unknown, .. }, _) = CheckEmptyIncome::from_binary(&input.data)?;
 
         if unknown == 1 {
             response.push(HandlerOutput::ErrorMessage("Player not exists".to_string(), None));
@@ -39,12 +37,18 @@ impl PacketHandler for Handler {
             return Ok(response);
         }
 
-        let (Income { packed_guid, name, race, class, gender, .. }, json) = Income::from_binary(
-            input.data.as_ref().unwrap(),
-        )?;
+        let (Income {
+            packed_guid,
+            name,
+            race,
+            class,
+            gender,
+            ..
+        }, json) = Income::from_binary(&input.data)?;
 
         response.push(HandlerOutput::ResponseMessage(
-            Opcode::get_server_opcode_name(input.opcode.unwrap()),
+            Opcode::get_opcode_name(input.opcode as u32)
+                .unwrap_or(format!("Unknown opcode: {}", input.opcode)),
             Some(json),
         ));
 
