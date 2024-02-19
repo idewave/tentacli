@@ -60,7 +60,6 @@ use crate::primary::types::{HandlerInput, HandlerOutput, IncomingPacket, Outgoin
 use crate::primary::utils::encode_hex;
 
 pub struct RunOptions<'a> {
-    pub external_channel: Option<(BroadcastSender<HandlerOutput>, BroadcastReceiver<HandlerOutput>)>,
     pub external_features: Vec<Box<dyn Feature>>,
     pub config_path: &'a str,
     pub account: &'a str,
@@ -133,10 +132,7 @@ impl Client {
 
         let (signal_sender, signal_receiver) = mpsc::channel::<Signal>(1);
         let (output_sender, output_receiver) = mpsc::channel::<OutgoingPacket>(BUFFER_SIZE);
-        let (query_sender, query_receiver) = match options.external_channel {
-            Some((sender, receiver)) => (sender, receiver),
-            None => broadcast::<HandlerOutput>(BUFFER_SIZE)
-        };
+        let (query_sender, query_receiver) = broadcast::<HandlerOutput>(BUFFER_SIZE);
 
         match Self::connect_inner(&host, port).await {
             Ok(stream) => {
@@ -177,13 +173,11 @@ impl Client {
             if #[cfg(feature = "ui")] {
                 use crate::features::ui::UI;
 
-                let ui = UI::new(query_sender.clone(), query_receiver.clone());
-                features.push(Box::new(ui));
+                features.push(Box::new(UI::new()));
             } else if #[cfg(feature = "console")] {
                 use crate::features::console::Console;
 
-                let console = Console::new(query_sender.clone(), query_receiver.clone());
-                features.push(Box::new(console));
+                features.push(Box::new(Console::new()));
             }
         }
 
@@ -201,13 +195,17 @@ impl Client {
 
         output_sender.send(login_challenge(&account)?).await?;
 
+        for feature in &mut features {
+            feature.set_broadcast_channel(query_sender.clone(), query_receiver.clone());
+        }
+
         let mut all_tasks = vec![
             self.handle_read(signal_receiver, query_sender.clone(), notify.clone()),
             self.handle_output(
                 signal_sender.clone(), output_sender.clone(), query_sender.clone(),
                 query_receiver, notify.clone(),
             ),
-            self.handle_write(output_receiver, query_sender.clone()),
+            self.handle_write(output_receiver, query_sender),
         ];
 
         let features_tasks: Vec<JoinHandle<()>> =

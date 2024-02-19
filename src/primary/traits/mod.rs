@@ -9,10 +9,11 @@ pub mod paginator;
 pub mod processor;
 
 pub trait Feature: Send {
-    fn new(
+    fn new() -> Self where Self: Sized;
+    fn set_broadcast_channel(
+        &mut self,
         sender: BroadcastSender<HandlerOutput>,
         receiver: BroadcastReceiver<HandlerOutput>,
-    ) -> Self where Self: Sized;
-
+    );
     fn get_tasks(&mut self) -> Vec<JoinHandle<()>>;
 }

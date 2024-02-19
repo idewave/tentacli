@@ -47,8 +47,8 @@ use crate::primary::types::HandlerOutput;
 pub const MARGIN: u16 = 1;
 
 pub struct UI {
-    _receiver: BroadcastReceiver<HandlerOutput>,
-    _sender: BroadcastSender<HandlerOutput>,
+    _receiver: Option<BroadcastReceiver<HandlerOutput>>,
+    _sender: Option<BroadcastSender<HandlerOutput>>,
 }
 
 impl UI {
@@ -60,19 +60,25 @@ impl UI {
 }
 
 impl Feature for UI {
-    fn new(
-        sender: BroadcastSender<HandlerOutput>,
-        receiver: BroadcastReceiver<HandlerOutput>,
-    ) -> Self where Self: Sized {
+    fn new() -> Self where Self: Sized {
         Self {
-            _receiver: receiver,
-            _sender: sender,
+            _receiver: None,
+            _sender: None,
         }
     }
 
+    fn set_broadcast_channel(
+        &mut self,
+        sender: BroadcastSender<HandlerOutput>,
+        receiver: BroadcastReceiver<HandlerOutput>
+    ) {
+        self._sender = Some(sender);
+        self._receiver = Some(receiver);
+    }
+
     fn get_tasks(&mut self) -> Vec<JoinHandle<()>> {
-        let sender = self._sender.clone();
-        let mut receiver = self._receiver.clone();
+        let sender = self._sender.as_ref().unwrap().clone();
+        let mut receiver = self._receiver.as_mut().unwrap().clone();
 
         enable_raw_mode().unwrap();
         execute!(std::io::stdout(), EnterAlternateScreen, EnableMouseCapture).unwrap();
