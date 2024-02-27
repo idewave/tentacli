@@ -153,3 +153,7 @@ pub mod traits {
 pub mod types {
     pub use crate::primary::types::{HandlerOutput, IncomingPacket, OutgoingPacket};
 }
+
+pub mod errors {
+    pub use crate::primary::errors::{FieldError};
+}

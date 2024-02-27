@@ -1,7 +1,7 @@
 pub mod client;
 mod config;
 mod crypto;
-mod errors;
+pub mod errors;
 pub mod shared;
 mod macros;
 mod network;
