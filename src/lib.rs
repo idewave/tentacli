@@ -33,23 +33,29 @@
 //!     let (query_sender, query_receiver) = broadcast::<HandlerOutput>(100);
 //!
 //!     pub struct MyFeature {
-//!         _receiver: BroadcastReceiver<HandlerOutput>,
-//!         _sender: BroadcastSender<HandlerOutput>,
+//!         _receiver: Option<BroadcastReceiver<HandlerOutput>>,
+//!         _sender: Option<BroadcastSender<HandlerOutput>>,
 //!     }
 //!
 //!     impl Feature for MyFeature {
-//!         fn new(
-//!             sender: BroadcastSender<HandlerOutput>,
-//!             receiver: BroadcastReceiver<HandlerOutput>
-//!         ) -> Self where Self: Sized {
+//!         fn new() -> Self where Self: Sized {
 //!             Self {
-//!                 _receiver: receiver,
-//!                 _sender: sender,
+//!                 _receiver: None,
+//!                 _sender: None,
 //!             }
 //!         }
 //!
+//!         fn set_broadcast_channel(
+//!             &mut self,
+//!             sender: BroadcastSender<HandlerOutput>,
+//!             receiver: BroadcastReceiver<HandlerOutput>
+//!         ) {
+//!             self._sender = Some(sender);
+//!             self._receiver = Some(receiver);
+//!         }
+//!
 //!         fn get_tasks(&mut self) -> Vec<JoinHandle<()>> {
-//!             let mut receiver = self._receiver.clone();
+//!             let mut receiver = self._receiver.as_mut().unwrap().clone();
 //!
 //!             let handle_smth = || {
 //!                 tokio::spawn(async move {
@@ -58,8 +64,8 @@
 //!                             match output {
 //!                                 HandlerOutput::SuccessMessage(message, _) => {
 //!                                     println!("{}", message);
-//!                                 },
-//!                                 _ => {},
+//!                                 }
+//!                                 _ => {}
 //!                             }
 //!                         }
 //!                     }
@@ -71,8 +77,7 @@
 //!     }
 //!
 //!     let options = RunOptions {
-//!         external_channel: Some((query_sender.clone(), query_receiver.clone())),
-//!         external_features: vec![Box::new(MyFeature::new(query_sender, query_receiver))],
+//!         external_features: vec![Box::new(MyFeature::new())],
 //!         account: "account_name",
 //!         config_path: "./dir/another_dir/ConfigFileName.yml",
 //!         dotenv_path: "./path/to/.env"
@@ -147,4 +152,8 @@ pub mod traits {
 
 pub mod types {
     pub use crate::primary::types::{HandlerOutput, IncomingPacket, OutgoingPacket};
+}
+
+pub mod errors {
+    pub use crate::primary::errors::{FieldError};
 }

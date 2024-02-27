@@ -28,7 +28,7 @@ realm and character for autoselect (or set them empty to select manually)
 It's always welcome. Just create pull request with your improvements, bugfix etc.
 
 ### Want to discuss ?
-Join us on Discord: https://discord.gg/wcqXekEvE6 !
+Join us on Discord: https://discord.gg/2qa6dS3Aj6 !
 
 ### If you want to support...
 ...you could buy me a [ko-fi](https://ko-fi.com/idewave)

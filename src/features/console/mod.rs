@@ -6,23 +6,29 @@ use crate::primary::traits::Feature;
 use crate::primary::types::HandlerOutput;
 
 pub struct Console {
-    _receiver: BroadcastReceiver<HandlerOutput>,
-    _sender: BroadcastSender<HandlerOutput>,
+    _receiver: Option<BroadcastReceiver<HandlerOutput>>,
+    _sender: Option<BroadcastSender<HandlerOutput>>,
 }
 
 impl Feature for Console {
-    fn new(
-        sender: BroadcastSender<HandlerOutput>,
-        receiver: BroadcastReceiver<HandlerOutput>
-    ) -> Self where Self: Sized {
+    fn new() -> Self where Self: Sized {
         Self {
-            _receiver: receiver,
-            _sender: sender,
+            _receiver: None,
+            _sender: None,
         }
     }
 
+    fn set_broadcast_channel(
+        &mut self,
+        sender: BroadcastSender<HandlerOutput>,
+        receiver: BroadcastReceiver<HandlerOutput>
+    ) {
+        self._sender = Some(sender);
+        self._receiver = Some(receiver);
+    }
+
     fn get_tasks(&mut self) -> Vec<JoinHandle<()>> {
-        let mut receiver = self._receiver.clone();
+        let mut receiver = self._receiver.as_mut().unwrap().clone();
 
         let handle_input = || {
             tokio::spawn(async move {
