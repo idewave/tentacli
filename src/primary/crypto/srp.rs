@@ -52,7 +52,7 @@ impl Srp {
         let result = D::new()
             .chain(self.calculate_xor_hash::<D>())
             .chain(Self::calculate_account_hash::<D>(account))
-            .chain(&self.salt)
+            .chain(self.salt)
             .chain(self.public_ephemeral.to_bytes_le().1)
             .chain(self.server_ephemeral.to_bytes_le().1)
             .chain(&self.session_key)

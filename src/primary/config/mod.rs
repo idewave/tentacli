@@ -95,7 +95,7 @@ impl Config {
 
         Ok(Self {
             common: common_options,
-            connection_data: connection_data,
+            connection_data,
             addons: vec![
                 AddonInfo { name: "Blizzard_AchievementUI".to_string(), flags: 0, modulus_crc: 0, urlcrc_crc: 0 },
                 AddonInfo { name: "Blizzard_ArenaUI".to_string(), flags: 0, modulus_crc: 0, urlcrc_crc: 0 },
@@ -158,7 +158,7 @@ impl Config {
             config["auto_create_character_for_new_account"].as_bool().unwrap()
         };
 
-        return CommonOptions {
+        CommonOptions {
             auto_create_character_for_new_account,
         }
     }
