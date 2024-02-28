@@ -4,6 +4,8 @@ mod handle_update_data;
 pub mod types;
 pub mod get_characters_list;
 pub mod player_login;
+mod check_character_create_status;
+mod traits;
 
 use crate::primary::client::opcodes::Opcode;
 use crate::primary::traits::processor::Processor;
@@ -49,6 +51,11 @@ impl Processor for PlayerProcessor {
                     Box::new(player_login::Handler),
                 ]
             },
+            Opcode::SMSG_CHAR_CREATE => {
+                vec![
+                    Box::new(check_character_create_status::Handler),
+                ]
+            },
             _ => vec![],
         };
 
@@ -59,12 +66,13 @@ impl Processor for PlayerProcessor {
 pub mod packet {
     use crate::primary::client::Opcode;
     use crate::primary::macros::with_opcode;
+    use crate::primary::types::TerminatedString;
 
     with_opcode! {
         @world_opcode(Opcode::CMSG_CHAR_CREATE)
         #[derive(WorldPacket, Serialize, Deserialize, Debug)]
         pub struct CharCreateOutcome {
-            pub name: String,
+            pub name: TerminatedString,
             pub race: u8,
             pub class: u8,
             pub gender: u8,
