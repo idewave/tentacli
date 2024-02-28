@@ -20,12 +20,12 @@ pub trait CharacterCreateToolkit {
 
             format!("{}{}", first_letter.to_uppercase(), string.to_lowercase())
         } else {
-            format!("{}", string.to_lowercase())
+            string.to_lowercase()
         }
     }
 
     fn get_random_race() -> u8 {
-        let races = vec![
+        let races = &[
             Race::HUMAN,
             Race::ORC,
             Race::DWARF,
@@ -39,7 +39,7 @@ pub trait CharacterCreateToolkit {
     }
 
     fn get_random_class() -> u8 {
-        let races = vec![
+        let races = &[
             Class::WARRIOR,
             Class::ROGUE,
         ];
@@ -49,7 +49,7 @@ pub trait CharacterCreateToolkit {
     }
 
     fn get_random_gender() -> u8 {
-        let races = vec![
+        let races = &[
             Gender::GENDER_MALE,
             Gender::GENDER_FEMALE,
         ];
