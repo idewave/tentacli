@@ -1,18 +1,21 @@
 use num_bigint::{BigInt, Sign, ToBigInt};
-use sha1::{Digest};
+use sha1::{Digest, Sha1};
 
+#[derive(Debug)]
 pub struct Srp {
+    pub session_key: Vec<u8>,
     modulus: BigInt,
     generator: BigInt,
     private_ephemeral: BigInt,
     public_ephemeral: BigInt,
     server_ephemeral: BigInt,
-    session_key: Vec<u8>,
+    salt: [u8; 32],
+    client_proof: Option<[u8; 20]>,
 }
 
 // public methods
 impl Srp {
-    pub fn new(n: &[u8], g: &[u8], server_ephemeral: &[u8; 32]) -> Self {
+    pub fn new(n: &[u8], g: &[u8], server_ephemeral: &[u8; 32], salt: [u8; 32]) -> Self {
         let private_ephemeral: [u8; 19] = rand::random();
 
         let modulus = BigInt::from_bytes_le(Sign::Plus, n);
@@ -23,12 +26,14 @@ impl Srp {
         let server_ephemeral = BigInt::from_bytes_le(Sign::Plus, server_ephemeral);
 
         Self {
+            session_key: Vec::new(),
             modulus,
             generator,
             private_ephemeral,
             public_ephemeral,
             server_ephemeral,
-            session_key: Vec::new(),
+            salt,
+            client_proof: None,
         }
     }
 
@@ -40,26 +45,60 @@ impl Srp {
         self.session_key.to_vec()
     }
 
-    pub fn calculate_proof<D>(
-        &mut self,
-        account: &str,
-        password: &str,
-        salt: &[u8]
-    ) -> Vec<u8>
+    pub fn calculate_proof<D>(&mut self, account: &str) -> [u8; 20]
     where
         D: Digest,
     {
-        self.session_key = self.calculate_session_key::<D>(account, password, salt);
-
-        D::new()
+        let result = D::new()
             .chain(self.calculate_xor_hash::<D>())
             .chain(Self::calculate_account_hash::<D>(account))
-            .chain(salt)
+            .chain(&self.salt)
             .chain(self.public_ephemeral.to_bytes_le().1)
             .chain(self.server_ephemeral.to_bytes_le().1)
             .chain(&self.session_key)
             .finalize()
-            .to_vec()
+            .to_vec();
+
+        let mut output = [0u8; 20];
+        output.copy_from_slice(&result);
+
+        self.client_proof = Some(output);
+
+        output
+    }
+
+    pub fn calculate_session_key<D>(&mut self, account: &str, password: &str)
+        where
+            D: Digest,
+    {
+        let salt = self.salt;
+        let x = self.calculate_x::<D>(account, password, &salt);
+        let verifier = self.generator.modpow(
+            &x,
+            &self.modulus,
+        );
+
+        self.session_key = Self::calculate_interleaved::<D>(
+            self.calculate_s::<D>(x, verifier)
+        );
+    }
+
+    pub fn validate_proof(&mut self, server_proof: [u8; 20]) -> bool {
+        let client_proof = {
+            let hasher = Sha1::new();
+
+            let result = hasher
+                .chain(self.public_ephemeral())
+                .chain(self.client_proof.unwrap())
+                .chain(self.session_key.clone())
+                .finalize();
+
+            let mut hashed_proof = [0u8; 20];
+            hashed_proof.copy_from_slice(&result);
+            hashed_proof
+        };
+
+        client_proof == server_proof
     }
 }
 
@@ -133,20 +172,6 @@ impl Srp {
             &self.modulus,
         );
         s
-    }
-
-    fn calculate_session_key<D>(&mut self, account: &str, password: &str, salt: &[u8]) -> Vec<u8>
-    where
-        D: Digest,
-    {
-        let x = self.calculate_x::<D>(account, password, salt);
-        let verifier = self.generator.modpow(
-            &x,
-            &self.modulus,
-        );
-        Self::calculate_interleaved::<D>(
-            self.calculate_s::<D>(x, verifier)
-        )
     }
 
     fn calculate_interleaved<D>(s: BigInt) -> Vec<u8>

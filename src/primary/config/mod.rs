@@ -66,6 +66,7 @@ pub struct EnvConfigParams<'a> {
     pub dotenv_path: &'a str,
 }
 
+#[derive(Debug)]
 pub struct Config {
     pub connection_data: ConnectionData,
     pub addons: Vec<AddonInfo>,
