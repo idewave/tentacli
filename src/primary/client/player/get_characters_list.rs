@@ -2,13 +2,12 @@ use anyhow::bail;
 use async_trait::async_trait;
 use regex::Regex;
 
+use crate::packet::player::CharCreateOutcome;
 use crate::primary::client::{Opcode, Player};
+use crate::primary::client::player::globals::CharacterEnumOutcome;
+use crate::primary::client::player::traits::CharacterCreateToolkit;
 use crate::primary::errors::CharacterListError;
-use crate::primary::types::{
-    HandlerInput,
-    HandlerOutput,
-    HandlerResult,
-};
+use crate::primary::types::{HandlerInput, HandlerOutput, HandlerResult, TerminatedString};
 use crate::primary::traits::packet_handler::PacketHandler;
 
 #[derive(WorldPacket, Serialize, Deserialize, Debug)]
@@ -37,31 +36,65 @@ impl PacketHandler for Handler {
         };
 
         if me_exists {
-            return Ok(vec![]);
+            return Ok(response);
         }
+
+        let auto_create_character_for_new_account = {
+            let guard = input.session.lock().await;
+            let config = guard.get_config()?;
+            config.common.auto_create_character_for_new_account
+        };
 
         if characters.is_empty() {
-            return Ok(vec![]);
+            return if auto_create_character_for_new_account {
+                let random_name = Self::generate_random_string(true);
+                response.push(HandlerOutput::ResponseMessage(
+                    format!("Creating character with name \"{}\"", random_name),
+                    None,
+                ));
+
+                response.push(HandlerOutput::Data(CharCreateOutcome {
+                    name: TerminatedString::from(random_name),
+                    race: Self::get_random_race(),
+                    class: Self::get_random_class(),
+                    gender: Self::get_random_gender(),
+                    skin: 0,
+                    face: 0,
+                    hair_style: 0,
+                    hair_color: 0,
+                    facial_hair: 0,
+                    outfit_id: 0,
+                }.unpack()?));
+
+                response.push(HandlerOutput::Data(CharacterEnumOutcome::default().unpack()?));
+
+                Ok(response)
+            } else {
+                Ok(response)
+            }
         }
 
-        let autoselect_character_name = {
+        let name_pattern = {
             let guard = input.session.lock().await;
             let config = guard.get_config()?;
             config.connection_data.autoselect_character_name.to_string()
         };
 
-        if autoselect_character_name.is_empty() {
+        let autoselect_character: bool = !name_pattern.is_empty();
+
+        if !autoselect_character {
             response.push(HandlerOutput::TransferCharactersList(characters));
             response.push(HandlerOutput::Freeze);
         } else {
-            let re = Regex::new(&autoselect_character_name).unwrap();
-            if let Some(character) = characters.into_iter().find(|item| re.is_match(&item.name[..])) {
+            let re = Regex::new(&name_pattern).unwrap();
+            if let Some(character) = characters.into_iter().find(|item| re.is_match(&item.name[..]))
+            {
                 response.push(HandlerOutput::DebugMessage(
                     format!("Selected \"{}\" Character", character.name),
                     None,
                 ));
                 input.session.lock().await.me = Some(character);
-            } else {
+            } else if !auto_create_character_for_new_account {
                 bail!(CharacterListError::NotFound);
             }
         }
@@ -69,3 +102,5 @@ impl PacketHandler for Handler {
         Ok(response)
     }
 }
+
+impl CharacterCreateToolkit for Handler {}
