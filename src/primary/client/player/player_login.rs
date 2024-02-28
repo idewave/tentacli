@@ -25,8 +25,18 @@ impl PacketHandler for Handler {
             let guard = input.session.lock().await;
             guard.me.is_some()
         };
+
+        let auto_create_character_for_new_account = {
+            let guard = input.session.lock().await;
+            let config = guard.get_config()?;
+            config.common.auto_create_character_for_new_account
+        };
         
         if !me_exists {
+            if auto_create_character_for_new_account {
+                return Ok(response);
+            }
+
             bail!(CharacterListError::Empty);
         }
 
