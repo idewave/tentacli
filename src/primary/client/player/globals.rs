@@ -8,3 +8,9 @@ with_opcode! {
         pub guid: u64,
     }
 }
+
+with_opcode! {
+    @world_opcode(Opcode::CMSG_CHAR_ENUM)
+    #[derive(WorldPacket, Serialize, Deserialize, Debug, Default)]
+    pub struct CharacterEnumOutcome {}
+}

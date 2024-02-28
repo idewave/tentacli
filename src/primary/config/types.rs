@@ -1,7 +1,12 @@
 use std::io::{Error, Write};
 use byteorder::{LittleEndian, WriteBytesExt};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
+pub struct CommonOptions {
+    pub auto_create_character_for_new_account: bool,
+}
+
+#[derive(Clone, Debug)]
 pub struct ConnectionData {
     pub account: String,
     pub password: String,
@@ -9,7 +14,7 @@ pub struct ConnectionData {
     pub autoselect_character_name: String,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct AddonInfo {
     pub name: String,
     pub flags: u8,
@@ -38,7 +43,7 @@ impl AddonInfo {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ChannelLabels {
     pub lfg: String,
     pub common: String,

@@ -58,10 +58,13 @@ impl PacketHandler for Handler {
         let (server_id, account, session_key, addons) = {
             let guard = input.session.lock().await;
             let config = guard.get_config()?;
+            let srp = guard.srp.as_ref().unwrap();
+            let session_key = srp.session_key.to_vec();
+
             (
                 guard.selected_realm.as_ref().unwrap().server_id as u32,
                 config.connection_data.account.to_string(),
-                guard.session_key.as_ref().unwrap().to_vec(),
+                session_key,
                 config.addons.clone()
             )
         };

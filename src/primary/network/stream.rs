@@ -63,7 +63,7 @@ impl Reader {
 
                 let mut header = decryptor.decrypt(&buffer);
                 if is_long_packet {
-                    first_byte = first_byte & 0x7Fu8;
+                    first_byte &= 0x7Fu8;
                 }
                 header.insert(0, first_byte);
 

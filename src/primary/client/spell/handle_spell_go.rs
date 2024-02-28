@@ -26,13 +26,21 @@ impl PacketHandler for Handler {
             Some(json),
         ));
 
-        let my_guid = {
-            input.session.lock().await.me.as_ref().unwrap().guid
+        let my_guid: Option<u64> = {
+            let guard = input.session.lock().await;
+            let me = guard.me.as_ref();
+            if me.is_some() {
+                Some(me.unwrap().guid)
+            } else {
+                None
+            }
         };
 
-        input.session.lock().await.action_flags.set(
-            ActionFlags::IS_CASTING, my_guid == caster_guid
-        );
+        if my_guid.is_some() {
+            input.session.lock().await.action_flags.set(
+                ActionFlags::IS_CASTING, my_guid.unwrap() == caster_guid
+            );
+        }
 
         Ok(response)
     }

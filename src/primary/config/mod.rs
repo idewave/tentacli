@@ -8,10 +8,13 @@ use yaml_rust::{Yaml, YamlLoader};
 
 pub mod types;
 
-use crate::primary::config::types::{AddonInfo, ChannelLabels, ConnectionData};
+use crate::primary::config::types::{AddonInfo, ChannelLabels, CommonOptions, ConnectionData};
 use crate::primary::errors::{ConfigError};
 
-const CONFIG_CONTENT: &str = r##"connection_data:
+const CONFIG_CONTENT: &str = r##"common:
+  auto_create_character_for_new_account: false
+
+connection_data:
   127.0.0.1:
     account_name:
         password: "safe_password"
@@ -66,7 +69,9 @@ pub struct EnvConfigParams<'a> {
     pub dotenv_path: &'a str,
 }
 
+#[derive(Debug)]
 pub struct Config {
+    pub common: CommonOptions,
     pub connection_data: ConnectionData,
     pub addons: Vec<AddonInfo>,
     pub channel_labels: ChannelLabels,
@@ -79,7 +84,9 @@ impl Config {
         let data = read_to_string(params.config_path).map_err(|_| ConfigError::NotFound)?;
         let docs = YamlLoader::load_from_str(&data).map_err(ConfigError::ScanError)?;
 
-        let connection_data = Self::parse_connection_data(
+        let common_options = Self::parse_common_options(&docs[0]["common"]);
+
+        let connection_data = Self::parse_connection_options(
             &docs[0]["connection_data"][params.host],
             params.account,
         );
@@ -87,7 +94,8 @@ impl Config {
         let channel_labels = Self::parse_channels_data(&docs[0]["channel_labels"]);
 
         Ok(Self {
-            connection_data,
+            common: common_options,
+            connection_data: connection_data,
             addons: vec![
                 AddonInfo { name: "Blizzard_AchievementUI".to_string(), flags: 0, modulus_crc: 0, urlcrc_crc: 0 },
                 AddonInfo { name: "Blizzard_ArenaUI".to_string(), flags: 0, modulus_crc: 0, urlcrc_crc: 0 },
@@ -117,7 +125,7 @@ impl Config {
         })
     }
 
-    fn parse_connection_data(config: &Yaml, account: &str) -> ConnectionData {
+    fn parse_connection_options(config: &Yaml, account: &str) -> ConnectionData {
         let config = &config[account];
         let autoselect = config["autoselect"].as_hash().unwrap();
 
@@ -142,6 +150,16 @@ impl Config {
             lfg: config["lfg"].as_str().unwrap().to_string(),
             common: config["common"].as_str().unwrap().to_string(),
             trade: config["trade"].as_str().unwrap().to_string(),
+        }
+    }
+
+    fn parse_common_options(config: &Yaml) -> CommonOptions {
+        let auto_create_character_for_new_account = {
+            config["auto_create_character_for_new_account"].as_bool().unwrap()
+        };
+
+        return CommonOptions {
+            auto_create_character_for_new_account,
         }
     }
 }
@@ -198,7 +216,7 @@ mod tests {
         let docs = YamlLoader::load_from_str(&file_content)
             .map_err(ConfigError::ScanError).unwrap();
 
-        let connection_data = Config::parse_connection_data(
+        let connection_data = Config::parse_connection_options(
             &docs[0]["connection_data"][HOST],
             ACCOUNT,
         );
@@ -212,6 +230,9 @@ mod tests {
         assert_eq!(channel_labels.common, "COMMON");
         assert_eq!(channel_labels.lfg, "LFG");
         assert_eq!(channel_labels.trade, "TRADE");
+
+        let common_options = Config::parse_common_options(&docs[0]["common"]);
+        assert_eq!(common_options.auto_create_character_for_new_account, false);
 
         temp_dir.close().unwrap();
     }

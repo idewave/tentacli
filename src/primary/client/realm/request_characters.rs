@@ -1,7 +1,6 @@
 use async_trait::async_trait;
 
-use crate::primary::macros::with_opcode;
-use crate::primary::client::opcodes::Opcode;
+use crate::primary::client::player::globals::CharacterEnumOutcome;
 use crate::primary::types::{
     HandlerInput,
     HandlerOutput,
@@ -9,17 +8,11 @@ use crate::primary::types::{
 };
 use crate::primary::traits::packet_handler::PacketHandler;
 
-with_opcode! {
-    @world_opcode(Opcode::CMSG_CHAR_ENUM)
-    #[derive(WorldPacket, Serialize, Deserialize, Debug, Default)]
-    struct Outcome {}
-}
-
 pub struct Handler;
 #[async_trait]
 impl PacketHandler for Handler {
     async fn handle(&mut self, _: &mut HandlerInput) -> HandlerResult {
-        let response = vec![HandlerOutput::Data(Outcome::default().unpack()?)];
+        let response = vec![HandlerOutput::Data(CharacterEnumOutcome::default().unpack()?)];
 
         Ok(response)
     }

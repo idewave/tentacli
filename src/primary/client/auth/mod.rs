@@ -5,6 +5,7 @@ mod login_challenge;
 mod login_proof;
 mod request_realmlist;
 mod types;
+mod validate_proof;
 
 // TODO: remove this (need to think how better refactor this part)
 pub use login_challenge::handler as login_challenge;
@@ -27,7 +28,10 @@ impl Processor for AuthProcessor {
                 ]
             },
             Opcode::LOGIN_PROOF => {
-                vec![Box::new(request_realmlist::Handler)]
+                vec![
+                    Box::new(validate_proof::Handler),
+                    Box::new(request_realmlist::Handler),
+                ]
             },
             Opcode::REALM_LIST => {
                 vec![
