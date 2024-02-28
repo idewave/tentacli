@@ -1,15 +1,17 @@
 use std::collections::HashSet;
-use std::fmt::{Debug, Formatter};
+use std::fmt::{Debug};
 
 pub mod types;
 
 use crate::primary::client::{Player, Realm, WardenModuleInfo};
 use crate::primary::config::{Config, ConfigParams};
+use crate::primary::crypto::srp::Srp;
 use crate::primary::errors::ConfigError;
 use crate::primary::shared::session::types::{ActionFlags, StateFlags};
 
+#[derive(Debug)]
 pub struct Session {
-    pub session_key: Option<Vec<u8>>,
+    pub srp: Option<Srp>,
     pub selected_realm: Option<Realm>,
     pub warden_module_info: Option<WardenModuleInfo>,
     pub config: Option<Config>,
@@ -24,7 +26,7 @@ pub struct Session {
 impl Session {
     pub fn new() -> Self {
         Self {
-            session_key: None,
+            srp: None,
             selected_realm: None,
             warden_module_info: None,
             config: None,
@@ -53,15 +55,5 @@ impl Session {
         }
 
         Ok(())
-    }
-}
-
-impl Debug for Session {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "session_key: {:?}",
-            self.session_key,
-        )
     }
 }

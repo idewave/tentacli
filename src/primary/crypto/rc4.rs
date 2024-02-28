@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub struct RC4 {
     i: u8,
     j: u8,
