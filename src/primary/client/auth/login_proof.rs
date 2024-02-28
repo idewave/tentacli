@@ -50,7 +50,7 @@ with_opcode! {
         #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
         public_ephemeral: Vec<u8>,
         #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
-        proof: Vec<u8>,
+        client_proof: [u8; 20],
         #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
         crc_hash: [u8; 20],
         keys_count: u8,
@@ -78,11 +78,11 @@ impl PacketHandler for Handler {
             (&config.connection_data.account, &config.connection_data.password)
         };
 
-        let mut srp_client = Srp::new(&n, &g, &server_ephemeral);
-        let proof = srp_client.calculate_proof::<Sha1>(account, password, &salt);
-        let crc_hash: [u8; 20] = rand::random();
+        let mut srp_client = Srp::new(&n, &g, &server_ephemeral, salt);
+        srp_client.calculate_session_key::<Sha1>(account, password);
 
-        session.session_key = Some(srp_client.session_key());
+        let client_proof: [u8; 20] = srp_client.calculate_proof::<Sha1>(account);
+        let crc_hash: [u8; 20] = rand::random();
 
         response.push(HandlerOutput::DebugMessage(
             String::from("Session key created"),
@@ -91,11 +91,13 @@ impl PacketHandler for Handler {
 
         response.push(HandlerOutput::Data(Outcome {
             public_ephemeral: srp_client.public_ephemeral(),
-            proof,
+            client_proof,
             crc_hash,
             keys_count: 0,
             security_flags: 0
         }.unpack()?));
+
+        session.srp = Some(srp_client);
 
         Ok(response)
     }

@@ -343,14 +343,15 @@ impl Client {
 
                                         let session_key = {
                                             let guard = session.lock().await;
-                                            guard.session_key.clone()
+                                            let srp = guard.srp.as_ref().unwrap();
+                                            srp.session_key.to_vec()
                                         };
 
                                         Self::set_stream_halves(
                                             stream,
                                             Arc::clone(&reader),
                                             Arc::clone(&writer),
-                                            session_key.clone(),
+                                            Some(session_key.clone()),
                                             Arc::clone(&warden_crypt),
                                         ).await;
 
@@ -566,7 +567,7 @@ mod tests {
         assert!(data_storage.players_map.is_empty());
 
         let session = &mut *client.session.lock().await;
-        assert!(session.session_key.is_none());
+        assert!(session.srp.is_none());
         assert!(session.me.is_none());
         assert!(session.warden_module_info.is_none());
         assert!(session.config.is_none());

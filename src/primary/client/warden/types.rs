@@ -5,6 +5,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use crate::primary::crypto::rc4::RC4;
 use crate::primary::utils::{decompress, encode_hex};
 
+#[derive(Debug)]
 pub struct WardenModuleInfo {
     #[allow(dead_code)]
     md5: Vec<u8>,
