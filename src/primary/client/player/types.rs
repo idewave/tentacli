@@ -1575,3 +1575,34 @@ bitflags! {
         const XP_USER_DISABLED = 0x02000000;
     }
 }
+
+#[non_exhaustive]
+pub struct CharacterCreateResponseCode;
+
+#[allow(dead_code)]
+impl CharacterCreateResponseCode {
+    pub const CHAR_CREATE_IN_PROGRESS: u8 = 46;
+    pub const CHAR_CREATE_SUCCESS: u8 = 47;
+    pub const CHAR_CREATE_ERROR: u8 = 48;
+    pub const CHAR_CREATE_FAILED: u8 = 49;
+    pub const CHAR_CREATE_NAME_IN_USE: u8 = 50;
+    pub const CHAR_CREATE_DISABLED: u8 = 51;
+    pub const CHAR_CREATE_PVP_TEAMS_VIOLATION: u8 = 52;
+    pub const CHAR_CREATE_SERVER_LIMIT: u8 = 53;
+    pub const CHAR_CREATE_ACCOUNT_LIMIT: u8 = 54;
+    pub const CHAR_CREATE_SERVER_QUEUE: u8 = 55;
+    pub const CHAR_CREATE_ONLY_EXISTING: u8 = 56;
+    pub const CHAR_CREATE_EXPANSION: u8 = 57;
+    pub const CHAR_CREATE_EXPANSION_CLASS: u8 = 58;
+    pub const CHAR_CREATE_LEVEL_REQUIREMENT: u8 = 59;
+    pub const CHAR_CREATE_UNIQUE_CLASS_LIMIT: u8 = 60;
+    pub const CHAR_CREATE_CHARACTER_IN_GUILD: u8 = 61;
+    pub const CHAR_CREATE_RESTRICTED_RACECLASS: u8 = 62;
+    pub const CHAR_CREATE_CHARACTER_CHOOSE_RACE: u8 = 63;
+    pub const CHAR_CREATE_CHARACTER_ARENA_LEADER: u8 = 64;
+    pub const CHAR_CREATE_CHARACTER_DELETE_MAIL: u8 = 65;
+    pub const CHAR_CREATE_CHARACTER_SWAP_FACTION: u8 = 66;
+    pub const CHAR_CREATE_CHARACTER_RACE_ONLY: u8 = 67;
+    pub const CHAR_CREATE_CHARACTER_GOLD_LIMIT: u8 = 68;
+    pub const CHAR_CREATE_FORCE_LOGIN: u8 = 69;
+}

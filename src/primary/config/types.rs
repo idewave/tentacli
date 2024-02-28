@@ -2,6 +2,11 @@ use std::io::{Error, Write};
 use byteorder::{LittleEndian, WriteBytesExt};
 
 #[derive(Clone, Debug)]
+pub struct CommonOptions {
+    pub auto_create_character_for_new_account: bool,
+}
+
+#[derive(Clone, Debug)]
 pub struct ConnectionData {
     pub account: String,
     pub password: String,
