@@ -254,6 +254,8 @@ impl Feature for UI {
                         }
 
                     }).unwrap();
+
+                    sleep(Duration::from_millis(30)).await;
                 }
             })
         };
