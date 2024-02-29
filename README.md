@@ -20,9 +20,10 @@ realm and character for autoselect (or set them empty to select manually)
 + Parses update packets, chat, movement and some other basic stuff
 + UI with keyboard interaction (including history scrolling and details output in DEBUG mode)
 + Auto Realm/Character, configurable in Config.yml
-+ Accepts external broadcast channel and external feature set
++ Accepts external feature set
 + Supports multi-config (you can pass custom config and .env paths)
 + Supports multi-account sets (you can set multiple account per host in config)
++ Supports auto-character create on empty or newly added accounts (see config)
 
 ### You want to contribute
 It's always welcome. Just create pull request with your improvements, bugfix etc.
