@@ -28,12 +28,7 @@ impl PacketHandler for Handler {
 
         let my_guid: Option<u64> = {
             let guard = input.session.lock().await;
-            let me = guard.me.as_ref();
-            if let Some(me) = me {
-                Some(me.guid)
-            } else {
-                None
-            }
+            guard.me.as_ref().map(|player| player.guid)
         };
 
         if my_guid.is_some() {
