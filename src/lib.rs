@@ -143,6 +143,10 @@ pub mod packet {
     pub mod player {
         pub use crate::primary::client::player::packet::CharCreateOutcome;
     }
+
+    pub mod idewave {
+        pub use idewave_packet::{WorldPacket, LoginPacket, FieldsSerializer};
+    }
 }
 
 pub mod traits {
