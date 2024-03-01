@@ -84,7 +84,7 @@ pub fn derive_login_packet(input: TokenStream) -> TokenStream {
             }
 
             pub fn to_binary(&mut self) -> #result<Vec<u8>> {
-                let body = self._build_body()?;
+                let body = self.build_body()?;
 
                 let header = Self::_build_header(Self::opcode())?;
                 Ok([header, body].concat())
@@ -104,7 +104,7 @@ pub fn derive_login_packet(input: TokenStream) -> TokenStream {
                 String::from_utf8(serializer.into_inner()).map_err(|e| e.into())
             }
 
-            fn _build_body(&mut self) -> #result<Vec<u8>> {
+            pub fn build_body(&mut self) -> #result<Vec<u8>> {
                 let mut body = Vec::new();
                 #(
                     #binary_converter::write_into(
@@ -241,7 +241,7 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
 
             // use this method in case you didn't use with_opcode! macro
             pub fn to_binary_with_opcode(&mut self, opcode: u32) -> #result<Vec<u8>> {
-                let body = self._build_body()?;
+                let body = self.build_body()?;
                 let header = Self::_build_header(body.len(), opcode)?;
                 Ok([header, body].concat())
             }
@@ -260,7 +260,7 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
                 String::from_utf8(serializer.into_inner()).map_err(|e| e.into())
             }
 
-            fn _build_body(&mut self) -> #result<Vec<u8>> {
+            pub fn build_body(&mut self) -> #result<Vec<u8>> {
                 let mut body = Vec::new();
                 #(
                     #binary_converter::write_into(
@@ -296,7 +296,7 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
 
             impl #ident {
                 pub fn to_binary(&mut self) -> #result<Vec<u8>> {
-                    let body = self._build_body()?;
+                    let body = self.build_body()?;
 
                     let header = Self::_build_header(body.len(), Self::opcode())?;
                     Ok([header, body].concat())

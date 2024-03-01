@@ -1,6 +1,6 @@
 [package]
 name = "idewave_packet"
-version = "1.1.0"
+version = "1.1.1"
 edition = "2021"
 authors = ["Sergio Ivanuzzo <sergio.ivanuzzo@gmail.com>"]
 description = "Macro for implementing packet structures"
