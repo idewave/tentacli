@@ -84,7 +84,7 @@ pub fn derive_login_packet(input: TokenStream) -> TokenStream {
             }
 
             pub fn to_binary(&mut self) -> #result<Vec<u8>> {
-                let body = self.build_body()?;
+                let body = self._build_body()?;
 
                 let header = Self::_build_header(Self::opcode())?;
                 Ok([header, body].concat())
@@ -104,7 +104,7 @@ pub fn derive_login_packet(input: TokenStream) -> TokenStream {
                 String::from_utf8(serializer.into_inner()).map_err(|e| e.into())
             }
 
-            pub fn build_body(&mut self) -> #result<Vec<u8>> {
+            fn _build_body(&mut self) -> #result<Vec<u8>> {
                 let mut body = Vec::new();
                 #(
                     #binary_converter::write_into(
@@ -241,7 +241,7 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
 
             // use this method in case you didn't use with_opcode! macro
             pub fn to_binary_with_opcode(&mut self, opcode: u32) -> #result<Vec<u8>> {
-                let body = self.build_body()?;
+                let body = self._build_body()?;
                 let header = Self::_build_header(body.len(), opcode)?;
                 Ok([header, body].concat())
             }
@@ -260,7 +260,7 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
                 String::from_utf8(serializer.into_inner()).map_err(|e| e.into())
             }
 
-            pub fn build_body(&mut self) -> #result<Vec<u8>> {
+            fn _build_body(&mut self) -> #result<Vec<u8>> {
                 let mut body = Vec::new();
                 #(
                     #binary_converter::write_into(
@@ -296,7 +296,7 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
 
             impl #ident {
                 pub fn to_binary(&mut self) -> #result<Vec<u8>> {
-                    let body = self.build_body()?;
+                    let body = self._build_body()?;
 
                     let header = Self::_build_header(body.len(), Self::opcode())?;
                     Ok([header, body].concat())
@@ -312,6 +312,102 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
             }
         }
     }
+
+    TokenStream::from(output)
+}
+
+#[proc_macro_derive(FieldsSerializer, attributes(dynamic_field))]
+pub fn derive_fields_serializer(input: TokenStream) -> TokenStream {
+    let ItemStruct { ident, fields, attrs, .. } = parse_macro_input!(input);
+    let Imports {
+        binary_converter,
+        cursor,
+        json_formatter,
+        result,
+        serialize,
+        ..
+    } = Imports::get();
+
+    let field_names = fields.iter().map(|f| {
+        f.ident.clone()
+    }).collect::<Vec<Option<Ident>>>();
+
+    let mut dynamic_fields: Vec<Option<Ident>> = vec![];
+    for field in fields.iter() {
+        let ident = format_ident!("{}", field.ident.as_ref().unwrap());
+
+        if field.attrs.iter().any(|attr| attr.path().is_ident("dynamic_field")) {
+            dynamic_fields.push(Some(ident));
+        }
+    }
+
+    let initial_initializers = fields
+        .iter()
+        .map(|f| {
+            let field_name = f.ident.clone();
+
+            if dynamic_fields.contains(&field_name) {
+                quote!{ Default::default() }
+            } else {
+                quote! { #binary_converter::read_from(&mut initial_reader)? }
+            }
+        });
+
+    let initializers = fields
+        .iter()
+        .map(|f| {
+            let field_name = f.ident.clone();
+            let field_type = f.ty.clone();
+
+            if dynamic_fields.contains(&field_name) {
+                quote!{ Self::#field_name(&mut reader, &mut initial) }
+            } else {
+                quote! {
+                    {
+                        let value: #field_type = #binary_converter::read_from(&mut reader)?;
+                        initial.#field_name = value.clone();
+                        value
+                    }
+                }
+            }
+        });
+
+    let mut output = quote! {
+        impl #ident {
+            pub fn from_binary(buffer: &[u8]) -> #result<(Self, String)> {
+                let mut initial_reader = #cursor::new(buffer.to_vec());
+                let mut initial = Self {
+                    #(#field_names: #initial_initializers),*
+                };
+
+                let mut reader = #cursor::new(buffer);
+                let mut instance = Self {
+                    #(#field_names: #initializers),*
+                };
+                let details = instance.get_json_details()?;
+
+                Ok((instance, details))
+            }
+
+            pub fn get_json_details(&mut self) -> #result<String> {
+                let mut serializer = #json_formatter::init();
+                #serialize::serialize(self, &mut serializer)?;
+                String::from_utf8(serializer.into_inner()).map_err(|e| e.into())
+            }
+
+            pub fn to_binary(&mut self) -> #result<Vec<u8>> {
+                let mut body = Vec::new();
+                #(
+                    #binary_converter::write_into(
+                        &mut self.#field_names,
+                        &mut body
+                    )?;
+                )*
+
+                Ok(body)
+            }
+        }
+    };
 
     TokenStream::from(output)
 }
