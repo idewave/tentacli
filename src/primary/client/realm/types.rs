@@ -3,7 +3,8 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer, ser::SerializeStru
 
 #[derive(Clone, Default)]
 pub struct Realm {
-    pub icon: u16,
+    pub icon: u8,
+    pub lock: u8,
     pub flags: u8,
     pub name: String,
     pub address: String,
@@ -38,6 +39,7 @@ impl Serialize for Realm {
         const FIELDS_AMOUNT: usize = 8;
         let mut state = serializer.serialize_struct("Realm", FIELDS_AMOUNT)?;
         state.serialize_field("icon", &self.icon)?;
+        state.serialize_field("lock", &self.lock)?;
         state.serialize_field("flags", &self.flags)?;
         state.serialize_field("name", &self.name)?;
         state.serialize_field("address", &self.address)?;

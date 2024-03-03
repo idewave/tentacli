@@ -176,8 +176,10 @@ impl BinaryConverter for Vec<Realm> {
             let mut name = Vec::new();
             let mut address = Vec::new();
 
-            let icon = reader.read_u16::<LittleEndian>()
-                .map_err(|e| FieldError::CannotRead(e, format!("icon:u16 ({})", label)))?;
+            let icon = reader.read_u8()
+                .map_err(|e| FieldError::CannotRead(e, format!("icon:u8 ({})", label)))?;
+            let lock = reader.read_u8()
+                .map_err(|e| FieldError::CannotRead(e, format!("lock:u8 ({})", label)))?;
             let flags = reader.read_u8()
                 .map_err(|e| FieldError::CannotRead(e, format!("flags:u8 ({})", label)))?;
 
@@ -197,6 +199,7 @@ impl BinaryConverter for Vec<Realm> {
 
             realms.push(Realm {
                 icon,
+                lock,
                 flags,
                 name: String::from_utf8_lossy(&name).trim_matches(char::from(0)).to_string(),
                 address: String::from_utf8_lossy(&address).trim_matches(char::from(0)).to_string(),
