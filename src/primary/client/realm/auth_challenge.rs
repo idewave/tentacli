@@ -10,14 +10,15 @@ use crate::primary::config::types::AddonInfo;
 use crate::primary::types::{HandlerInput, HandlerOutput, HandlerResult, TerminatedString};
 use crate::primary::traits::packet_handler::PacketHandler;
 
-const CLIENT_SEED_SIZE: usize = 4;
+const SEED_SIZE: usize = 4;
 
 #[derive(WorldPacket, Serialize, Deserialize, Debug)]
 #[options(no_opcode)]
 struct Income {
     skip: u32,
+    server_seed: [u8; SEED_SIZE],
     #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
-    server_seed: [u8; 32],
+    seed: [u8; 32],
 }
 
 with_opcode! {
@@ -29,7 +30,7 @@ with_opcode! {
         account: TerminatedString,
         unknown2: u32,
         #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
-        client_seed: [u8; CLIENT_SEED_SIZE],
+        client_seed: [u8; SEED_SIZE],
         unknown3: u64,
         server_id: u32,
         unknown4: u64,
@@ -69,14 +70,13 @@ impl PacketHandler for Handler {
             )
         };
 
-        let client_seed: [u8; CLIENT_SEED_SIZE] = rand::random();
+        let client_seed: [u8; SEED_SIZE] = rand::random();
 
         let digest = Sha1::new()
             .chain(&account)
             .chain(vec![0, 0, 0, 0])
             .chain(client_seed)
-            // from server_seed we need only CLIENT_SEED_SIZE first bytes
-            .chain(&server_seed[..CLIENT_SEED_SIZE])
+            .chain(server_seed)
             .chain(session_key)
             .finalize()
             .to_vec();
