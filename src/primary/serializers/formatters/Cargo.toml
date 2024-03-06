@@ -1,0 +1,19 @@
+[package]
+name = "idewave-formatters"
+version = "0.1.0"
+edition = "2021"
+authors = ["Sergio Ivanuzzo <sergio.ivanuzzo@gmail.com>"]
+description = "Macro for implementing packet structures"
+keywords = [
+    "idewave", "idewave-packet"
+]
+license-file = "../../../../LICENSE"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+serde_json = "1.0"
+
+[lib]
+name = "idewave_formatters"
+path = "src/lib.rs"

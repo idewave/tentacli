@@ -25,7 +25,7 @@ impl Imports {
             byteorder_write: quote!(byteorder::WriteBytesExt),
             cursor: quote!(std::io::Cursor),
             deflate_decoder: quote!(flate2::read::DeflateDecoder),
-            json_formatter: quote!(crate::primary::serializers::formatters::JsonFormatter),
+            json_formatter: quote!(idewave_formatters::JsonFormatter),
             // TODO: need to reorganize constants
             read: quote!(std::io::Read),
             result: quote!(anyhow::Result),
