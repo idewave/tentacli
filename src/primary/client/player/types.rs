@@ -1,11 +1,15 @@
 use std::collections::BTreeMap;
 use std::fmt::{Debug, Formatter};
+use std::io::BufRead;
 use bitflags::bitflags;
+use byteorder::{LittleEndian, ReadBytesExt};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde::ser::{SerializeStruct, SerializeTuple};
+use crate::errors::FieldError;
 
 use crate::primary::parsers::position_parser::types::Position;
 use crate::primary::parsers::update_block_parser::types::UpdateFields;
+use crate::traits::BinaryConverter;
 
 #[derive(Clone, Default)]
 pub struct Player {
@@ -71,6 +75,105 @@ impl Serialize for Player {
         state.serialize_field("level", &self.level)?;
         state.serialize_field("position", &self.position)?;
         state.end()
+    }
+}
+
+impl BinaryConverter for Vec<Player> {
+    fn write_into(&mut self, _buffer: &mut Vec<u8>) -> Result<(), FieldError> {
+        todo!()
+    }
+
+    fn read_from<R: BufRead>(mut reader: R) -> Result<Self, FieldError> {
+        let mut characters = Vec::new();
+        let label = "Vec<Character>";
+
+        let characters_count = reader.read_u8()
+            .map_err(|e| FieldError::CannotRead(e, format!("characters_count:u8 ({})", label)))?;
+        for _ in 0 .. characters_count {
+            let guid = reader.read_u64::<LittleEndian>()
+                .map_err(|e| FieldError::CannotRead(e, format!("guid:u64 ({})", label)))?;
+
+            let mut name_buf = Vec::new();
+            reader.read_until(0, &mut name_buf)
+                .map_err(|e| FieldError::CannotRead(e, format!("name_buf:Vec<u8> ({})", label)))?;
+            let name = String::from_utf8(
+                name_buf[..(name_buf.len() - 1)].to_vec()
+            ).map_err(|e| FieldError::InvalidString(e, label.to_owned()))?;
+
+            let race = reader.read_u8()
+                .map_err(|e| FieldError::CannotRead(e, format!("race:u8 ({})", label)))?;
+            let class = reader.read_u8()
+                .map_err(|e| FieldError::CannotRead(e, format!("class:u8 ({})", label)))?;
+            let gender = reader.read_u8()
+                .map_err(|e| FieldError::CannotRead(e, format!("gender:u8 ({})", label)))?;
+
+            let _skin = reader.read_u8()
+                .map_err(|e| FieldError::CannotRead(e, format!("skin:u8 ({})", label)))?;
+            let _face = reader.read_u8()
+                .map_err(|e| FieldError::CannotRead(e, format!("face:u8 ({})", label)))?;
+            let _hair_style = reader.read_u8()
+                .map_err(|e| FieldError::CannotRead(e, format!("hair_style:u8 ({})", label)))?;
+            let _hair_color = reader.read_u8()
+                .map_err(|e| FieldError::CannotRead(e, format!("hair_color:u8 ({})", label)))?;
+
+            let _facial_hair = reader.read_u8()
+                .map_err(|e| FieldError::CannotRead(e, format!("facial_hair:u8 ({})", label)))?;
+            let level = reader.read_u8()
+                .map_err(|e| FieldError::CannotRead(e, format!("level:u8 ({})", label)))?;
+
+            let _zone_id = reader.read_u32::<LittleEndian>()
+                .map_err(|e| FieldError::CannotRead(e, format!("zone_id:u32 ({})", label)))?;
+            let _map_id = reader.read_u32::<LittleEndian>()
+                .map_err(|e| FieldError::CannotRead(e, format!("map_id:u32 ({})", label)))?;
+
+            let x = reader.read_f32::<LittleEndian>()
+                .map_err(|e| FieldError::CannotRead(e, format!("x:f32 ({})", label)))?;
+            let y = reader.read_f32::<LittleEndian>()
+                .map_err(|e| FieldError::CannotRead(e, format!("y:f32 ({})", label)))?;
+            let z = reader.read_f32::<LittleEndian>()
+                .map_err(|e| FieldError::CannotRead(e, format!("z:f32 ({})", label)))?;
+
+            let _guild_id = reader.read_u32::<LittleEndian>()
+                .map_err(|e| FieldError::CannotRead(e, format!("guild_id:u32 ({})", label)))?;
+            let _char_flags = reader.read_u32::<LittleEndian>()
+                .map_err(|e| FieldError::CannotRead(e, format!("char_flags:u32 ({})", label)))?;
+            let _char_customize_flags = reader.read_u32::<LittleEndian>()
+                .map_err(|e| FieldError::CannotRead(e, format!("char_customize_flags:u32 ({})", label)))?;
+
+            let _first_login = reader.read_u8()
+                .map_err(|e| FieldError::CannotRead(e, format!("first_login:u8 ({})", label)))?;
+
+            let _pet_display_id = reader.read_u32::<LittleEndian>()
+                .map_err(|e| FieldError::CannotRead(e, format!("pet_display_id:u32 ({})", label)))?;
+            let _pet_level = reader.read_u32::<LittleEndian>()
+                .map_err(|e| FieldError::CannotRead(e, format!("pet_level:u32 ({})", label)))?;
+            let _pet_family = reader.read_u32::<LittleEndian>()
+                .map_err(|e| FieldError::CannotRead(e, format!("pet_family:u32 ({})", label)))?;
+
+            // inventory
+            for _ in 0..23 {
+                reader.read_u32::<LittleEndian>()
+                    .map_err(|e| FieldError::CannotRead(e, format!("inventory:u32 ({})", label)))?;
+                reader.read_u8()
+                    .map_err(|e| FieldError::CannotRead(e, format!("inventory:u8 ({})", label)))?;
+                reader.read_u32::<LittleEndian>()
+                    .map_err(|e| FieldError::CannotRead(e, format!("inventory:u32_2 ({})", label)))?;
+            }
+
+            characters.push(Player {
+                guid,
+                name,
+                race,
+                class,
+                gender,
+                level,
+                fields: Default::default(),
+                movement_speed: Default::default(),
+                position: Some(Position::new(x, y, z, 0.0)),
+            });
+        }
+
+        Ok(characters)
     }
 }
 

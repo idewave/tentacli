@@ -2,7 +2,7 @@ use async_trait::async_trait;
 
 use crate::primary::client::{CooldownInfo, Opcode, Spell};
 use crate::primary::types::{HandlerInput, HandlerOutput, HandlerResult};
-use crate::primary::traits::packet_handler::PacketHandler;
+use crate::primary::traits::PacketHandler;
 
 #[derive(WorldPacket, Serialize, Deserialize, Debug, Default)]
 #[options(no_opcode)]

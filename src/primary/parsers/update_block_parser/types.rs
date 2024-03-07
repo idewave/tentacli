@@ -1,11 +1,15 @@
 use std::collections::BTreeMap;
 use std::fmt::{Debug, Formatter};
+use std::io::BufRead;
 use bitflags::bitflags;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde::ser::SerializeStruct;
 
+use crate::errors::FieldError;
 use crate::primary::client::{FieldValue, ObjectField, PlayerField, UnitField};
 use crate::primary::parsers::movement_parser::types::MovementInfo;
+use crate::primary::parsers::update_block_parser::UpdateBlocksParser;
+use crate::traits::BinaryConverter;
 
 pub type UpdateFields = BTreeMap<u32, FieldValue>;
 
@@ -118,6 +122,18 @@ impl Debug for ParsedBlock {
             self.guid,
             self.update_fields,
         )
+    }
+}
+
+impl BinaryConverter for Vec<ParsedBlock> {
+    fn write_into(&mut self, _buffer: &mut Vec<u8>) -> Result<(), FieldError> {
+        todo!()
+    }
+
+    fn read_from<R: BufRead>(mut reader: R) -> Result<Self, FieldError> {
+        let parsed_blocks = UpdateBlocksParser::parse(&mut reader)
+            .map_err(|e| FieldError::CannotRead(e, "Vec<ParsedBlock>".to_string()))?;
+        Ok(parsed_blocks)
     }
 }
 

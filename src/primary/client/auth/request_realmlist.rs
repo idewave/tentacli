@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use crate::primary::macros::with_opcode;
 use crate::primary::client::Opcode;
 use crate::primary::types::{HandlerInput, HandlerOutput, HandlerResult};
-use crate::primary::traits::packet_handler::PacketHandler;
+use crate::primary::traits::PacketHandler;
 
 with_opcode! {
     @login_opcode(Opcode::REALM_LIST)

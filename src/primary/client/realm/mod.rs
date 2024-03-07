@@ -10,7 +10,7 @@ pub mod types;
 mod logout;
 
 use crate::primary::client::opcodes::Opcode;
-use crate::primary::traits::processor::Processor;
+use crate::primary::traits::Processor;
 use crate::primary::types::{HandlerInput, ProcessorResult};
 
 pub struct RealmProcessor;
@@ -81,7 +81,7 @@ pub mod packet {
 
     with_opcode! {
         @world_opcode(Opcode::CMSG_LOGOUT_REQUEST)
-        #[derive(WorldPacket, Serialize, Deserialize, Debug)]
+        #[derive(WorldPacket, Serialize, Deserialize, Debug, Default)]
         pub struct LogoutOutcome {}
     }
 }

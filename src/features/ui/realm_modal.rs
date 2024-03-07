@@ -5,7 +5,7 @@ use tui::text::{Span, Spans};
 use tui::widgets::{ListItem, ListState};
 
 use crate::primary::client::{Realm};
-use crate::features::ui::traits::ui_component::{UIModalComponent};
+use crate::features::ui::traits::{UIModalComponent};
 use crate::features::ui::types::{UIEventFlags};
 use crate::primary::types::HandlerOutput;
 

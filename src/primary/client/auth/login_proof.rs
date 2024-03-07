@@ -2,12 +2,14 @@ use std::io::BufRead;
 use sha1::{Sha1};
 use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
+use tokio::io::{AsyncReadExt, BufReader};
+use tokio::net::TcpStream;
 
 use crate::primary::macros::with_opcode;
 use crate::primary::client::Opcode;
 use crate::primary::crypto::srp::Srp;
 use crate::primary::types::{HandlerInput, HandlerOutput, HandlerResult};
-use crate::primary::traits::packet_handler::PacketHandler;
+use crate::primary::traits::PacketHandler;
 use crate::primary::utils::encode_hex;
 
 with_opcode! {
@@ -35,9 +37,21 @@ with_opcode! {
             buffer
         }
 
+        async fn async_g(stream: &mut BufReader<TcpStream>, initial: &mut Self) -> Vec<u8> {
+            let mut buffer = vec![0u8; initial.g_len as usize];
+            stream.read_exact(&mut buffer).await.unwrap();
+            buffer
+        }
+
         fn n<R: BufRead>(mut reader: R, initial: &mut Self) -> Vec<u8> {
             let mut buffer = vec![0u8; initial.n_len as usize];
             reader.read_exact(&mut buffer).unwrap();
+            buffer
+        }
+
+        async fn async_n(stream: &mut BufReader<TcpStream>, initial: &mut Self) -> Vec<u8> {
+            let mut buffer = vec![0u8; initial.n_len as usize];
+            stream.read_exact(&mut buffer).await.unwrap();
             buffer
         }
     }
@@ -48,7 +62,7 @@ with_opcode! {
     #[derive(LoginPacket, Serialize, Deserialize, Debug)]
     struct Outcome {
         #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
-        public_ephemeral: Vec<u8>,
+        public_ephemeral: [u8; 32],
         #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
         client_proof: [u8; 20],
         #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]

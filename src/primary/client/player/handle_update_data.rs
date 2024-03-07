@@ -6,7 +6,7 @@ use crate::primary::client::player::globals::NameQueryOutcome;
 use crate::primary::client::player::types::Gender;
 use crate::primary::parsers::update_block_parser::types::{ObjectTypeMask, ParsedBlock};
 use crate::primary::types::{HandlerInput, HandlerOutput, HandlerResult};
-use crate::primary::traits::packet_handler::PacketHandler;
+use crate::primary::traits::PacketHandler;
 
 #[derive(WorldPacket, Serialize, Deserialize, Debug)]
 #[options(no_opcode)]

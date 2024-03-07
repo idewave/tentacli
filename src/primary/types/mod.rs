@@ -2,14 +2,14 @@ use std::sync::{Arc, Mutex as SyncMutex};
 use anyhow::{Result as AnyResult};
 use tokio::sync::Mutex;
 
-mod fields;
+mod custom_fields;
 
-pub use fields::{PackedGuid, TerminatedString};
+pub use custom_fields::{PackedGuid, TerminatedString};
 use crate::primary::client::{Message, Player, Realm};
 
 use crate::primary::shared::storage::DataStorage;
 use crate::primary::shared::session::Session;
-use crate::primary::traits::packet_handler::PacketHandler;
+use crate::primary::traits::PacketHandler;
 
 #[derive(Debug, Clone)]
 pub enum Signal {
@@ -29,7 +29,7 @@ pub struct HandlerInput {
 pub enum HandlerOutput {
     // data transfer
     ChatMessage(Message),
-    Data(OutgoingPacket),
+    Data((u32, Vec<u8>, String)),
     TransferCharactersList(Vec<Player>),
     TransferRealmsList(Vec<Realm>),
     UpdatePlayer(Player),

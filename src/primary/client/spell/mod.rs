@@ -3,7 +3,7 @@ mod handle_spell_go;
 pub mod types;
 
 use crate::primary::client::opcodes::Opcode;
-use crate::primary::traits::processor::Processor;
+use crate::primary::traits::Processor;
 use crate::primary::types::{HandlerInput, ProcessorResult};
 
 pub struct SpellProcessor;

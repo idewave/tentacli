@@ -8,7 +8,7 @@ use crate::primary::macros::with_opcode;
 use crate::primary::client::opcodes::Opcode;
 use crate::primary::config::types::AddonInfo;
 use crate::primary::types::{HandlerInput, HandlerOutput, HandlerResult, TerminatedString};
-use crate::primary::traits::packet_handler::PacketHandler;
+use crate::primary::traits::PacketHandler;
 
 const SEED_SIZE: usize = 4;
 

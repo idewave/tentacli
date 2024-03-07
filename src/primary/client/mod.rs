@@ -54,9 +54,11 @@ use crate::primary::crypto::warden_crypt::WardenCrypt;
 use crate::primary::shared::storage::DataStorage;
 use crate::primary::shared::session::Session;
 use crate::primary::network::stream::{Reader, Writer};
-use crate::primary::traits::Feature;
-use crate::primary::traits::processor::Processor;
-use crate::primary::types::{HandlerInput, HandlerOutput, IncomingPacket, OutgoingPacket, ProcessorFunction, ProcessorResult, Signal};
+use crate::primary::traits::{Feature, Processor};
+use crate::primary::types::{
+    HandlerInput, HandlerOutput, IncomingPacket,
+    OutgoingPacket, ProcessorFunction, ProcessorResult, Signal
+};
 use crate::primary::utils::encode_hex;
 
 pub struct RunOptions<'a> {
@@ -333,8 +335,12 @@ impl Client {
                         };
 
                         match output {
-                            HandlerOutput::Data(packet) => {
-                                output_sender.send(packet).await.unwrap();
+                            HandlerOutput::Data((opcode, data, json_details)) => {
+                                output_sender.send(OutgoingPacket {
+                                    opcode,
+                                    data,
+                                    json_details,
+                                }).await.unwrap();
                             },
                             HandlerOutput::ConnectionRequest(host, port) => {
                                 match Self::connect_inner(&host, port).await {
@@ -386,8 +392,17 @@ impl Client {
                                         )
                                     ).await.unwrap();
 
-                                    let packet = LogoutOutcome {}.unpack().unwrap();
-                                    output_sender.send(packet).await.unwrap();
+                                    let (
+                                        opcode,
+                                        data,
+                                        json_details
+                                    ) = LogoutOutcome::default().unpack().unwrap();
+
+                                    output_sender.send(OutgoingPacket {
+                                        opcode,
+                                        data,
+                                        json_details,
+                                    }).await.unwrap();
                                 } else {
                                     query_sender
                                         .broadcast(HandlerOutput::ExitConfirmed).await.unwrap();

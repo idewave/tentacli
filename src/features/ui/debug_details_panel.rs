@@ -7,7 +7,7 @@ use tui::style::{Color, Style};
 use tui::text::{Text};
 use tui::widgets::{Block, Borders, BorderType, Paragraph, Wrap};
 
-use crate::features::ui::traits::ui_component::{UIComponent};
+use crate::features::ui::traits::{UIComponent};
 use crate::features::ui::MARGIN;
 use crate::features::ui::types::{UIEventFlags};
 

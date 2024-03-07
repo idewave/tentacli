@@ -5,7 +5,7 @@ use regex::Regex;
 use crate::primary::macros::with_opcode;
 use crate::primary::client::{Realm, Opcode};
 use crate::primary::errors::RealmListError;
-use crate::primary::traits::packet_handler::PacketHandler;
+use crate::primary::traits::PacketHandler;
 use crate::primary::types::{
     HandlerInput,
     HandlerOutput,

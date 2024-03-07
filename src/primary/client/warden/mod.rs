@@ -3,7 +3,7 @@ mod send_data;
 pub mod types;
 
 use crate::primary::client::Opcode;
-use crate::primary::traits::processor::Processor;
+use crate::primary::traits::Processor;
 use crate::primary::types::{HandlerInput, ProcessorResult};
 
 pub struct WardenProcessor;

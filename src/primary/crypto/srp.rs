@@ -37,8 +37,8 @@ impl Srp {
         }
     }
 
-    pub fn public_ephemeral(&mut self) -> Vec<u8> {
-        self.public_ephemeral.to_bytes_le().1
+    pub fn public_ephemeral(&mut self) -> [u8; 32] {
+        self.public_ephemeral.to_bytes_le().1.try_into().unwrap()
     }
 
     pub fn session_key(&mut self) -> Vec<u8> {

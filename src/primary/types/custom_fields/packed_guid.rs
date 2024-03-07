@@ -3,7 +3,7 @@ use byteorder::ReadBytesExt;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::primary::errors::FieldError;
-use crate::primary::traits::binary_converter::BinaryConverter;
+use crate::primary::traits::BinaryConverter;
 
 #[derive(Debug, Default, Clone)]
 pub struct PackedGuid(pub u64);

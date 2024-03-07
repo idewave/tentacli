@@ -35,7 +35,7 @@ pub mod types;
 mod title;
 mod traits;
 
-use crate::features::ui::traits::ui_component::{UIComponent, UIModalComponent};
+use crate::features::ui::traits::{UIComponent, UIModalComponent};
 use crate::features::ui::characters_modal::CharactersModal;
 use crate::features::ui::debug_panel::DebugPanel;
 use crate::features::ui::realm_modal::RealmModal;

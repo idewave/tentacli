@@ -8,7 +8,7 @@ mod check_character_create_status;
 mod traits;
 
 use crate::primary::client::opcodes::Opcode;
-use crate::primary::traits::processor::Processor;
+use crate::primary::traits::Processor;
 use crate::primary::types::{HandlerInput, ProcessorResult};
 
 pub struct PlayerProcessor;

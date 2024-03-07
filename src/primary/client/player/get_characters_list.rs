@@ -8,7 +8,7 @@ use crate::primary::client::player::globals::CharacterEnumOutcome;
 use crate::primary::client::player::traits::CharacterCreateToolkit;
 use crate::primary::errors::CharacterListError;
 use crate::primary::types::{HandlerInput, HandlerOutput, HandlerResult, TerminatedString};
-use crate::primary::traits::packet_handler::PacketHandler;
+use crate::primary::traits::PacketHandler;
 
 #[derive(WorldPacket, Serialize, Deserialize, Debug)]
 #[options(no_opcode)]

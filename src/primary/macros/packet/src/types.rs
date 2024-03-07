@@ -6,6 +6,7 @@ pub struct Imports {
     pub binary_converter: TokenStream2,
     pub byteorder_be: TokenStream2,
     pub byteorder_le: TokenStream2,
+    pub buf_reader: TokenStream2,
     pub byteorder_write: TokenStream2,
     pub cursor: TokenStream2,
     pub deflate_decoder: TokenStream2,
@@ -13,15 +14,17 @@ pub struct Imports {
     pub read: TokenStream2,
     pub result: TokenStream2,
     pub serialize: TokenStream2,
-    pub types: TokenStream2,
+    pub stream_reader: TokenStream2,
+    pub tcp_stream: TokenStream2,
 }
 
 impl Imports {
     pub fn get() -> Self {
         Self {
-            binary_converter: quote!(crate::primary::traits::binary_converter::BinaryConverter),
+            binary_converter: quote!(crate::traits::BinaryConverter),
             byteorder_be: quote!(byteorder::BigEndian),
             byteorder_le: quote!(byteorder::LittleEndian),
+            buf_reader: quote!(tokio::io::BufReader),
             byteorder_write: quote!(byteorder::WriteBytesExt),
             cursor: quote!(std::io::Cursor),
             deflate_decoder: quote!(flate2::read::DeflateDecoder),
@@ -30,7 +33,8 @@ impl Imports {
             read: quote!(std::io::Read),
             result: quote!(anyhow::Result),
             serialize: quote!(serde::Serialize),
-            types: quote!(crate::primary::types),
+            stream_reader: quote!(crate::primary::traits::StreamReader),
+            tcp_stream: quote!(tokio::net::TcpStream),
         }
     }
 }
