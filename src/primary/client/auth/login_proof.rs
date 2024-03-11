@@ -2,8 +2,7 @@ use std::io::BufRead;
 use sha1::{Sha1};
 use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
-use tokio::io::{AsyncReadExt, BufReader};
-use tokio::net::TcpStream;
+use tokio::io::{AsyncBufRead, AsyncReadExt};
 
 use crate::primary::macros::with_opcode;
 use crate::primary::client::Opcode;
@@ -15,7 +14,7 @@ use crate::primary::utils::encode_hex;
 with_opcode! {
     @login_opcode(Opcode::LOGIN_PROOF)
     #[derive(LoginPacket, Serialize, Deserialize, Debug)]
-    struct Income {
+    pub struct LoginChallengeResponse {
         unknown: u8,
         code: u8,
         #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
@@ -28,29 +27,35 @@ with_opcode! {
         n: Vec<u8>,
         #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
         salt: [u8; 32],
+        version_challenge: [u8; 16],
+        unknown2: u8,
     }
 
-    impl Income {
-        fn g<R: BufRead>(mut reader: R, initial: &mut Self) -> Vec<u8> {
-            let mut buffer = vec![0u8; initial.g_len as usize];
+    impl LoginChallengeResponse {
+        fn g<R: BufRead>(mut reader: R, cache: &mut Self) -> Vec<u8> {
+            let mut buffer = vec![0u8; cache.g_len as usize];
             reader.read_exact(&mut buffer).unwrap();
             buffer
         }
 
-        async fn async_g(stream: &mut BufReader<TcpStream>, initial: &mut Self) -> Vec<u8> {
-            let mut buffer = vec![0u8; initial.g_len as usize];
+        async fn async_g<R>(stream: &mut R, cache: &mut Self) -> Vec<u8>
+            where R: AsyncBufRead + Unpin + Send
+        {
+            let mut buffer = vec![0u8; cache.g_len as usize];
             stream.read_exact(&mut buffer).await.unwrap();
             buffer
         }
 
-        fn n<R: BufRead>(mut reader: R, initial: &mut Self) -> Vec<u8> {
-            let mut buffer = vec![0u8; initial.n_len as usize];
+        fn n<R: BufRead>(mut reader: R, cache: &mut Self) -> Vec<u8> {
+            let mut buffer = vec![0u8; cache.n_len as usize];
             reader.read_exact(&mut buffer).unwrap();
             buffer
         }
 
-        async fn async_n(stream: &mut BufReader<TcpStream>, initial: &mut Self) -> Vec<u8> {
-            let mut buffer = vec![0u8; initial.n_len as usize];
+        async fn async_n<R>(stream: &mut R, cache: &mut Self) -> Vec<u8>
+            where R: AsyncBufRead + Unpin + Send
+        {
+            let mut buffer = vec![0u8; cache.n_len as usize];
             stream.read_exact(&mut buffer).await.unwrap();
             buffer
         }
@@ -78,7 +83,13 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let mut response = Vec::new();
 
-        let (Income { n, g, server_ephemeral, salt, .. }, json) = Income::from_binary(&input.data)?;
+        let (LoginChallengeResponse {
+            n,
+            g,
+            server_ephemeral,
+            salt,
+            ..
+        }, json) = LoginChallengeResponse::from_binary(&input.data)?;
 
         response.push(HandlerOutput::ResponseMessage(
             Opcode::get_opcode_name(input.opcode as u32)

@@ -12,15 +12,14 @@ use types::{Attributes, Imports};
 pub fn derive_login_packet(input: TokenStream) -> TokenStream {
     let ItemStruct { ident, fields, .. } = parse_macro_input!(input);
     let Imports {
+        buf_read,
         binary_converter,
         byteorder_write,
         cursor,
         json_formatter,
         result,
         serialize,
-        buf_reader,
         stream_reader,
-        tcp_stream,
         ..
     } = Imports::get();
 
@@ -37,18 +36,6 @@ pub fn derive_login_packet(input: TokenStream) -> TokenStream {
         }
     }
 
-    let initial_initializers = fields
-        .iter()
-        .map(|f| {
-            let field_name = f.ident.clone();
-
-            if dynamic_fields.contains(&field_name) {
-                quote!{ Default::default() }
-            } else {
-                quote! { #binary_converter::read_from(&mut initial_reader)? }
-            }
-        });
-
     let initializers = fields
         .iter()
         .map(|f| {
@@ -56,28 +43,15 @@ pub fn derive_login_packet(input: TokenStream) -> TokenStream {
             let field_type = f.ty.clone();
 
             if dynamic_fields.contains(&field_name) {
-                quote!{ Self::#field_name(&mut reader, &mut initial) }
+                quote!{ Self::#field_name(&mut reader, &mut cache) }
             } else {
                 quote! {
                     {
                         let value: #field_type = #binary_converter::read_from(&mut reader)?;
-                        initial.#field_name = value.clone();
+                        cache.#field_name = value.clone();
                         value
                     }
                 }
-            }
-        });
-
-    //
-    let initial_async_initializers = fields
-        .iter()
-        .map(|f| {
-            let field_name = f.ident.clone();
-
-            if dynamic_fields.contains(&field_name) {
-                quote!{ Default::default() }
-            } else {
-                quote! { #stream_reader::read_from(&mut stream).await? }
             }
         });
 
@@ -89,25 +63,23 @@ pub fn derive_login_packet(input: TokenStream) -> TokenStream {
 
             if dynamic_fields.contains(&field_name) {
                 let async_field_name = format_ident!("async_{}", field_name.unwrap());
-                quote!{ Self::#async_field_name(&mut stream, &mut initial).await }
+                quote!{ Self::#async_field_name(&mut stream, &mut cache).await }
             } else {
                 quote! {
                     {
                         let value: #field_type = #stream_reader::read_from(&mut stream).await?;
-                        initial.#field_name = value.clone();
+                        cache.#field_name = value.clone();
                         value
                     }
                 }
             }
         });
-    //
 
     let output = quote! {
         impl #ident {
             pub fn from_binary(buffer: &[u8]) -> #result<(Self, String)> {
-                let mut initial_reader = #cursor::new(buffer.to_vec());
-                let mut initial = Self {
-                    #(#field_names: #initial_initializers),*
+                let mut cache = Self {
+                    #(#field_names: Default::default()),*
                 };
 
                 let mut reader = #cursor::new(buffer.to_vec());
@@ -119,19 +91,18 @@ pub fn derive_login_packet(input: TokenStream) -> TokenStream {
                 Ok((instance, details))
             }
 
-            pub async fn from_stream(
-                mut stream: &mut #buf_reader<#tcp_stream>
-            ) -> #result<(Self, String)> {
-                let mut initial = Self {
-                    #(#field_names: #initial_async_initializers),*
+            pub async fn from_stream<R>(mut stream: &mut R) -> #result<Vec<u8>>
+                where R: #buf_read + Unpin + Send
+            {
+                let mut cache = Self {
+                    #(#field_names: Default::default()),*
                 };
 
                 let mut instance = Self {
                     #(#field_names: #async_initializers),*
                 };
-                let details = instance.get_json_details()?;
 
-                Ok((instance, details))
+                Ok(instance._build_body()?)
             }
 
             pub fn to_binary(&mut self) -> #result<Vec<u8>> {

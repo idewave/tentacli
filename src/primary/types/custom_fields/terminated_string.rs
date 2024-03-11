@@ -3,8 +3,7 @@ use std::io::{BufRead, Write};
 use async_trait::async_trait;
 use byteorder::{WriteBytesExt};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use tokio::io::{BufReader, AsyncBufReadExt};
-use tokio::net::TcpStream;
+use tokio::io::{AsyncBufReadExt, AsyncBufRead};
 
 use crate::primary::errors::FieldError;
 use crate::primary::traits::BinaryConverter;
@@ -78,8 +77,10 @@ impl Serialize for TerminatedString {
 
 #[async_trait]
 impl StreamReader for TerminatedString {
-    async fn read_from(stream: &mut BufReader<TcpStream>) -> Result<Self, FieldError>
-        where Self: Sized
+    async fn read_from<R>(stream: &mut R) -> Result<Self, FieldError>
+        where
+            Self: Sized,
+            R: AsyncBufRead + Unpin + Send
     {
         let mut internal_buf = vec![];
         let label = "TerminatedString";

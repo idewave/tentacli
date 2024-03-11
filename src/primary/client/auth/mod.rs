@@ -9,6 +9,9 @@ mod validate_proof;
 
 // TODO: remove this (need to think how better refactor this part)
 pub use login_challenge::handler as login_challenge;
+pub use login_proof::LoginChallengeResponse;
+pub use validate_proof::LoginProofResponse;
+pub use get_realmlist::RealmlistResponse;
 
 use crate::primary::client::Opcode;
 use crate::primary::traits::Processor;

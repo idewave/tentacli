@@ -12,7 +12,7 @@ use futures::future::{join_all};
 use tokio::time::sleep;
 use anyhow::{Result as AnyResult};
 
-mod auth;
+pub mod auth;
 pub mod chat;
 pub mod movement;
 mod opcodes;

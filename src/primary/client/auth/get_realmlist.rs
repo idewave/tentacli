@@ -15,7 +15,7 @@ use crate::primary::types::{
 with_opcode! {
     @login_opcode(Opcode::REALM_LIST)
     #[derive(LoginPacket, Serialize, Deserialize, Debug, Default)]
-    struct Income {
+    pub struct RealmlistResponse {
         skip: [u8; 6],
         realms: Vec<Realm>,
     }
@@ -27,7 +27,7 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let mut response = Vec::new();
 
-        let (Income { realms, .. }, json) = Income::from_binary(&input.data)?;
+        let (RealmlistResponse { realms, .. }, json) = RealmlistResponse::from_binary(&input.data)?;
 
         response.push(HandlerOutput::ResponseMessage(
             Opcode::get_opcode_name(input.opcode as u32)

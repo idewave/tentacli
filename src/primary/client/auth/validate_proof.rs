@@ -9,7 +9,7 @@ use crate::types::HandlerOutput;
 with_opcode! {
     @login_opcode(Opcode::LOGIN_PROOF)
     #[derive(LoginPacket, Serialize, Deserialize, Debug)]
-    struct Income {
+    pub struct LoginProofResponse {
         error: u8,
         server_proof: [u8; 20],
         account_flags: u32,
@@ -23,7 +23,7 @@ pub struct Handler;
 impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let mut response = Vec::new();
-        let (Income { server_proof, .. }, _) = Income::from_binary(&input.data)?;
+        let (LoginProofResponse { server_proof, .. }, _) = LoginProofResponse::from_binary(&input.data)?;
 
         let mut guard = input.session.lock().await;
         let is_valid_proof = guard.srp.as_mut().unwrap().validate_proof(server_proof);

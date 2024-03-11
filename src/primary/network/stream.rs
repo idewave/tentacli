@@ -3,6 +3,8 @@ use std::sync::{Arc, Mutex as SyncMutex};
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
+// use tokio_util::io::InspectReader;
+use crate::primary::client::auth::{LoginChallengeResponse, LoginProofResponse, RealmlistResponse};
 
 use crate::primary::client::Opcode;
 use crate::primary::crypto::decryptor::{Decryptor};
@@ -14,6 +16,7 @@ pub const INCOME_WORLD_OPCODE_LENGTH: usize = 2;
 pub const OUTCOME_WORLD_PACKET_HEADER_LENGTH: usize = 6;
 
 pub struct Reader {
+    // _stream: BufReader<InspectReader<OwnedReadHalf, fn(&[u8])>>,
     _stream: BufReader<OwnedReadHalf>,
     _decryptor: Option<Decryptor>,
     _warden_crypt: Arc<SyncMutex<Option<WardenCrypt>>>,
@@ -22,8 +25,12 @@ pub struct Reader {
 
 impl Reader {
     pub fn new(reader: OwnedReadHalf) -> Self {
+        // let inspect_fn: fn(&[u8]) = |bytes| println!("READ: {bytes:?}");
+        // let inspect_reader = InspectReader::new(reader, inspect_fn);
+        let buf_reader = BufReader::new(reader);
+
         Self {
-            _stream: BufReader::new(reader),
+            _stream: buf_reader,
             _decryptor: None,
             _warden_crypt: Arc::new(SyncMutex::new(None)),
             _need_sync: false,
@@ -38,60 +45,62 @@ impl Reader {
 
     pub async fn read(&mut self) -> Result<IncomingPacket, Error> {
         let (opcode, body) = if let Some(decryptor) = self._decryptor.as_mut() {
-            if self._need_sync {
-                self._need_sync = false;
+            let mut header = vec![0u8; 4];
+            self._stream.read_exact(&mut header[..]).await?;
 
-                let mut buffer = [0u8; 65536];
-                let bytes_count = self._stream.read(&mut buffer).await?;
-
-                let mut header_reader = Cursor::new(&buffer[2..4]);
-                let opcode = ReadBytesExt::read_u16::<LittleEndian>(&mut header_reader)?;
-
-                (opcode, buffer[4..bytes_count].to_vec())
+            if !self._need_sync {
+                header = decryptor.decrypt(&header);
             } else {
-                let mut buffer = [0u8; 1];
-                self._stream.read_exact(&mut buffer).await?;
-
-                let mut first_byte = buffer[0];
-                first_byte = decryptor.decrypt(&[first_byte])[0];
-
-                let is_long_packet = first_byte >= 0x80;
-
-                let buffer_size = if is_long_packet { 4 } else { 3 };
-                let mut buffer = vec![0u8; buffer_size];
-                self._stream.read_exact(&mut buffer).await?;
-
-                let mut header = decryptor.decrypt(&buffer);
-                if is_long_packet {
-                    first_byte &= 0x7Fu8;
-                }
-                header.insert(0, first_byte);
-
-                let mut header_reader = Cursor::new(&header);
-                let size = if is_long_packet {
-                    ReadBytesExt::read_u24::<BigEndian>(&mut header_reader)? as usize
-                } else {
-                    ReadBytesExt::read_u16::<BigEndian>(&mut header_reader)? as usize
-                };
-
-                let opcode = ReadBytesExt::read_u16::<LittleEndian>(&mut header_reader).unwrap();
-
-                let mut body = vec![0u8; size - INCOME_WORLD_OPCODE_LENGTH];
-                self._stream.read_exact(&mut body).await?;
-
-                if opcode == Opcode::SMSG_WARDEN_DATA {
-                    body = self._warden_crypt.lock().unwrap().as_mut().unwrap().decrypt(&body);
-                }
-
-                (opcode, body)
+                self._need_sync = false;
             }
-        } else {
-            let mut buffer = [0u8; 65536];
-            let bytes_count = self._stream.read(&mut buffer).await?;
-            let body = buffer[1..bytes_count].to_vec();
-            let opcode = buffer[0] as u16;
+
+            let first_byte = header[0];
+            let is_long_packet = first_byte >= 0x80;
+
+            if is_long_packet {
+                let extra_byte = self._stream.read_u8().await?;
+                header.push(extra_byte);
+            }
+
+            let mut header_reader = Cursor::new(&header);
+            let size = if is_long_packet {
+                ReadBytesExt::read_u24::<BigEndian>(&mut header_reader)? as usize
+            } else {
+                ReadBytesExt::read_u16::<BigEndian>(&mut header_reader)? as usize
+            };
+
+            let opcode = ReadBytesExt::read_u16::<LittleEndian>(&mut header_reader).unwrap();
+
+            let mut body = vec![0u8; size - INCOME_WORLD_OPCODE_LENGTH];
+            self._stream.read_exact(&mut body).await?;
+
+            if opcode == Opcode::SMSG_WARDEN_DATA {
+                body = self._warden_crypt.lock().unwrap().as_mut().unwrap().decrypt(&body);
+            }
 
             (opcode, body)
+        } else {
+            let opcode = self._stream.read_u8().await?;
+            let body = match opcode {
+                Opcode::LOGIN_CHALLENGE => {
+                    LoginChallengeResponse::from_stream(&mut self._stream)
+                        .await
+                        .map_err(|e| Error::new(std::io::ErrorKind::Other, e))?
+                },
+                Opcode::LOGIN_PROOF => {
+                    LoginProofResponse::from_stream(&mut self._stream)
+                        .await
+                        .map_err(|e| Error::new(std::io::ErrorKind::Other, e))?
+                },
+                Opcode::REALM_LIST => {
+                    RealmlistResponse::from_stream(&mut self._stream)
+                        .await
+                        .map_err(|e| Error::new(std::io::ErrorKind::Other, e))?
+                },
+                _ => vec![],
+            };
+
+            (opcode as u16, body)
         };
 
         Ok(IncomingPacket { opcode, body })

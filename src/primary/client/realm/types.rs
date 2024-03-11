@@ -1,10 +1,9 @@
 use std::fmt::{Debug, Formatter};
-use std::io::BufRead;
+use std::io::{BufRead, Write};
 use async_trait::async_trait;
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use serde::{Deserialize, Deserializer, Serialize, Serializer, ser::SerializeStruct};
-use tokio::io::{AsyncBufReadExt, AsyncReadExt, BufReader};
-use tokio::net::TcpStream;
+use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncReadExt};
 
 use crate::errors::FieldError;
 use crate::primary::traits::StreamReader;
@@ -61,8 +60,38 @@ impl Serialize for Realm {
 }
 
 impl BinaryConverter for Vec<Realm> {
-    fn write_into(&mut self, _buffer: &mut Vec<u8>) -> Result<(), FieldError> {
-        todo!()
+    fn write_into(&mut self, buffer: &mut Vec<u8>) -> Result<(), FieldError> {
+        let label = "Vec<Realm>";
+
+        buffer.write_u16::<LittleEndian>(self.len() as u16)
+            .map_err(|e| FieldError::CannotWrite(e, format!("u16 ({})", label)))?;
+        
+        for realm in self.iter_mut() {
+            buffer.write_u8(realm.icon)
+                .map_err(|e| FieldError::CannotRead(e, format!("icon:u8 ({})", label)))?;
+            buffer.write_u8(realm.lock)
+                .map_err(|e| FieldError::CannotRead(e, format!("lock:u8 ({})", label)))?;
+            buffer.write_u8(realm.flags)
+                .map_err(|e| FieldError::CannotRead(e, format!("flags:u8 ({})", label)))?;
+            buffer.write_all(realm.name.as_bytes())
+                .map_err(|e| FieldError::CannotWrite(e, format!("name bytes ({})", label)))?;
+            buffer.write_u8(0)
+                .map_err(|e| FieldError::CannotWrite(e, format!("u8 zero ({})", label)))?;
+            buffer.write_all(realm.address.as_bytes())
+                .map_err(|e| FieldError::CannotWrite(e, format!("address bytes ({})", label)))?;
+            buffer.write_u8(0)
+                .map_err(|e| FieldError::CannotWrite(e, format!("u8 zero ({})", label)))?;
+            buffer.write_f32::<LittleEndian>(realm.population)
+                .map_err(|e| FieldError::CannotRead(e, format!("population:f32 ({})", label)))?;
+            buffer.write_u8(realm.characters)
+                .map_err(|e| FieldError::CannotRead(e, format!("characters:u8 ({})", label)))?;
+            buffer.write_u8(realm.timezone)
+                .map_err(|e| FieldError::CannotRead(e, format!("timezone:u8 ({})", label)))?;
+            buffer.write_u8(realm.server_id)
+                .map_err(|e| FieldError::CannotRead(e, format!("server_id:u8 ({})", label)))?;
+        }
+
+        Ok(())
     }
 
     fn read_from<R: BufRead>(mut reader: R) -> Result<Self, FieldError> {
@@ -115,8 +144,10 @@ impl BinaryConverter for Vec<Realm> {
 
 #[async_trait]
 impl StreamReader for Vec<Realm> {
-    async fn read_from(stream: &mut BufReader<TcpStream>) -> Result<Self, FieldError>
-        where Self: Sized
+    async fn read_from<R>(stream: &mut R) -> Result<Self, FieldError>
+        where
+            Self: Sized,
+            R: AsyncBufRead + Unpin + Send,
     {
         let mut realms = Vec::new();
         let label = "Vec<Realm>";
