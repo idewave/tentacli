@@ -107,7 +107,11 @@ impl PacketHandler for Handler {
         srp_client.calculate_session_key::<Sha1>(account, password);
 
         let client_proof: [u8; 20] = srp_client.calculate_proof::<Sha1>(account);
-        let crc_hash: [u8; 20] = rand::random();
+        let crc_hash: [u8; 20]  = [
+            0xCD, 0xCB, 0xBD, 0x51, 0x88, 0x31, 0x5E, 0x6B,
+            0x4D, 0x19, 0x44, 0x9D, 0x49, 0x2D, 0xBC, 0xFA,
+            0xF1, 0x56, 0xA3, 0x47
+        ];
 
         response.push(HandlerOutput::DebugMessage(
             String::from("Session key created"),
