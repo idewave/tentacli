@@ -5,7 +5,7 @@ use crate::primary::macros::with_opcode;
 use crate::primary::client::opcodes::Opcode;
 use crate::primary::errors::CharacterListError;
 use crate::primary::types::{HandlerInput, HandlerOutput, HandlerResult};
-use crate::primary::traits::packet_handler::PacketHandler;
+use crate::primary::traits::PacketHandler;
 
 with_opcode! {
     @world_opcode(Opcode::CMSG_PLAYER_LOGIN)

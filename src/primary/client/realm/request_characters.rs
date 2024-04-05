@@ -6,7 +6,7 @@ use crate::primary::types::{
     HandlerOutput,
     HandlerResult
 };
-use crate::primary::traits::packet_handler::PacketHandler;
+use crate::primary::traits::PacketHandler;
 
 pub struct Handler;
 #[async_trait]

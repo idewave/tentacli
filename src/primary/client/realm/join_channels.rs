@@ -2,7 +2,7 @@ use async_trait::async_trait;
 
 use crate::primary::client::chat::globals::JoinChannelOutcome;
 use crate::primary::types::{HandlerInput, HandlerOutput, HandlerResult, TerminatedString};
-use crate::primary::traits::packet_handler::PacketHandler;
+use crate::primary::traits::PacketHandler;
 
 const COMMON_CHANNEL_ID: u32 = 1;
 const LFG_CHANNEL_ID: u32 = 26;

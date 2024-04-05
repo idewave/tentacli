@@ -2,18 +2,19 @@ use std::io::BufRead;
 use sha1::{Sha1};
 use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
+use tokio::io::{AsyncBufRead, AsyncReadExt};
 
 use crate::primary::macros::with_opcode;
 use crate::primary::client::Opcode;
 use crate::primary::crypto::srp::Srp;
 use crate::primary::types::{HandlerInput, HandlerOutput, HandlerResult};
-use crate::primary::traits::packet_handler::PacketHandler;
+use crate::primary::traits::PacketHandler;
 use crate::primary::utils::encode_hex;
 
 with_opcode! {
     @login_opcode(Opcode::LOGIN_PROOF)
     #[derive(LoginPacket, Serialize, Deserialize, Debug)]
-    struct Income {
+    pub struct LoginChallengeResponse {
         unknown: u8,
         code: u8,
         #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
@@ -26,18 +27,36 @@ with_opcode! {
         n: Vec<u8>,
         #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
         salt: [u8; 32],
+        version_challenge: [u8; 16],
+        unknown2: u8,
     }
 
-    impl Income {
-        fn g<R: BufRead>(mut reader: R, initial: &mut Self) -> Vec<u8> {
-            let mut buffer = vec![0u8; initial.g_len as usize];
+    impl LoginChallengeResponse {
+        fn g<R: BufRead>(mut reader: R, cache: &mut Self) -> Vec<u8> {
+            let mut buffer = vec![0u8; cache.g_len as usize];
             reader.read_exact(&mut buffer).unwrap();
             buffer
         }
 
-        fn n<R: BufRead>(mut reader: R, initial: &mut Self) -> Vec<u8> {
-            let mut buffer = vec![0u8; initial.n_len as usize];
+        async fn async_g<R>(stream: &mut R, cache: &mut Self) -> Vec<u8>
+            where R: AsyncBufRead + Unpin + Send
+        {
+            let mut buffer = vec![0u8; cache.g_len as usize];
+            stream.read_exact(&mut buffer).await.unwrap();
+            buffer
+        }
+
+        fn n<R: BufRead>(mut reader: R, cache: &mut Self) -> Vec<u8> {
+            let mut buffer = vec![0u8; cache.n_len as usize];
             reader.read_exact(&mut buffer).unwrap();
+            buffer
+        }
+
+        async fn async_n<R>(stream: &mut R, cache: &mut Self) -> Vec<u8>
+            where R: AsyncBufRead + Unpin + Send
+        {
+            let mut buffer = vec![0u8; cache.n_len as usize];
+            stream.read_exact(&mut buffer).await.unwrap();
             buffer
         }
     }
@@ -48,7 +67,7 @@ with_opcode! {
     #[derive(LoginPacket, Serialize, Deserialize, Debug)]
     struct Outcome {
         #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
-        public_ephemeral: Vec<u8>,
+        public_ephemeral: [u8; 32],
         #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
         client_proof: [u8; 20],
         #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
@@ -64,7 +83,13 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let mut response = Vec::new();
 
-        let (Income { n, g, server_ephemeral, salt, .. }, json) = Income::from_binary(&input.data)?;
+        let (LoginChallengeResponse {
+            n,
+            g,
+            server_ephemeral,
+            salt,
+            ..
+        }, json) = LoginChallengeResponse::from_binary(&input.data)?;
 
         response.push(HandlerOutput::ResponseMessage(
             Opcode::get_opcode_name(input.opcode as u32)
@@ -82,7 +107,11 @@ impl PacketHandler for Handler {
         srp_client.calculate_session_key::<Sha1>(account, password);
 
         let client_proof: [u8; 20] = srp_client.calculate_proof::<Sha1>(account);
-        let crc_hash: [u8; 20] = rand::random();
+        let crc_hash: [u8; 20]  = [
+            0xCD, 0xCB, 0xBD, 0x51, 0x88, 0x31, 0x5E, 0x6B,
+            0x4D, 0x19, 0x44, 0x9D, 0x49, 0x2D, 0xBC, 0xFA,
+            0xF1, 0x56, 0xA3, 0x47
+        ];
 
         response.push(HandlerOutput::DebugMessage(
             String::from("Session key created"),

@@ -6,7 +6,7 @@ use crate::primary::client::Opcode;
 use crate::primary::client::player::globals::CharacterEnumOutcome;
 use crate::primary::client::player::traits::CharacterCreateToolkit;
 use crate::primary::client::player::types::CharacterCreateResponseCode;
-use crate::primary::traits::packet_handler::PacketHandler;
+use crate::primary::traits::PacketHandler;
 use crate::primary::types::{HandlerInput, HandlerResult};
 use crate::types::HandlerOutput;
 

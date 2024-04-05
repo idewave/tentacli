@@ -5,7 +5,7 @@ use tui::style::{Color, Style};
 use tui::text::{Span, Spans};
 use tui::widgets::{Block, Borders, BorderType, Clear, Paragraph, Wrap};
 
-use crate::features::ui::traits::ui_component::{UIComponent};
+use crate::features::ui::traits::{UIComponent};
 
 pub struct InfoPanel {
     selected_index: usize,

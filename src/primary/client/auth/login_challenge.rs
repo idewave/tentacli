@@ -32,7 +32,7 @@ pub fn handler(account: &str) -> AnyResult<OutgoingPacket> {
     let account_length = account.chars().count() as u8;
     let packet_size = PACKET_LENGTH_WITHOUT_ACCOUNT + account_length as u16;
 
-    Outcome {
+    let (opcode, data, json_details) = Outcome {
         unknown: 0,
         packet_size,
         game_name: TerminatedString::from("WoW"),
@@ -45,5 +45,11 @@ pub fn handler(account: &str) -> AnyResult<OutgoingPacket> {
         ip: Ipv4Addr::new(127, 0, 0, 1).into(),
         account_length,
         account: account.to_string(),
-    }.unpack()
+    }.unpack()?;
+
+    Ok(OutgoingPacket {
+        opcode,
+        data,
+        json_details,
+    })
 }

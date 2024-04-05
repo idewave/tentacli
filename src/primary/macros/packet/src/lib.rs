@@ -12,13 +12,14 @@ use types::{Attributes, Imports};
 pub fn derive_login_packet(input: TokenStream) -> TokenStream {
     let ItemStruct { ident, fields, .. } = parse_macro_input!(input);
     let Imports {
+        buf_read,
         binary_converter,
         byteorder_write,
         cursor,
         json_formatter,
         result,
         serialize,
-        types,
+        stream_reader,
         ..
     } = Imports::get();
 
@@ -35,18 +36,6 @@ pub fn derive_login_packet(input: TokenStream) -> TokenStream {
         }
     }
 
-    let initial_initializers = fields
-        .iter()
-        .map(|f| {
-            let field_name = f.ident.clone();
-
-            if dynamic_fields.contains(&field_name) {
-                quote!{ Default::default() }
-            } else {
-                quote! { #binary_converter::read_from(&mut initial_reader)? }
-            }
-        });
-
     let initializers = fields
         .iter()
         .map(|f| {
@@ -54,12 +43,32 @@ pub fn derive_login_packet(input: TokenStream) -> TokenStream {
             let field_type = f.ty.clone();
 
             if dynamic_fields.contains(&field_name) {
-                quote!{ Self::#field_name(&mut reader, &mut initial) }
+                quote!{ Self::#field_name(&mut reader, &mut cache) }
             } else {
                 quote! {
                     {
                         let value: #field_type = #binary_converter::read_from(&mut reader)?;
-                        initial.#field_name = value.clone();
+                        cache.#field_name = value.clone();
+                        value
+                    }
+                }
+            }
+        });
+
+    let async_initializers = fields
+        .iter()
+        .map(|f| {
+            let field_name = f.ident.clone();
+            let field_type = f.ty.clone();
+
+            if dynamic_fields.contains(&field_name) {
+                let async_field_name = format_ident!("async_{}", field_name.unwrap());
+                quote!{ Self::#async_field_name(&mut stream, &mut cache).await }
+            } else {
+                quote! {
+                    {
+                        let value: #field_type = #stream_reader::read_from(&mut stream).await?;
+                        cache.#field_name = value.clone();
                         value
                     }
                 }
@@ -69,9 +78,8 @@ pub fn derive_login_packet(input: TokenStream) -> TokenStream {
     let output = quote! {
         impl #ident {
             pub fn from_binary(buffer: &[u8]) -> #result<(Self, String)> {
-                let mut initial_reader = #cursor::new(buffer.to_vec());
-                let mut initial = Self {
-                    #(#field_names: #initial_initializers),*
+                let mut cache = Self {
+                    #(#field_names: Default::default()),*
                 };
 
                 let mut reader = #cursor::new(buffer.to_vec());
@@ -83,6 +91,20 @@ pub fn derive_login_packet(input: TokenStream) -> TokenStream {
                 Ok((instance, details))
             }
 
+            pub async fn from_stream<R>(mut stream: &mut R) -> #result<Vec<u8>>
+                where R: #buf_read + Unpin + Send
+            {
+                let mut cache = Self {
+                    #(#field_names: Default::default()),*
+                };
+
+                let mut instance = Self {
+                    #(#field_names: #async_initializers),*
+                };
+
+                Ok(instance._build_body()?)
+            }
+
             pub fn to_binary(&mut self) -> #result<Vec<u8>> {
                 let body = self._build_body()?;
 
@@ -90,12 +112,8 @@ pub fn derive_login_packet(input: TokenStream) -> TokenStream {
                 Ok([header, body].concat())
             }
 
-            pub fn unpack(&mut self) -> #result<#types::OutgoingPacket> {
-                Ok(#types::OutgoingPacket {
-                    opcode: Self::opcode() as u32,
-                    data: self.to_binary()?,
-                    json_details: self.get_json_details()?,
-                })
+            pub fn unpack(&mut self) -> #result<(u32, Vec<u8>, String)> {
+                Ok((Self::opcode() as u32, self.to_binary()?, self.get_json_details()?))
             }
 
             pub fn get_json_details(&mut self) -> #result<String> {
@@ -145,7 +163,6 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
         read,
         result,
         serialize,
-        types,
         ..
     } = Imports::get();
 
@@ -246,12 +263,8 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
                 Ok([header, body].concat())
             }
 
-            pub fn unpack_with_opcode(&mut self, opcode: u32) -> #result<#types::OutgoingPacket> {
-                Ok(#types::OutgoingPacket {
-                    opcode,
-                    data: self.to_binary_with_opcode(opcode)?,
-                    json_details: self.get_json_details()?,
-                })
+            pub fn unpack_with_opcode(&mut self, opcode: u32) -> #result<(u32, Vec<u8>, String)> {
+                Ok((opcode, self.to_binary_with_opcode(opcode)?, self.get_json_details()?))
             }
 
             pub fn get_json_details(&mut self) -> #result<String> {
@@ -302,12 +315,12 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
                     Ok([header, body].concat())
                 }
 
-                pub fn unpack(&mut self) -> #result<#types::OutgoingPacket> {
-                    Ok(#types::OutgoingPacket {
-                        opcode: Self::opcode(),
-                        data: self.to_binary()?,
-                        json_details: self.get_json_details()?,
-                    })
+                pub fn unpack(&mut self) -> #result<(u32, Vec<u8>, String)> {
+                    Ok((
+                        Self::opcode(),
+                        self.to_binary()?,
+                        self.get_json_details()?
+                    ))
                 }
             }
         }
@@ -318,7 +331,7 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
 
 #[proc_macro_derive(FieldsSerializer, attributes(dynamic_field))]
 pub fn derive_fields_serializer(input: TokenStream) -> TokenStream {
-    let ItemStruct { ident, fields, attrs, .. } = parse_macro_input!(input);
+    let ItemStruct { ident, fields, .. } = parse_macro_input!(input);
     let Imports {
         binary_converter,
         cursor,
@@ -372,7 +385,7 @@ pub fn derive_fields_serializer(input: TokenStream) -> TokenStream {
             }
         });
 
-    let mut output = quote! {
+    let output = quote! {
         impl #ident {
             pub fn from_binary(buffer: &[u8]) -> #result<(Self, String)> {
                 let mut initial_reader = #cursor::new(buffer.to_vec());

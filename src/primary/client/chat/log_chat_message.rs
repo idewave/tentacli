@@ -4,7 +4,7 @@ use std::io::BufRead;
 use crate::primary::client::chat::types::{MessageType};
 use crate::primary::client::{Message, Opcode};
 use crate::primary::types::{HandlerInput, HandlerOutput, HandlerResult, TerminatedString};
-use crate::primary::traits::packet_handler::PacketHandler;
+use crate::primary::traits::PacketHandler;
 
 #[derive(WorldPacket, Serialize, Deserialize)]
 #[options(no_opcode)]

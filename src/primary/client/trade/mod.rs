@@ -1,6 +1,6 @@
 pub mod types;
 
-use crate::primary::traits::processor::Processor;
+use crate::primary::traits::Processor;
 use crate::primary::types::{HandlerInput, ProcessorResult};
 
 pub struct TradeProcessor;

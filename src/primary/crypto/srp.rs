@@ -37,8 +37,8 @@ impl Srp {
         }
     }
 
-    pub fn public_ephemeral(&mut self) -> Vec<u8> {
-        self.public_ephemeral.to_bytes_le().1
+    pub fn public_ephemeral(&mut self) -> [u8; 32] {
+        Self::pad_to_32_bytes(self.public_ephemeral.to_bytes_le().1)
     }
 
     pub fn session_key(&mut self) -> Vec<u8> {
@@ -78,9 +78,17 @@ impl Srp {
             &self.modulus,
         );
 
-        self.session_key = Self::calculate_interleaved::<D>(
+        let mut session_key = Self::calculate_interleaved::<D>(
             self.calculate_s::<D>(x, verifier)
         );
+
+        // sometimes session key has trailing 0, but on mangos side there was no trailing zero
+        // so, actually, session key can be less than 40 bytes
+        while let Some(&0) = session_key.last() {
+            session_key.truncate(session_key.len() - 1);
+        }
+
+        self.session_key = session_key;
     }
 
     pub fn validate_proof(&mut self, server_proof: [u8; 20]) -> bool {
@@ -179,7 +187,7 @@ impl Srp {
         D: Digest
     {
         let (even, odd): (Vec<_>, Vec<_>) =
-            s.to_bytes_le().1
+            Self::pad_to_32_bytes(s.to_bytes_le().1)
                 .into_iter()
                 .enumerate()
                 .partition(|(i, _)| i % 2 == 0);
@@ -197,5 +205,11 @@ impl Srp {
         }
 
         session_key
+    }
+
+    fn pad_to_32_bytes(bytes: Vec<u8>) -> [u8; 32] {
+        let mut buffer = [0u8; 32];
+        buffer[..bytes.len()].copy_from_slice(&bytes);
+        buffer
     }
 }

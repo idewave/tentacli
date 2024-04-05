@@ -150,8 +150,9 @@ pub mod packet {
 }
 
 pub mod traits {
-    pub use crate::primary::traits::Feature;
-    pub use crate::primary::traits::binary_converter::BinaryConverter;
+    pub use crate::primary::traits::{
+        Feature, BinaryConverter, StreamReader, Processor, PacketHandler
+    };
 }
 
 pub mod types {

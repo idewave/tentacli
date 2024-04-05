@@ -1,8 +1,12 @@
+use std::io::BufRead;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde::ser::SerializeStruct;
+use crate::errors::FieldError;
 
 use crate::primary::client::{MovementFlags, MovementFlagsExtra};
+use crate::primary::parsers::movement_parser::MovementParser;
 use crate::primary::parsers::position_parser::types::Position;
+use crate::traits::BinaryConverter;
 
 #[derive(Clone, Default, Debug)]
 pub struct MovementInfo {
@@ -31,6 +35,17 @@ impl Serialize for MovementInfo {
         state.serialize_field("fall_time", &self.fall_time)?;
         state.serialize_field("jump_info", &self.jump_info)?;
         state.end()
+    }
+}
+
+impl BinaryConverter for MovementInfo {
+    fn write_into(&mut self, _buffer: &mut Vec<u8>) -> Result<(), FieldError> {
+        todo!()
+    }
+
+    fn read_from<R: BufRead>(mut reader: R) -> Result<Self, FieldError> where Self: Sized {
+        MovementParser::parse(&mut reader)
+            .map_err(|e| FieldError::CannotRead(e, "MovementInfo".to_string()))
     }
 }
 

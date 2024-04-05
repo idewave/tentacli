@@ -4,7 +4,7 @@ use crate::primary::client::Opcode;
 use crate::primary::client::player::globals::NameQueryOutcome;
 use crate::primary::types::{HandlerInput, HandlerOutput, HandlerResult, PackedGuid};
 use crate::primary::parsers::movement_parser::types::{MovementInfo};
-use crate::primary::traits::packet_handler::PacketHandler;
+use crate::primary::traits::PacketHandler;
 
 #[derive(WorldPacket, Serialize, Deserialize, Debug)]
 #[options(no_opcode)]
