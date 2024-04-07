@@ -22,7 +22,7 @@ impl Imports {
     pub fn get() -> Self {
         Self {
             async_read: quote!(tokio::io::AsyncRead),
-            binary_converter: quote!(crate::traits::BinaryConverter),
+            binary_converter: quote!(tentacli::traits::BinaryConverter),
             buf_read: quote!(tokio::io::AsyncBufRead),
             byteorder_be: quote!(byteorder::BigEndian),
             byteorder_le: quote!(byteorder::LittleEndian),
@@ -34,7 +34,7 @@ impl Imports {
             read: quote!(std::io::Read),
             result: quote!(anyhow::Result),
             serialize: quote!(serde::Serialize),
-            stream_reader: quote!(crate::primary::traits::StreamReader),
+            stream_reader: quote!(tentacli::traits::StreamReader),
         }
     }
 }

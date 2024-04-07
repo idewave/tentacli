@@ -20,3 +20,4 @@ syn = { version = "2.0.49", features = ["full"] }
 quote = "1.0"
 proc-macro2 = "1.0"
 structmeta = "0.3.0"
+tentacli = "8.0.7"
