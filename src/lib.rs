@@ -160,5 +160,5 @@ pub mod types {
 }
 
 pub mod errors {
-    pub use crate::primary::errors::{FieldError};
+    pub use crate::primary::errors::*;
 }
