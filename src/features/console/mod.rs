@@ -1,9 +1,8 @@
 use async_broadcast::{Sender as BroadcastSender, Receiver as BroadcastReceiver};
 use tokio::task::JoinHandle;
 use colored::*;
-
-use crate::primary::traits::Feature;
-use crate::primary::types::HandlerOutput;
+use tentacli_traits::Feature;
+use tentacli_traits::types::HandlerOutput;
 
 pub struct Console {
     _receiver: Option<BroadcastReceiver<HandlerOutput>>,
