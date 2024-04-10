@@ -7,12 +7,12 @@ use tui::layout::{Constraint, Direction, Layout, Rect};
 use tui::style::{Color, Modifier, Style};
 use tui::text::{Span, Spans};
 use tui::widgets::{Block, Borders, BorderType, Clear, List, ListItem, ListState};
+use tentacli_traits::types::HandlerOutput;
 
 use crate::features::ui::debug_details_panel::DebugDetailsPanel;
 use crate::features::ui::info_panel::InfoPanel;
 use crate::features::ui::traits::{UIComponent, Paginator};
 use crate::features::ui::types::{LoggerOutput, UIEventFlags};
-use crate::primary::types::HandlerOutput;
 
 const PANEL_TITLE: &str = "I/O MONITOR";
 

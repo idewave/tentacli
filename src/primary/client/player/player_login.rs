@@ -1,18 +1,12 @@
 use anyhow::bail;
 use async_trait::async_trait;
+use tentacli_traits::{CharacterListError, PacketHandler};
+use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
+use tentacli_traits::types::opcodes::Opcode;
 
-use crate::primary::macros::with_opcode;
-use crate::primary::client::opcodes::Opcode;
-use crate::primary::errors::CharacterListError;
-use crate::primary::types::{HandlerInput, HandlerOutput, HandlerResult};
-use crate::primary::traits::PacketHandler;
-
-with_opcode! {
-    @world_opcode(Opcode::CMSG_PLAYER_LOGIN)
-    #[derive(WorldPacket, Serialize, Deserialize, Debug)]
-    struct Outcome {
-        guid: u64,
-    }
+#[derive(WorldPacket, Serialize, Deserialize, Debug)]
+struct Outcome {
+    guid: u64,
 }
 
 pub struct Handler;
@@ -44,7 +38,11 @@ impl PacketHandler for Handler {
             input.session.lock().await.me.as_ref().unwrap().guid
         };
 
-        response.push(HandlerOutput::Data(Outcome { guid: my_guid }.unpack()?));
+        response.push(
+            HandlerOutput::Data(
+                Outcome { guid: my_guid }.unpack_with_opcode(Opcode::CMSG_PLAYER_LOGIN)?
+            )
+        );
 
         Ok(response)
     }

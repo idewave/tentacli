@@ -1,8 +1,7 @@
 use async_trait::async_trait;
-
-use crate::primary::shared::session::types::StateFlags;
-use crate::primary::types::{HandlerInput, HandlerResult};
-use crate::primary::traits::PacketHandler;
+use tentacli_traits::PacketHandler;
+use tentacli_traits::types::{HandlerInput, HandlerResult};
+use tentacli_traits::types::shared::StateFlags;
 
 pub struct Handler;
 #[async_trait]

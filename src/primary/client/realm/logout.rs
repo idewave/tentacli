@@ -1,8 +1,6 @@
 use async_trait::async_trait;
-
-use crate::primary::traits::PacketHandler;
-use crate::primary::types::{HandlerInput, HandlerResult};
-use crate::types::HandlerOutput;
+use tentacli_traits::PacketHandler;
+use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
 
 pub struct Handler;
 #[async_trait]

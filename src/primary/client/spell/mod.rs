@@ -1,10 +1,9 @@
+use tentacli_traits::Processor;
+use tentacli_traits::types::{HandlerInput, ProcessorResult};
+use tentacli_traits::types::opcodes::Opcode;
+
 mod handle_initial_spells;
 mod handle_spell_go;
-pub mod types;
-
-use crate::primary::client::opcodes::Opcode;
-use crate::primary::traits::Processor;
-use crate::primary::types::{HandlerInput, ProcessorResult};
 
 pub struct SpellProcessor;
 

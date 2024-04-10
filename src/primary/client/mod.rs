@@ -11,30 +11,27 @@ use tokio::task::{JoinHandle};
 use futures::future::{join_all};
 use tokio::time::sleep;
 use anyhow::{Result as AnyResult};
+use bitflags::bitflags;
+use tentacli_crypto::WardenCrypt;
+use tentacli_traits::{Feature, Processor};
+use tentacli_traits::types::config::{EnvConfig, EnvConfigParams};
+use tentacli_traits::types::opcodes::Opcode;
+use tentacli_traits::types::shared::{DataStorage, Session};
+use tentacli_traits::types::{
+    HandlerInput, HandlerOutput, IncomingPacket,
+    OutgoingPacket, ProcessorFunction, ProcessorResult, Signal
+};
+use tentacli_utils::encode_hex;
 
 pub mod auth;
 pub mod chat;
 pub mod movement;
-mod opcodes;
 pub mod player;
 mod realm;
 mod spell;
-mod trade;
-pub mod types;
 mod warden;
 
 #[allow(unused_imports)]
-pub use chat::types::{Language, MessageType, EmoteType, TextEmoteType, Message};
-pub use movement::types::{MovementFlags, MovementFlagsExtra, SplineFlags, UnitMoveType};
-pub use crate::primary::parsers::position_parser::types::Position;
-pub use player::types::{
-    Player, ObjectField, UnitField, PlayerField, FieldType, FieldValue,
-    Race, Class, Gender,
-};
-pub use realm::types::{Realm};
-pub use spell::types::{Spell, CooldownInfo};
-pub use warden::types::{WardenModuleInfo};
-
 use auth::AuthProcessor;
 use chat::ChatProcessor;
 use movement::MovementProcessor;
@@ -46,20 +43,8 @@ use warden::WardenProcessor;
 // TODO: REMOVE THIS ! (need to think how better refactor this part)
 use auth::login_challenge;
 
-pub use crate::primary::client::opcodes::Opcode;
 use crate::primary::client::realm::packet::LogoutOutcome;
-use crate::primary::client::types::{ClientFlags};
-use crate::primary::config::{EnvConfig, EnvConfigParams};
-use crate::primary::crypto::warden_crypt::WardenCrypt;
-use crate::primary::shared::storage::DataStorage;
-use crate::primary::shared::session::Session;
 use crate::primary::network::stream::{Reader, Writer};
-use crate::primary::traits::{Feature, Processor};
-use crate::primary::types::{
-    HandlerInput, HandlerOutput, IncomingPacket,
-    OutgoingPacket, ProcessorFunction, ProcessorResult, Signal
-};
-use crate::primary::utils::encode_hex;
 
 pub struct RunOptions<'a> {
     pub external_features: Vec<Box<dyn Feature>>,
@@ -396,7 +381,8 @@ impl Client {
                                         opcode,
                                         data,
                                         json_details
-                                    ) = LogoutOutcome::default().unpack().unwrap();
+                                    ) = LogoutOutcome::default()
+                                        .unpack_with_opcode(Opcode::CMSG_LOGOUT_REQUEST).unwrap();
 
                                     output_sender.send(OutgoingPacket {
                                         opcode,
@@ -543,17 +529,26 @@ impl Client {
     }
 }
 
+bitflags! {
+    #[derive(Default, Clone, Debug, PartialEq)]
+    pub struct ClientFlags: u32 {
+        const NONE = 0x00000000;
+        const IS_CONNECTED_TO_REALM = 0x00000001;
+        const IN_DEBUG_MODE = 0x00000010;
+        const IN_FROZEN_MODE = 0x00000100;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use async_broadcast::broadcast;
     use tokio::io::{AsyncReadExt};
     use tokio::net::TcpListener;
     use tokio::sync::{mpsc};
+    use tentacli_traits::types::{HandlerOutput, OutgoingPacket};
+    use tentacli_traits::types::shared::{ActionFlags, StateFlags};
 
-    use crate::primary::client::Client;
-    use crate::primary::client::types::{ClientFlags};
-    use crate::primary::shared::session::types::{ActionFlags, StateFlags};
-    use crate::primary::types::{HandlerOutput, OutgoingPacket};
+    use crate::primary::client::{Client, ClientFlags};
 
     const HOST: &str = "127.0.0.1";
     // https://users.rust-lang.org/t/async-tests-sometimes-fails/78451

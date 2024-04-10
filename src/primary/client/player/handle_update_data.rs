@@ -1,21 +1,19 @@
 use async_trait::async_trait;
-
-use crate::primary::client::{FieldValue, ObjectField, Player};
-use crate::primary::client::opcodes::Opcode;
+use tentacli_traits::PacketHandler;
+use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
+use tentacli_traits::types::opcodes::Opcode;
+use tentacli_traits::types::parsed_block::{ObjectTypeMask, ParsedBlock};
+use tentacli_traits::types::player::{FieldValue, Gender, ObjectField, Player};
 use crate::primary::client::player::globals::NameQueryOutcome;
-use crate::primary::client::player::types::Gender;
-use crate::primary::parsers::update_block_parser::types::{ObjectTypeMask, ParsedBlock};
-use crate::primary::types::{HandlerInput, HandlerOutput, HandlerResult};
-use crate::primary::traits::PacketHandler;
+
 
 #[derive(WorldPacket, Serialize, Deserialize, Debug)]
-#[options(no_opcode)]
 struct Income {
     parsed_blocks: Vec<ParsedBlock>,
 }
 
 #[derive(WorldPacket, Serialize, Deserialize, Debug)]
-#[options(no_opcode, compressed)]
+#[options(compressed)]
 struct CompressedIncome {
     parsed_blocks: Vec<ParsedBlock>,
 }
@@ -91,7 +89,10 @@ impl PacketHandler for Handler {
                                             .unwrap().players_map.insert(guid, player);
 
                                         return Ok(
-                                            vec![HandlerOutput::Data(NameQueryOutcome { guid }.unpack()?)]
+                                            vec![HandlerOutput::Data(
+                                                NameQueryOutcome { guid }
+                                                    .unpack_with_opcode(Opcode::CMSG_NAME_QUERY)?
+                                            )]
                                         );
                                     }
                                 },
@@ -102,7 +103,9 @@ impl PacketHandler for Handler {
                     },
                     None => {
                         if players_map.get(&guid).is_none() {
-                            let mut player = Player::new(guid, String::new(), 0, 0, Gender::GENDER_NONE, 1);
+                            let mut player = Player::new(
+                                guid, String::new(), 0, 0, Gender::GENDER_NONE, 1
+                            );
 
                             if let Some(movement_data) = parsed_block.movement_data {
                                 if let Some(movement_info) = movement_data.movement_info {
@@ -120,7 +123,14 @@ impl PacketHandler for Handler {
 
                             input.data_storage.lock().unwrap().players_map.insert(guid, player);
 
-                            return Ok(vec![HandlerOutput::Data(NameQueryOutcome { guid }.unpack()?)]);
+                            return Ok(
+                                vec![
+                                    HandlerOutput::Data(
+                                        NameQueryOutcome { guid }
+                                            .unpack_with_opcode(Opcode::CMSG_NAME_QUERY)?
+                                    )
+                                ]
+                            );
                         } else {
                             players_map.entry(guid).and_modify(|p| {
                                 if let Some(movement_data) = parsed_block.movement_data {
@@ -139,16 +149,19 @@ impl PacketHandler for Handler {
             } else {
                 if let Some(movement_data) = parsed_block.movement_data {
                     if let Some(movement_info) = movement_data.movement_info {
-                        input.session.lock().await.me.as_mut().unwrap().position = Some(movement_info.position);
+                        input.session.lock().await
+                            .me.as_mut().unwrap().position = Some(movement_info.position);
                     }
 
                     if !movement_data.movement_speed.is_empty() {
-                        input.session.lock().await.me.as_mut().unwrap().movement_speed = movement_data.movement_speed;
+                        input.session.lock().await
+                            .me.as_mut().unwrap().movement_speed = movement_data.movement_speed;
                     }
                 }
 
                 if !parsed_block.update_fields.is_empty() {
-                    input.session.lock().await.me.as_mut().unwrap().fields = parsed_block.update_fields;
+                    input.session.lock().await
+                        .me.as_mut().unwrap().fields = parsed_block.update_fields;
                 }
 
                 let me = input.session.lock().await.me.clone().unwrap();

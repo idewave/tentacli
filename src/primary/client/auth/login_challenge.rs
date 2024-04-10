@@ -1,28 +1,24 @@
 use std::net::Ipv4Addr;
 use anyhow::{Result as AnyResult};
+use tentacli_traits::types::custom_fields::TerminatedString;
+use tentacli_traits::types::opcodes::Opcode;
+use tentacli_traits::types::OutgoingPacket;
 
-use crate::primary::client::Opcode;
-use crate::primary::macros::with_opcode;
-use crate::primary::types::{OutgoingPacket, TerminatedString};
-
-with_opcode! {
-    @login_opcode(Opcode::LOGIN_CHALLENGE)
-    #[derive(LoginPacket, Serialize, Deserialize, Debug)]
-    struct Outcome {
-        unknown: u8,
-        packet_size: u16,
-        game_name: TerminatedString,
-        #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
-        version: [u8; 3],
-        build: u16,
-        platform: TerminatedString,
-        os: TerminatedString,
-        locale: String,
-        timezone: u32,
-        ip: u32,
-        account_length: u8,
-        account: String,
-    }
+#[derive(LoginPacket, Serialize, Deserialize, Debug)]
+struct Outcome {
+    unknown: u8,
+    packet_size: u16,
+    game_name: TerminatedString,
+    #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
+    version: [u8; 3],
+    build: u16,
+    platform: TerminatedString,
+    os: TerminatedString,
+    locale: String,
+    timezone: u32,
+    ip: u32,
+    account_length: u8,
+    account: String,
 }
 
 const PACKET_LENGTH_WITHOUT_ACCOUNT: u16 = 30;
@@ -45,7 +41,7 @@ pub fn handler(account: &str) -> AnyResult<OutgoingPacket> {
         ip: Ipv4Addr::new(127, 0, 0, 1).into(),
         account_length,
         account: account.to_string(),
-    }.unpack()?;
+    }.unpack_with_opcode(Opcode::LOGIN_CHALLENGE)?;
 
     Ok(OutgoingPacket {
         opcode,

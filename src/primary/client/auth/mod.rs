@@ -1,10 +1,13 @@
+use tentacli_traits::Processor;
+use tentacli_traits::types::{HandlerInput, ProcessorResult};
+use tentacli_traits::types::opcodes::Opcode;
+
 mod check_proof_code;
 mod connect_to_realm;
 mod get_realmlist;
 mod login_challenge;
 mod login_proof;
 mod request_realmlist;
-mod types;
 mod validate_proof;
 
 // TODO: remove this (need to think how better refactor this part)
@@ -12,10 +15,6 @@ pub use login_challenge::handler as login_challenge;
 pub use login_proof::LoginChallengeResponse;
 pub use validate_proof::LoginProofResponse;
 pub use get_realmlist::RealmlistResponse;
-
-use crate::primary::client::Opcode;
-use crate::primary::traits::Processor;
-use crate::primary::types::{HandlerInput, ProcessorResult};
 
 pub struct AuthProcessor;
 

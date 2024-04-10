@@ -3,11 +3,11 @@ use crossterm::event::{KeyCode, KeyModifiers};
 use tui::style::{Color, Modifier, Style};
 use tui::text::{Span, Spans};
 use tui::widgets::{ListItem, ListState};
+use tentacli_traits::types::HandlerOutput;
+use tentacli_traits::types::realm::Realm;
 
-use crate::primary::client::{Realm};
 use crate::features::ui::traits::{UIModalComponent};
 use crate::features::ui::types::{UIEventFlags};
-use crate::primary::types::HandlerOutput;
 
 #[derive(Clone)]
 pub struct RealmModal {

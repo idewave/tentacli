@@ -1,24 +1,15 @@
 use anyhow::bail;
 use async_trait::async_trait;
 use regex::Regex;
+use tentacli_traits::{PacketHandler, RealmListError};
+use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
+use tentacli_traits::types::opcodes::Opcode;
+use tentacli_traits::types::realm::Realm;
 
-use crate::primary::macros::with_opcode;
-use crate::primary::client::{Realm, Opcode};
-use crate::primary::errors::RealmListError;
-use crate::primary::traits::PacketHandler;
-use crate::primary::types::{
-    HandlerInput,
-    HandlerOutput,
-    HandlerResult,
-};
-
-with_opcode! {
-    @login_opcode(Opcode::REALM_LIST)
-    #[derive(LoginPacket, Serialize, Deserialize, Debug, Default)]
-    pub struct RealmlistResponse {
-        skip: [u8; 6],
-        realms: Vec<Realm>,
-    }
+#[derive(LoginPacket, Serialize, Deserialize, Debug, Default)]
+pub struct RealmlistResponse {
+    skip: [u8; 6],
+    realms: Vec<Realm>,
 }
 
 pub struct Handler;

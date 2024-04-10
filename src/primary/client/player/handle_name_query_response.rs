@@ -1,18 +1,18 @@
 use async_trait::async_trait;
+use tentacli_traits::PacketHandler;
+use tentacli_traits::types::custom_fields::{PackedGuid, TerminatedString};
+use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
+use tentacli_traits::types::opcodes::Opcode;
+use tentacli_traits::types::player::Player;
 
-use crate::primary::client::{Opcode, Player};
-use crate::primary::types::{HandlerInput, HandlerOutput, HandlerResult, PackedGuid, TerminatedString};
-use crate::primary::traits::PacketHandler;
 
 #[derive(WorldPacket, Serialize, Deserialize, Debug)]
-#[options(no_opcode)]
 struct CheckEmptyIncome {
     packed_guid: PackedGuid,
     unknown: u8,
 }
 
 #[derive(WorldPacket, Serialize, Deserialize, Debug)]
-#[options(no_opcode)]
 struct Income {
     packed_guid: PackedGuid,
     unknown: u8,

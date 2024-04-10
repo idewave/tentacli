@@ -1,0 +1,23 @@
+[package]
+name = "tentacli-utils"
+version = "0.1.0"
+edition = "2021"
+authors = ["Sergio Ivanuzzo <sergio.ivanuzzo@gmail.com>"]
+description = "Utils for tentacli and related projects"
+keywords = [
+    "idewave", "tentacli", "tentacli-traits", "traits"
+]
+license-file = "../../../LICENSE"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+byteorder = "1.4.3"
+flate2 = "1.0.24"
+
+[dev-dependencies]
+tempdir = "0.3.7"
+
+[lib]
+name = "tentacli_utils"
+path = "src/lib.rs"

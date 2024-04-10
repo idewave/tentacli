@@ -1,13 +1,13 @@
 use async_trait::async_trait;
+use tentacli_traits::PacketHandler;
+use tentacli_traits::types::custom_fields::PackedGuid;
+use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
+use tentacli_traits::types::movement::MovementInfo;
 
 use crate::primary::client::Opcode;
 use crate::primary::client::player::globals::NameQueryOutcome;
-use crate::primary::types::{HandlerInput, HandlerOutput, HandlerResult, PackedGuid};
-use crate::primary::parsers::movement_parser::types::{MovementInfo};
-use crate::primary::traits::PacketHandler;
 
 #[derive(WorldPacket, Serialize, Deserialize, Debug)]
-#[options(no_opcode)]
 struct Income {
     packed_guid: PackedGuid,
     movement_info: MovementInfo,
@@ -44,7 +44,9 @@ impl PacketHandler for Handler {
             let player = players_map.get(&guid);
 
             if player.is_none() {
-                response.push(HandlerOutput::Data(NameQueryOutcome { guid }.unpack()?));
+                response.push(HandlerOutput::Data(
+                    NameQueryOutcome { guid }.unpack_with_opcode(Opcode::CMSG_NAME_QUERY)?
+                ));
 
                 return Ok(response);
             }

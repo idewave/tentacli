@@ -3,17 +3,15 @@ use sha1::{Digest, Sha1};
 use flate2::Compression;
 use flate2::write::ZlibEncoder;
 use async_trait::async_trait;
-
-use crate::primary::macros::with_opcode;
-use crate::primary::client::opcodes::Opcode;
-use crate::primary::config::types::AddonInfo;
-use crate::primary::types::{HandlerInput, HandlerOutput, HandlerResult, TerminatedString};
-use crate::primary::traits::PacketHandler;
+use tentacli_traits::PacketHandler;
+use tentacli_traits::types::custom_fields::TerminatedString;
+use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
+use tentacli_traits::types::config::AddonInfo;
+use tentacli_traits::types::opcodes::Opcode;
 
 const SEED_SIZE: usize = 4;
 
 #[derive(WorldPacket, Serialize, Deserialize, Debug)]
-#[options(no_opcode)]
 struct Income {
     skip: u32,
     server_seed: [u8; SEED_SIZE],
@@ -21,25 +19,22 @@ struct Income {
     seed: [u8; 32],
 }
 
-with_opcode! {
-    @world_opcode(Opcode::CMSG_AUTH_SESSION)
-    #[derive(WorldPacket, Serialize, Deserialize, Debug)]
-    struct Outcome {
-        build: u32,
-        unknown: u32,
-        account: TerminatedString,
-        unknown2: u32,
-        #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
-        client_seed: [u8; SEED_SIZE],
-        unknown3: u64,
-        server_id: u32,
-        unknown4: u64,
-        #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
-        digest: [u8; 20],
-        addons_count: u32,
-        #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
-        addons: Vec<u8>,
-    }
+#[derive(WorldPacket, Serialize, Deserialize, Debug)]
+struct Outcome {
+    build: u32,
+    unknown: u32,
+    account: TerminatedString,
+    unknown2: u32,
+    #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
+    client_seed: [u8; SEED_SIZE],
+    unknown3: u64,
+    server_id: u32,
+    unknown4: u64,
+    #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
+    digest: [u8; 20],
+    addons_count: u32,
+    #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
+    addons: Vec<u8>,
 }
 
 pub struct Handler;
@@ -97,7 +92,7 @@ impl PacketHandler for Handler {
             digest: digest.try_into().unwrap(),
             addons_count: addon_info.len() as u32,
             addons: encoder.finish()?,
-        }.unpack()?));
+        }.unpack_with_opcode(Opcode::CMSG_AUTH_SESSION)?));
 
         Ok(response)
     }

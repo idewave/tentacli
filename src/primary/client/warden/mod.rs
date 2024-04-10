@@ -1,10 +1,8 @@
-mod opcodes;
-mod send_data;
-pub mod types;
+use tentacli_traits::Processor;
+use tentacli_traits::types::opcodes::Opcode;
+use tentacli_traits::types::{HandlerInput, ProcessorResult};
 
-use crate::primary::client::Opcode;
-use crate::primary::traits::Processor;
-use crate::primary::types::{HandlerInput, ProcessorResult};
+mod send_data;
 
 pub struct WardenProcessor;
 
