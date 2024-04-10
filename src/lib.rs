@@ -22,16 +22,13 @@
 //! ```rust
 //! use tokio::task::JoinHandle;
 //!
-//! use tentacli::async_broadcast::{broadcast, BroadcastSender, BroadcastReceiver};
+//! use tentacli::async_broadcast::{BroadcastSender, BroadcastReceiver};
 //! use tentacli::{Client, RunOptions};
-//! use tentacli::traits::Feature;
-//! use tentacli::types::HandlerOutput;
+//! use tentacli_traits::Feature;
+//! use tentacli_traits::types::HandlerOutput;
 //!
 //! #[tokio::main]
 //! async fn main() {
-//!
-//!     let (query_sender, query_receiver) = broadcast::<HandlerOutput>(100);
-//!
 //!     pub struct MyFeature {
 //!         _receiver: Option<BroadcastReceiver<HandlerOutput>>,
 //!         _sender: Option<BroadcastSender<HandlerOutput>>,
@@ -90,12 +87,9 @@
 
 extern crate chrono;
 #[macro_use]
-extern crate idewave_packet;
+extern crate tentacli_packet;
 #[macro_use]
 extern crate serde;
-#[macro_use]
-extern crate thiserror;
-extern crate yaml_rust;
 #[macro_use]
 extern crate cfg_if;
 
@@ -106,59 +100,4 @@ pub use primary::client::{Client, RunOptions};
 
 pub mod async_broadcast {
     pub use async_broadcast::{broadcast, Sender as BroadcastSender, Receiver as BroadcastReceiver};
-}
-
-pub mod chat {
-    pub use crate::primary::client::chat::types::{Language, MessageType, TextEmoteType, EmoteType};
-}
-
-pub mod movement {
-    pub use crate::primary::client::movement::types::{MovementFlags, MovementFlagsExtra};
-}
-
-pub mod player {
-    pub use crate::primary::client::{
-        ObjectField, Player, PlayerField, Position, UnitField, Race, Class, Gender
-    };
-}
-
-pub mod realm {
-    pub use crate::primary::client::{Realm};
-}
-
-pub mod packet {
-    pub mod custom_fields {
-        pub use crate::primary::types::PackedGuid;
-        pub use crate::primary::types::TerminatedString;
-    }
-
-    pub mod chat {
-        pub use crate::primary::client::chat::packet::{ChatOutcome, EmoteOutcome, TextEmoteOutcome};
-    }
-    
-    pub mod movement {
-        pub use crate::primary::client::movement::packet::{MovementOutcome, MovementOpcodes};
-    }
-
-    pub mod player {
-        pub use crate::primary::client::player::packet::CharCreateOutcome;
-    }
-
-    pub mod idewave {
-        pub use idewave_packet::{WorldPacket, LoginPacket, FieldsSerializer};
-    }
-}
-
-pub mod traits {
-    pub use crate::primary::traits::{
-        Feature, BinaryConverter, StreamReader, Processor, PacketHandler
-    };
-}
-
-pub mod types {
-    pub use crate::primary::types::{HandlerOutput, IncomingPacket, OutgoingPacket};
-}
-
-pub mod errors {
-    pub use crate::primary::errors::*;
 }

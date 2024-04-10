@@ -1,15 +1,14 @@
+use tentacli_traits::Processor;
+use tentacli_traits::types::{HandlerInput, ProcessorResult};
+use tentacli_traits::types::opcodes::Opcode;
+
 pub mod globals;
 mod handle_name_query_response;
 mod handle_update_data;
-pub mod types;
 pub mod get_characters_list;
 pub mod player_login;
 mod check_character_create_status;
 mod traits;
-
-use crate::primary::client::opcodes::Opcode;
-use crate::primary::traits::Processor;
-use crate::primary::types::{HandlerInput, ProcessorResult};
 
 pub struct PlayerProcessor;
 
@@ -64,24 +63,20 @@ impl Processor for PlayerProcessor {
 }
 
 pub mod packet {
-    use crate::primary::client::Opcode;
-    use crate::primary::macros::with_opcode;
-    use crate::primary::types::TerminatedString;
+    use tentacli_traits::types::custom_fields::TerminatedString;
 
-    with_opcode! {
-        @world_opcode(Opcode::CMSG_CHAR_CREATE)
-        #[derive(WorldPacket, Serialize, Deserialize, Debug)]
-        pub struct CharCreateOutcome {
-            pub name: TerminatedString,
-            pub race: u8,
-            pub class: u8,
-            pub gender: u8,
-            pub skin: u8,
-            pub face: u8,
-            pub hair_style: u8,
-            pub hair_color: u8,
-            pub facial_hair: u8,
-            pub outfit_id: u8,
-        }
+    // Opcode::CMSG_CHAR_CREATE
+    #[derive(WorldPacket, Serialize, Deserialize, Debug)]
+    pub struct CharCreateOutcome {
+        pub name: TerminatedString,
+        pub race: u8,
+        pub class: u8,
+        pub gender: u8,
+        pub skin: u8,
+        pub face: u8,
+        pub hair_style: u8,
+        pub hair_color: u8,
+        pub facial_hair: u8,
+        pub outfit_id: u8,
     }
 }

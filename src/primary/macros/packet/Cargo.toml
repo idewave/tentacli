@@ -1,16 +1,16 @@
 [package]
-name = "idewave_packet"
-version = "1.3.0"
+name = "tentacli-packet"
+version = "1.3.2"
 edition = "2021"
 authors = ["Sergio Ivanuzzo <sergio.ivanuzzo@gmail.com>"]
 description = "Macro for implementing packet structures"
 keywords = [
-    "idewave", "idewave-packet"
+    "idewave", "idewave-packet", "tentacli", "tentacli-packet"
 ]
 license-file = "../../../../LICENSE"
 
 [lib]
-name = "idewave_packet"
+name = "tentacli_packet"
 path = "src/lib.rs"
 proc-macro = true
 

@@ -1,11 +1,10 @@
 use async_trait::async_trait;
-
-use crate::primary::client::{CooldownInfo, Opcode, Spell};
-use crate::primary::types::{HandlerInput, HandlerOutput, HandlerResult};
-use crate::primary::traits::PacketHandler;
+use tentacli_traits::PacketHandler;
+use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
+use tentacli_traits::types::opcodes::Opcode;
+use tentacli_traits::types::spell::{CooldownInfo, Spell};
 
 #[derive(WorldPacket, Serialize, Deserialize, Debug, Default)]
-#[options(no_opcode)]
 struct Income {
     skip: u8,
     spells: Vec<Spell>,

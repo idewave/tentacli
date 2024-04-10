@@ -1,12 +1,11 @@
 use async_trait::async_trait;
+use tentacli_traits::PacketHandler;
+use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
 
 use crate::primary::client::Opcode;
 use crate::primary::client::player::globals::NameQueryOutcome;
-use crate::primary::types::{HandlerInput, HandlerOutput, HandlerResult};
-use crate::primary::traits::PacketHandler;
 
 #[derive(WorldPacket, Serialize, Deserialize, Debug)]
-#[options(no_opcode)]
 struct Income {
     skip: [u8; 5],
     sender_guid: u64,
@@ -28,7 +27,9 @@ impl PacketHandler for Handler {
 
         let players_map = &mut input.data_storage.lock().unwrap().players_map;
         if players_map.get(&sender_guid).is_none() {
-            response.push(HandlerOutput::Data(NameQueryOutcome { guid: sender_guid }.unpack()?));
+            response.push(HandlerOutput::Data(
+                NameQueryOutcome { guid: sender_guid }.unpack_with_opcode(Opcode::CMSG_NAME_QUERY)?
+            ));
 
             return Ok(response);
         }

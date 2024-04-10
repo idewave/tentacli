@@ -1,19 +1,13 @@
 use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
+use tentacli_traits::PacketHandler;
+use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
+use tentacli_traits::types::auth::AuthLogonResult;
 
-use crate::primary::macros::with_opcode;
-use crate::primary::client::auth::types::AuthLogonResult;
-use crate::primary::client::Opcode;
-use crate::primary::types::{HandlerInput, HandlerOutput, HandlerResult};
-use crate::primary::traits::PacketHandler;
-
-with_opcode! {
-    @login_opcode(Opcode::LOGIN_PROOF)
-    #[derive(LoginPacket, Serialize, Deserialize, Debug)]
-    struct Income {
-        unknown: u8,
-        code: u8,
-    }
+#[derive(LoginPacket, Serialize, Deserialize, Debug)]
+struct Income {
+    unknown: u8,
+    code: u8,
 }
 
 pub struct Handler;

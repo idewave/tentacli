@@ -1,80 +1,71 @@
 use std::io::BufRead;
-use sha1::{Sha1};
 use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
 use tokio::io::{AsyncBufRead, AsyncReadExt};
+use tentacli_crypto::Srp;
+use tentacli_traits::PacketHandler;
+use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
+use tentacli_traits::types::opcodes::Opcode;
+use tentacli_utils::encode_hex;
 
-use crate::primary::macros::with_opcode;
-use crate::primary::client::Opcode;
-use crate::primary::crypto::srp::Srp;
-use crate::primary::types::{HandlerInput, HandlerOutput, HandlerResult};
-use crate::primary::traits::PacketHandler;
-use crate::primary::utils::encode_hex;
+#[derive(LoginPacket, Serialize, Deserialize, Debug)]
+pub struct LoginChallengeResponse {
+    unknown: u8,
+    code: u8,
+    #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
+    server_ephemeral: [u8; 32],
+    g_len: u8,
+    #[dynamic_field]
+    g: Vec<u8>,
+    n_len: u8,
+    #[dynamic_field]
+    n: Vec<u8>,
+    #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
+    salt: [u8; 32],
+    version_challenge: [u8; 16],
+    unknown2: u8,
+}
 
-with_opcode! {
-    @login_opcode(Opcode::LOGIN_PROOF)
-    #[derive(LoginPacket, Serialize, Deserialize, Debug)]
-    pub struct LoginChallengeResponse {
-        unknown: u8,
-        code: u8,
-        #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
-        server_ephemeral: [u8; 32],
-        g_len: u8,
-        #[dynamic_field]
-        g: Vec<u8>,
-        n_len: u8,
-        #[dynamic_field]
-        n: Vec<u8>,
-        #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
-        salt: [u8; 32],
-        version_challenge: [u8; 16],
-        unknown2: u8,
+impl LoginChallengeResponse {
+    fn g<R: BufRead>(mut reader: R, cache: &mut Self) -> Vec<u8> {
+        let mut buffer = vec![0u8; cache.g_len as usize];
+        reader.read_exact(&mut buffer).unwrap();
+        buffer
     }
 
-    impl LoginChallengeResponse {
-        fn g<R: BufRead>(mut reader: R, cache: &mut Self) -> Vec<u8> {
-            let mut buffer = vec![0u8; cache.g_len as usize];
-            reader.read_exact(&mut buffer).unwrap();
-            buffer
-        }
+    async fn async_g<R>(stream: &mut R, cache: &mut Self) -> Vec<u8>
+        where R: AsyncBufRead + Unpin + Send
+    {
+        let mut buffer = vec![0u8; cache.g_len as usize];
+        stream.read_exact(&mut buffer).await.unwrap();
+        buffer
+    }
 
-        async fn async_g<R>(stream: &mut R, cache: &mut Self) -> Vec<u8>
-            where R: AsyncBufRead + Unpin + Send
-        {
-            let mut buffer = vec![0u8; cache.g_len as usize];
-            stream.read_exact(&mut buffer).await.unwrap();
-            buffer
-        }
+    fn n<R: BufRead>(mut reader: R, cache: &mut Self) -> Vec<u8> {
+        let mut buffer = vec![0u8; cache.n_len as usize];
+        reader.read_exact(&mut buffer).unwrap();
+        buffer
+    }
 
-        fn n<R: BufRead>(mut reader: R, cache: &mut Self) -> Vec<u8> {
-            let mut buffer = vec![0u8; cache.n_len as usize];
-            reader.read_exact(&mut buffer).unwrap();
-            buffer
-        }
-
-        async fn async_n<R>(stream: &mut R, cache: &mut Self) -> Vec<u8>
-            where R: AsyncBufRead + Unpin + Send
-        {
-            let mut buffer = vec![0u8; cache.n_len as usize];
-            stream.read_exact(&mut buffer).await.unwrap();
-            buffer
-        }
+    async fn async_n<R>(stream: &mut R, cache: &mut Self) -> Vec<u8>
+        where R: AsyncBufRead + Unpin + Send
+    {
+        let mut buffer = vec![0u8; cache.n_len as usize];
+        stream.read_exact(&mut buffer).await.unwrap();
+        buffer
     }
 }
 
-with_opcode! {
-    @login_opcode(Opcode::LOGIN_PROOF)
-    #[derive(LoginPacket, Serialize, Deserialize, Debug)]
-    struct Outcome {
-        #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
-        public_ephemeral: [u8; 32],
-        #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
-        client_proof: [u8; 20],
-        #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
-        crc_hash: [u8; 20],
-        keys_count: u8,
-        security_flags: u8,
-    }
+#[derive(LoginPacket, Serialize, Deserialize, Debug)]
+struct Outcome {
+    #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
+    public_ephemeral: [u8; 32],
+    #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
+    client_proof: [u8; 20],
+    #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
+    crc_hash: [u8; 20],
+    keys_count: u8,
+    security_flags: u8,
 }
 
 pub struct Handler;
@@ -104,9 +95,9 @@ impl PacketHandler for Handler {
         };
 
         let mut srp_client = Srp::new(&n, &g, &server_ephemeral, salt);
-        srp_client.calculate_session_key::<Sha1>(account, password);
+        srp_client.calculate_session_key(account, password);
 
-        let client_proof: [u8; 20] = srp_client.calculate_proof::<Sha1>(account);
+        let client_proof: [u8; 20] = srp_client.calculate_proof(account);
         let crc_hash: [u8; 20]  = [
             0xCD, 0xCB, 0xBD, 0x51, 0x88, 0x31, 0x5E, 0x6B,
             0x4D, 0x19, 0x44, 0x9D, 0x49, 0x2D, 0xBC, 0xFA,
@@ -124,7 +115,7 @@ impl PacketHandler for Handler {
             crc_hash,
             keys_count: 0,
             security_flags: 0
-        }.unpack()?));
+        }.unpack_with_opcode(Opcode::LOGIN_PROOF)?));
 
         session.srp = Some(srp_client);
 

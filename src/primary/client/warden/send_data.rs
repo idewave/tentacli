@@ -1,21 +1,16 @@
 use std::io::{BufRead};
 use async_trait::async_trait;
-
-use crate::primary::macros::with_opcode;
-use crate::primary::client::opcodes::Opcode;
-use crate::primary::client::WardenModuleInfo;
-use crate::primary::types::{HandlerInput, HandlerOutput, HandlerResult};
-use crate::primary::traits::PacketHandler;
-use super::opcodes::WardenOpcode;
+use tentacli_traits::PacketHandler;
+use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
+use tentacli_traits::types::opcodes::{Opcode, WardenOpcode};
+use tentacli_traits::types::warden::WardenModuleInfo;
 
 #[derive(WorldPacket, Serialize, Deserialize, Debug, Default)]
-#[options(no_opcode)]
 struct OpcodeIncome {
     opcode: u8,
 }
 
 #[derive(WorldPacket, Serialize, Deserialize, Debug, Default)]
-#[options(no_opcode)]
 struct ModuleUseIncome {
     #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
     module_md5: [u8; 16],
@@ -25,7 +20,6 @@ struct ModuleUseIncome {
 }
 
 #[derive(WorldPacket, Serialize, Deserialize, Debug, Default)]
-#[options(no_opcode)]
 struct ModuleCacheIncome {
     partial_size: u16,
     #[dynamic_field]
@@ -42,18 +36,15 @@ impl ModuleCacheIncome {
 }
 
 #[derive(WorldPacket, Serialize, Deserialize, Debug, Default)]
-#[options(no_opcode)]
 struct HashRequestIncome {
     #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
     seed: [u8; 16],
 }
 
-with_opcode! {
-    @world_opcode(Opcode::CMSG_WARDEN_DATA)
-    #[derive(WorldPacket, Serialize, Deserialize, Debug)]
-    struct Outcome {
-        warden_opcode: u8,
-    }
+// @world_opcode(Opcode::CMSG_WARDEN_DATA)
+#[derive(WorldPacket, Serialize, Deserialize, Debug)]
+struct Outcome {
+    warden_opcode: u8,
 }
 
 // I did this part mostly according to https://www.getmangos.eu/forums/topic/3409-warden/
@@ -97,7 +88,7 @@ impl PacketHandler for Handler {
                 Ok(vec![
                     HandlerOutput::Data(Outcome {
                         warden_opcode: WardenOpcode::WARDEN_CMSG_MODULE_OK,
-                    }.unpack()?),
+                    }.unpack_with_opcode(Opcode::CMSG_WARDEN_DATA)?),
                 ])
             },
             WardenOpcode::WARDEN_SMSG_MODULE_CACHE => {
@@ -122,7 +113,7 @@ impl PacketHandler for Handler {
 
                         response.push(HandlerOutput::Data(Outcome {
                             warden_opcode: WardenOpcode::WARDEN_CMSG_MODULE_OK,
-                        }.unpack()?));
+                        }.unpack_with_opcode(Opcode::CMSG_WARDEN_DATA)?));
 
                         return Ok(response);
                     }

@@ -1,12 +1,8 @@
 use std::str::FromStr;
 use async_trait::async_trait;
+use tentacli_traits::PacketHandler;
+use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
 
-use crate::primary::types::{
-    HandlerInput,
-    HandlerOutput,
-    HandlerResult
-};
-use crate::primary::traits::PacketHandler;
 
 pub struct Handler;
 #[async_trait]

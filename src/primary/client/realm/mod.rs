@@ -1,3 +1,7 @@
+use tentacli_traits::Processor;
+use tentacli_traits::types::{HandlerInput, ProcessorResult};
+use tentacli_traits::types::opcodes::Opcode;
+
 mod auth_challenge;
 mod join_channels;
 mod parse_motd;
@@ -6,12 +10,7 @@ mod ready_for_account_data_times;
 mod realm_split;
 mod request_characters;
 mod set_in_world;
-pub mod types;
 mod logout;
-
-use crate::primary::client::opcodes::Opcode;
-use crate::primary::traits::Processor;
-use crate::primary::types::{HandlerInput, ProcessorResult};
 
 pub struct RealmProcessor;
 
@@ -76,12 +75,7 @@ impl Processor for RealmProcessor {
 }
 
 pub mod packet {
-    use crate::primary::client::Opcode;
-    use crate::primary::macros::with_opcode;
-
-    with_opcode! {
-        @world_opcode(Opcode::CMSG_LOGOUT_REQUEST)
-        #[derive(WorldPacket, Serialize, Deserialize, Debug, Default)]
-        pub struct LogoutOutcome {}
-    }
+    // Opcode::CMSG_LOGOUT_REQUEST
+    #[derive(WorldPacket, Serialize, Deserialize, Debug, Default)]
+    pub struct LogoutOutcome {}
 }

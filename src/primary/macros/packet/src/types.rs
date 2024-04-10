@@ -22,19 +22,19 @@ impl Imports {
     pub fn get() -> Self {
         Self {
             async_read: quote!(tokio::io::AsyncRead),
-            binary_converter: quote!(crate::traits::BinaryConverter),
+            binary_converter: quote!(tentacli_traits::BinaryConverter),
             buf_read: quote!(tokio::io::AsyncBufRead),
             byteorder_be: quote!(byteorder::BigEndian),
             byteorder_le: quote!(byteorder::LittleEndian),
             byteorder_write: quote!(byteorder::WriteBytesExt),
             cursor: quote!(std::io::Cursor),
             deflate_decoder: quote!(flate2::read::DeflateDecoder),
-            json_formatter: quote!(idewave_formatters::JsonFormatter),
+            json_formatter: quote!(tentacli_formatters::JsonFormatter),
             // TODO: need to reorganize constants
             read: quote!(std::io::Read),
             result: quote!(anyhow::Result),
             serialize: quote!(serde::Serialize),
-            stream_reader: quote!(crate::primary::traits::StreamReader),
+            stream_reader: quote!(tentacli_traits::StreamReader),
         }
     }
 }
@@ -42,5 +42,4 @@ impl Imports {
 #[derive(StructMeta, Debug)]
 pub struct Attributes {
     pub compressed: Flag,
-    pub no_opcode: Flag,
 }

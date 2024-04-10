@@ -1,7 +1,7 @@
 use rand::distributions::Alphanumeric;
 use rand::prelude::SliceRandom;
 use rand::{Rng, thread_rng};
-use crate::player::{Class, Gender, Race};
+use tentacli_traits::types::player::{Class, Gender, Race};
 
 pub trait CharacterCreateToolkit {
     fn generate_random_string(capitalize: bool) -> String {

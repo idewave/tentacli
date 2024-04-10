@@ -105,15 +105,14 @@ pub fn derive_login_packet(input: TokenStream) -> TokenStream {
                 Ok(instance._build_body()?)
             }
 
-            pub fn to_binary(&mut self) -> #result<Vec<u8>> {
+            pub fn to_binary_with_opcode(&mut self, opcode: u8) -> #result<Vec<u8>> {
                 let body = self._build_body()?;
-
-                let header = Self::_build_header(Self::opcode())?;
+                let header = Self::_build_header(opcode)?;
                 Ok([header, body].concat())
             }
 
-            pub fn unpack(&mut self) -> #result<(u32, Vec<u8>, String)> {
-                Ok((Self::opcode() as u32, self.to_binary()?, self.get_json_details()?))
+            pub fn unpack_with_opcode(&mut self, opcode: u8) -> #result<(u32, Vec<u8>, String)> {
+                Ok((opcode as u32, self.to_binary_with_opcode(opcode)?, self.get_json_details()?))
             }
 
             pub fn get_json_details(&mut self) -> #result<String> {
@@ -167,17 +166,12 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
     } = Imports::get();
 
     let mut is_compressed = quote!(false);
-    let mut has_opcode = true;
     if attrs.iter().any(|attr| attr.path().is_ident("options")) {
         let attributes = attrs.iter().next().unwrap();
         let attrs: Attributes = attributes.parse_args().unwrap();
 
         if let Some(_span) = attrs.compressed.span {
             is_compressed = quote!(true);
-        }
-
-        if let Some(_span) = attrs.no_opcode.span {
-            has_opcode = false;
         }
     }
 
@@ -194,18 +188,6 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
         }
     }
 
-    let initial_initializers = fields
-        .iter()
-        .map(|f| {
-            let field_name = f.ident.clone();
-
-            if dynamic_fields.contains(&field_name) {
-                quote!{ Default::default() }
-            } else {
-                quote! { #binary_converter::read_from(&mut initial_reader)? }
-            }
-        });
-
     let initializers = fields
         .iter()
         .map(|f| {
@@ -213,19 +195,19 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
             let field_type = f.ty.clone();
 
             if dynamic_fields.contains(&field_name) {
-                quote!{ Self::#field_name(&mut reader, &mut initial) }
+                quote!{ Self::#field_name(&mut reader, &mut cache) }
             } else {
                 quote! {
                     {
                         let value: #field_type = #binary_converter::read_from(&mut reader)?;
-                        initial.#field_name = value.clone();
+                        cache.#field_name = value.clone();
                         value
                     }
                 }
             }
         });
 
-    let mut output = quote! {
+    let output = quote! {
         impl #ident {
             pub fn from_binary(buffer: &[u8]) -> #result<(Self, String)> {
                 let mut buffer = match #is_compressed {
@@ -242,9 +224,8 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
                     false => buffer.to_vec(),
                 };
 
-                let mut initial_reader = #cursor::new(buffer.to_vec());
-                let mut initial = Self {
-                    #(#field_names: #initial_initializers),*
+                let mut cache = Self {
+                    #(#field_names: Default::default()),*
                 };
 
                 let mut reader = #cursor::new(buffer);
@@ -256,7 +237,6 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
                 Ok((instance, details))
             }
 
-            // use this method in case you didn't use with_opcode! macro
             pub fn to_binary_with_opcode(&mut self, opcode: u32) -> #result<Vec<u8>> {
                 let body = self._build_body()?;
                 let header = Self::_build_header(body.len(), opcode)?;
@@ -303,29 +283,6 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
         }
     };
 
-    if has_opcode {
-        output = quote! {
-            #output
-
-            impl #ident {
-                pub fn to_binary(&mut self) -> #result<Vec<u8>> {
-                    let body = self._build_body()?;
-
-                    let header = Self::_build_header(body.len(), Self::opcode())?;
-                    Ok([header, body].concat())
-                }
-
-                pub fn unpack(&mut self) -> #result<(u32, Vec<u8>, String)> {
-                    Ok((
-                        Self::opcode(),
-                        self.to_binary()?,
-                        self.get_json_details()?
-                    ))
-                }
-            }
-        }
-    }
-
     TokenStream::from(output)
 }
 
@@ -354,18 +311,6 @@ pub fn derive_fields_serializer(input: TokenStream) -> TokenStream {
         }
     }
 
-    let initial_initializers = fields
-        .iter()
-        .map(|f| {
-            let field_name = f.ident.clone();
-
-            if dynamic_fields.contains(&field_name) {
-                quote!{ Default::default() }
-            } else {
-                quote! { #binary_converter::read_from(&mut initial_reader)? }
-            }
-        });
-
     let initializers = fields
         .iter()
         .map(|f| {
@@ -373,12 +318,12 @@ pub fn derive_fields_serializer(input: TokenStream) -> TokenStream {
             let field_type = f.ty.clone();
 
             if dynamic_fields.contains(&field_name) {
-                quote!{ Self::#field_name(&mut reader, &mut initial) }
+                quote!{ Self::#field_name(&mut reader, &mut cache) }
             } else {
                 quote! {
                     {
                         let value: #field_type = #binary_converter::read_from(&mut reader)?;
-                        initial.#field_name = value.clone();
+                        cache.#field_name = value.clone();
                         value
                     }
                 }
@@ -388,9 +333,8 @@ pub fn derive_fields_serializer(input: TokenStream) -> TokenStream {
     let output = quote! {
         impl #ident {
             pub fn from_binary(buffer: &[u8]) -> #result<(Self, String)> {
-                let mut initial_reader = #cursor::new(buffer.to_vec());
-                let mut initial = Self {
-                    #(#field_names: #initial_initializers),*
+                let mut cache = Self {
+                    #(#field_names: Default::default()),*
                 };
 
                 let mut reader = #cursor::new(buffer);

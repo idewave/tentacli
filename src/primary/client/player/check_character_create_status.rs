@@ -1,17 +1,15 @@
 use async_trait::async_trait;
+use tentacli_traits::PacketHandler;
+use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
+use tentacli_traits::types::custom_fields::TerminatedString;
+use tentacli_traits::types::player::CharacterCreateResponseCode;
 
-use crate::packet::custom_fields::TerminatedString;
-use crate::packet::player::CharCreateOutcome;
 use crate::primary::client::Opcode;
 use crate::primary::client::player::globals::CharacterEnumOutcome;
+use crate::primary::client::player::packet::CharCreateOutcome;
 use crate::primary::client::player::traits::CharacterCreateToolkit;
-use crate::primary::client::player::types::CharacterCreateResponseCode;
-use crate::primary::traits::PacketHandler;
-use crate::primary::types::{HandlerInput, HandlerResult};
-use crate::types::HandlerOutput;
 
 #[derive(WorldPacket, Serialize, Deserialize, Debug)]
-#[options(no_opcode)]
 struct Income {
     code: u8,
 }
@@ -61,9 +59,14 @@ impl PacketHandler for Handler {
                         hair_color: 0,
                         facial_hair: 0,
                         outfit_id: 0,
-                    }.unpack()?));
+                    }.unpack_with_opcode(Opcode::CMSG_CHAR_CREATE)?));
 
-                    response.push(HandlerOutput::Data(CharacterEnumOutcome::default().unpack()?));
+                    response.push(
+                        HandlerOutput::Data(
+                            CharacterEnumOutcome::default()
+                                .unpack_with_opcode(Opcode::CMSG_CHAR_ENUM)?
+                        )
+                    );
                 }
             },
             CharacterCreateResponseCode::CHAR_CREATE_ACCOUNT_LIMIT => {

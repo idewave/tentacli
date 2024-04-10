@@ -1,17 +1,17 @@
 use anyhow::bail;
 use async_trait::async_trait;
 use regex::Regex;
+use tentacli_traits::{CharacterListError, PacketHandler};
+use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
+use tentacli_traits::types::custom_fields::TerminatedString;
+use tentacli_traits::types::opcodes::Opcode;
+use tentacli_traits::types::player::Player;
 
-use crate::packet::player::CharCreateOutcome;
-use crate::primary::client::{Opcode, Player};
 use crate::primary::client::player::globals::CharacterEnumOutcome;
+use crate::primary::client::player::packet::CharCreateOutcome;
 use crate::primary::client::player::traits::CharacterCreateToolkit;
-use crate::primary::errors::CharacterListError;
-use crate::primary::types::{HandlerInput, HandlerOutput, HandlerResult, TerminatedString};
-use crate::primary::traits::PacketHandler;
 
 #[derive(WorldPacket, Serialize, Deserialize, Debug)]
-#[options(no_opcode)]
 struct Income {
     characters: Vec<Player>,
 }
@@ -64,9 +64,13 @@ impl PacketHandler for Handler {
                     hair_color: 0,
                     facial_hair: 0,
                     outfit_id: 0,
-                }.unpack()?));
+                }.unpack_with_opcode(Opcode::CMSG_CHAR_CREATE)?));
 
-                response.push(HandlerOutput::Data(CharacterEnumOutcome::default().unpack()?));
+                response.push(
+                    HandlerOutput::Data(
+                        CharacterEnumOutcome::default().unpack_with_opcode(Opcode::CMSG_CHAR_ENUM)?
+                    )
+                );
 
                 Ok(response)
             } else {

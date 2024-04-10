@@ -1,13 +1,13 @@
 use async_trait::async_trait;
 use std::io::BufRead;
+use tentacli_traits::PacketHandler;
+use tentacli_traits::types::chat::{Message, MessageType};
+use tentacli_traits::types::custom_fields::TerminatedString;
+use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
+use tentacli_traits::types::opcodes::Opcode;
 
-use crate::primary::client::chat::types::{MessageType};
-use crate::primary::client::{Message, Opcode};
-use crate::primary::types::{HandlerInput, HandlerOutput, HandlerResult, TerminatedString};
-use crate::primary::traits::PacketHandler;
 
 #[derive(WorldPacket, Serialize, Deserialize)]
-#[options(no_opcode)]
 #[allow(dead_code)]
 struct Income {
     message_type: u8,

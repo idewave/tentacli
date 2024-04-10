@@ -1,9 +1,8 @@
-mod detect_motion;
-pub mod types;
+use tentacli_traits::Processor;
+use tentacli_traits::types::{HandlerInput, ProcessorResult};
+use tentacli_traits::types::opcodes::Opcode;
 
-use crate::primary::client::opcodes::Opcode;
-use crate::primary::traits::Processor;
-use crate::primary::types::{HandlerInput, ProcessorResult};
+mod detect_motion;
 
 pub struct MovementProcessor;
 
@@ -43,12 +42,12 @@ impl Processor for MovementProcessor {
 }
 
 pub mod packet {
+    use tentacli_traits::types::custom_fields::PackedGuid;
+
     use crate::primary::client::Opcode;
-    use crate::primary::types::PackedGuid;
 
     #[non_exhaustive]
     pub struct MovementOpcodes;
-
     #[allow(dead_code)]
     impl MovementOpcodes {
         pub const MSG_MOVE_START_FORWARD: u16 = Opcode::MSG_MOVE_START_FORWARD;
@@ -74,7 +73,6 @@ pub mod packet {
     }
 
     #[derive(WorldPacket, Serialize, Deserialize, Debug)]
-    #[options(no_opcode)]
     pub struct MovementOutcome {
         pub guid: PackedGuid,
         pub movement_flags: u32,
