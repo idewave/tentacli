@@ -42,4 +42,5 @@ impl Imports {
 #[derive(StructMeta, Debug)]
 pub struct Attributes {
     pub compressed: Flag,
+    pub with_async: Flag,
 }

@@ -8,9 +8,9 @@ mod types;
 
 use types::{Attributes, Imports};
 
-#[proc_macro_derive(LoginPacket, attributes(dynamic_field))]
+#[proc_macro_derive(LoginPacket, attributes(options, dynamic_field))]
 pub fn derive_login_packet(input: TokenStream) -> TokenStream {
-    let ItemStruct { ident, fields, .. } = parse_macro_input!(input);
+    let ItemStruct { ident, fields, attrs, .. } = parse_macro_input!(input);
     let Imports {
         buf_read,
         binary_converter,
@@ -22,6 +22,16 @@ pub fn derive_login_packet(input: TokenStream) -> TokenStream {
         stream_reader,
         ..
     } = Imports::get();
+
+    let mut with_async = false;
+    if attrs.iter().any(|attr| attr.path().is_ident("options")) {
+        let attributes = attrs.iter().next().unwrap();
+        let attrs: Attributes = attributes.parse_args().unwrap();
+
+        if let Some(_span) = attrs.with_async.span {
+            with_async = true;
+        }
+    }
 
     let field_names = fields.iter().map(|f| {
         f.ident.clone()
@@ -55,27 +65,7 @@ pub fn derive_login_packet(input: TokenStream) -> TokenStream {
             }
         });
 
-    let async_initializers = fields
-        .iter()
-        .map(|f| {
-            let field_name = f.ident.clone();
-            let field_type = f.ty.clone();
-
-            if dynamic_fields.contains(&field_name) {
-                let async_field_name = format_ident!("async_{}", field_name.unwrap());
-                quote!{ Self::#async_field_name(&mut stream, &mut cache).await }
-            } else {
-                quote! {
-                    {
-                        let value: #field_type = #stream_reader::read_from(&mut stream).await?;
-                        cache.#field_name = value.clone();
-                        value
-                    }
-                }
-            }
-        });
-
-    let output = quote! {
+    let mut output = quote! {
         impl #ident {
             pub fn from_binary(buffer: &[u8]) -> #result<(Self, String)> {
                 let mut cache = Self {
@@ -89,20 +79,6 @@ pub fn derive_login_packet(input: TokenStream) -> TokenStream {
                 let details = instance.get_json_details()?;
 
                 Ok((instance, details))
-            }
-
-            pub async fn from_stream<R>(mut stream: &mut R) -> #result<Vec<u8>>
-                where R: #buf_read + Unpin + Send
-            {
-                let mut cache = Self {
-                    #(#field_names: Default::default()),*
-                };
-
-                let mut instance = Self {
-                    #(#field_names: #async_initializers),*
-                };
-
-                Ok(instance._build_body()?)
             }
 
             pub fn to_binary_with_opcode(&mut self, opcode: u8) -> #result<Vec<u8>> {
@@ -144,6 +120,48 @@ pub fn derive_login_packet(input: TokenStream) -> TokenStream {
            }
         }
     };
+
+    if with_async {
+        let async_initializers = fields
+            .iter()
+            .map(|f| {
+                let field_name = f.ident.clone();
+                let field_type = f.ty.clone();
+
+                if dynamic_fields.contains(&field_name) {
+                    let async_field_name = format_ident!("async_{}", field_name.unwrap());
+                    quote!{ Self::#async_field_name(&mut stream, &mut cache).await }
+                } else {
+                    quote! {
+                    {
+                        let value: #field_type = #stream_reader::read_from(&mut stream).await?;
+                        cache.#field_name = value.clone();
+                        value
+                    }
+                }
+                }
+            });
+
+        output = quote! {
+            #output
+
+            impl #ident {
+                pub async fn from_stream<R>(mut stream: &mut R) -> #result<Vec<u8>>
+                    where R: #buf_read + Unpin + Send
+                {
+                    let mut cache = Self {
+                        #(#field_names: Default::default()),*
+                    };
+
+                    let mut instance = Self {
+                        #(#field_names: #async_initializers),*
+                    };
+
+                    Ok(instance._build_body()?)
+                }
+            }
+        }
+    }
 
     TokenStream::from(output)
 }
