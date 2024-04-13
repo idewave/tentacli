@@ -175,11 +175,10 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
         byteorder_le,
         byteorder_write,
         cursor,
-        deflate_decoder,
         json_formatter,
-        read,
         result,
         serialize,
+        utils,
         ..
     } = Imports::get();
 
@@ -230,14 +229,8 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
             pub fn from_binary(buffer: &[u8]) -> #result<(Self, String)> {
                 let mut buffer = match #is_compressed {
                     true => {
-                        let mut internal_buffer: Vec<u8> = Vec::new();
                         // 4 bytes uncompressed + 2 bytes used by zlib
-                        let omit_bytes = 6;
-                        let data = &buffer[omit_bytes..];
-                        let mut decoder = #deflate_decoder::new(data);
-                        #read::read_to_end(&mut decoder, &mut internal_buffer)?;
-
-                        internal_buffer.to_vec()
+                        #utils::deflate_decompress(&buffer[6..])?
                     },
                     false => buffer.to_vec(),
                 };

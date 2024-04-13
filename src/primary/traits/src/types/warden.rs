@@ -1,7 +1,7 @@
 use std::io::{Cursor, Read};
 use byteorder::{LittleEndian, ReadBytesExt};
 use tentacli_crypto::RC4;
-use tentacli_utils::{decompress, encode_hex};
+use tentacli_utils::{zlib_decompress, encode_hex};
 
 #[derive(Debug)]
 pub struct WardenModuleInfo {
@@ -46,7 +46,7 @@ impl WardenModuleInfo {
         let mut compressed_module = Vec::new();
         reader.read_to_end(&mut compressed_module).unwrap();
 
-        let _decompressed_data = decompress(&compressed_module);
+        let _decompressed_data = zlib_decompress(&compressed_module);
         let _module_name = format!("{}.mod", encode_hex(&self.md5));
 
         // let mut file = File::create(format!("./{}", module_name)).unwrap();

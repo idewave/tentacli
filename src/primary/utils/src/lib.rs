@@ -1,7 +1,11 @@
 use std::{num::ParseIntError};
-use std::io::{BufRead, Read};
+use std::io::{BufRead, Read, Write};
+use anyhow::{anyhow, Result as AnyResult};
 use byteorder::ReadBytesExt;
+use flate2::Compression;
 use flate2::read::ZlibDecoder;
+use flate2::read::DeflateDecoder;
+use flate2::write::ZlibEncoder;
 
 #[allow(dead_code)]
 pub fn decode_hex(s: &str) -> Result<Vec<u8>, ParseIntError> {
@@ -41,31 +45,39 @@ pub fn read_packed_guid<R: BufRead>(reader: &mut R) -> u64 {
     guid
 }
 
-pub fn decompress(data: &[u8]) -> Vec<u8> {
+pub fn zlib_decompress(data: &[u8]) -> AnyResult<Vec<u8>> {
     let mut buffer = Vec::new();
-
     let mut decoder = ZlibDecoder::new(data);
-    decoder.read_to_end(&mut buffer).unwrap();
+    decoder.read_to_end(&mut buffer)?;
 
-    buffer
+    Ok(buffer)
+}
+
+pub fn deflate_decompress(data: &[u8]) -> AnyResult<Vec<u8>> {
+    let mut buffer = Vec::new();
+    let mut decoder = DeflateDecoder::new(data);
+    decoder.read_to_end(&mut buffer)?;
+
+    Ok(buffer)
+}
+
+pub fn compress(data: &[u8]) -> AnyResult<Vec<u8>> {
+    let mut encoder = ZlibEncoder::new(Vec::new(), Compression::best());
+    encoder.write_all(data)?;
+
+    encoder.finish().map_err(|e| anyhow!("Error on compress: {}", e))
 }
 
 #[cfg(test)]
 mod tests {
-    use std::io::{Write};
-    use flate2::Compression;
-    use flate2::write::ZlibEncoder;
-
-    use crate::{decode_hex, decompress, encode_hex};
+    use crate::{decode_hex, zlib_decompress, compress, encode_hex};
 
     #[test]
     fn test_decompress() {
         let origin = vec![1, 2, 3, 4, 5, 6, 7, 8];
+        let compressed = compress(&origin).unwrap();
 
-        let mut encoder = ZlibEncoder::new(Vec::new(), Compression::best());
-        encoder.write_all(&origin).unwrap();
-
-        assert_eq!(origin, decompress(&encoder.finish().unwrap()));
+        assert_eq!(origin, zlib_decompress(&compressed).unwrap());
     }
 
     #[test]

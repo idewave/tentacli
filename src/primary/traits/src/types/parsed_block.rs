@@ -507,8 +507,9 @@ bitflags! {
 
 #[cfg(test)]
 mod tests {
-    use std::io::Cursor;
-    use flate2::read::DeflateDecoder;
+    use std::io::{Cursor};
+    use tentacli_utils::deflate_decompress;
+
     use crate::types::parsed_block::ParsedBlock;
     use crate::types::player::{FieldValue, ObjectField, PlayerField, UnitField};
 
@@ -536,9 +537,7 @@ mod tests {
 
     #[test]
     fn test_parsing_compressed_packet() {
-        let mut buffer = Vec::new();
-        let mut decoder = DeflateDecoder::new(&COMPRESSED_PACKET[..]);
-        std::io::Read::read_to_end(&mut decoder, &mut buffer).expect("Cannot read");
+        let buffer = deflate_decompress(&COMPRESSED_PACKET).unwrap();
 
         let parsed = ParsedBlock::parse(&mut Cursor::new(buffer)).expect("Cannot parse");
         assert_eq!(parsed[0].guid, Some(TEST_GUID));
