@@ -9,6 +9,7 @@ use tentacli_traits::types::opcodes::Opcode;
 use tentacli_utils::encode_hex;
 
 #[derive(LoginPacket, Serialize, Deserialize, Debug)]
+#[options(with_async)]
 pub struct LoginChallengeResponse {
     unknown: u8,
     code: u8,
@@ -33,6 +34,7 @@ impl LoginChallengeResponse {
         buffer
     }
 
+    // this function is used for partial reading feature (when only part of the packet can be read)
     async fn async_g<R>(stream: &mut R, cache: &mut Self) -> Vec<u8>
         where R: AsyncBufRead + Unpin + Send
     {
@@ -47,6 +49,7 @@ impl LoginChallengeResponse {
         buffer
     }
 
+    // this function is used for partial reading feature (when only part of the packet can be read)
     async fn async_n<R>(stream: &mut R, cache: &mut Self) -> Vec<u8>
         where R: AsyncBufRead + Unpin + Send
     {
