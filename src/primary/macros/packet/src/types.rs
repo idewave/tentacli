@@ -10,12 +10,11 @@ pub struct Imports {
     pub byteorder_le: TokenStream2,
     pub byteorder_write: TokenStream2,
     pub cursor: TokenStream2,
-    pub deflate_decoder: TokenStream2,
     pub json_formatter: TokenStream2,
-    pub read: TokenStream2,
     pub result: TokenStream2,
     pub serialize: TokenStream2,
     pub stream_reader: TokenStream2,
+    pub utils: TokenStream2,
 }
 
 impl Imports {
@@ -28,13 +27,11 @@ impl Imports {
             byteorder_le: quote!(byteorder::LittleEndian),
             byteorder_write: quote!(byteorder::WriteBytesExt),
             cursor: quote!(std::io::Cursor),
-            deflate_decoder: quote!(flate2::read::DeflateDecoder),
             json_formatter: quote!(tentacli_formatters::JsonFormatter),
-            // TODO: need to reorganize constants
-            read: quote!(std::io::Read),
             result: quote!(anyhow::Result),
             serialize: quote!(serde::Serialize),
             stream_reader: quote!(tentacli_traits::StreamReader),
+            utils: quote!(tentacli_utils),
         }
     }
 }

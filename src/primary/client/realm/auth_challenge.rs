@@ -1,13 +1,11 @@
-use std::io::{Write};
 use sha1::{Digest, Sha1};
-use flate2::Compression;
-use flate2::write::ZlibEncoder;
 use async_trait::async_trait;
 use tentacli_traits::PacketHandler;
 use tentacli_traits::types::custom_fields::TerminatedString;
 use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
 use tentacli_traits::types::config::AddonInfo;
 use tentacli_traits::types::opcodes::Opcode;
+use tentacli_utils::compress;
 
 const SEED_SIZE: usize = 4;
 
@@ -77,8 +75,6 @@ impl PacketHandler for Handler {
             .to_vec();
 
         let addon_info = AddonInfo::build_addon_info(addons)?;
-        let mut encoder = ZlibEncoder::new(Vec::new(), Compression::best());
-        encoder.write_all(&addon_info)?;
 
         response.push(HandlerOutput::Data(Outcome {
             build: 12340,
@@ -91,7 +87,7 @@ impl PacketHandler for Handler {
             unknown4: 0,
             digest: digest.try_into().unwrap(),
             addons_count: addon_info.len() as u32,
-            addons: encoder.finish()?,
+            addons: compress(&addon_info)?,
         }.unpack_with_opcode(Opcode::CMSG_AUTH_SESSION)?));
 
         Ok(response)
