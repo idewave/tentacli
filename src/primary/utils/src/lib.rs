@@ -10,7 +10,7 @@ use rand::Rng;
 use rand::distributions::{Distribution, Standard};
 
 #[allow(dead_code)]
-fn generate_random<T>() -> T
+pub fn generate_random_number<T>() -> T
     where
         Standard: Distribution<T>,
 {
