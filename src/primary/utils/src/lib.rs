@@ -6,6 +6,17 @@ use flate2::Compression;
 use flate2::read::ZlibDecoder;
 use flate2::read::DeflateDecoder;
 use flate2::write::ZlibEncoder;
+use rand::Rng;
+use rand::distributions::{Distribution, Standard};
+
+#[allow(dead_code)]
+fn generate_random<T>() -> T
+    where
+        Standard: Distribution<T>,
+{
+    let mut rng = rand::thread_rng();
+    rng.gen()
+}
 
 #[allow(dead_code)]
 pub fn decode_hex(s: &str) -> Result<Vec<u8>, ParseIntError> {
