@@ -55,9 +55,14 @@ impl BinaryConverter for TerminatedString {
 
         reader.read_until(0, &mut internal_buf)
             .map_err(|e| FieldError::CannotRead(e, format!("bytes ({})", label)))?;
-        match String::from_utf8(internal_buf[..internal_buf.len() - 1].to_vec()) {
-            Ok(string) => Ok(Self(string)),
-            Err(err) => Err(FieldError::InvalidString(err, label.to_owned())),
+
+        if internal_buf.len() > 1 {
+            match String::from_utf8(internal_buf[..internal_buf.len() - 1].to_vec()) {
+                Ok(string) => Ok(Self(string)),
+                Err(err) => Err(FieldError::InvalidString(err, label.to_owned())),
+            }
+        } else {
+            Err(FieldError::InvalidTerminatedString)
         }
     }
 }
@@ -86,9 +91,14 @@ impl StreamReader for TerminatedString {
 
         stream.read_until(0, &mut internal_buf).await
             .map_err(|e| FieldError::CannotRead(e, format!("bytes ({})", label)))?;
-        match String::from_utf8(internal_buf[..internal_buf.len() - 1].to_vec()) {
-            Ok(string) => Ok(Self(string)),
-            Err(err) => Err(FieldError::InvalidString(err, label.to_owned())),
+
+        if internal_buf.len() > 1 {
+            match String::from_utf8(internal_buf[..internal_buf.len() - 1].to_vec()) {
+                Ok(string) => Ok(Self(string)),
+                Err(err) => Err(FieldError::InvalidString(err, label.to_owned())),
+            }
+        } else {
+            Err(FieldError::InvalidTerminatedString)
         }
     }
 }
