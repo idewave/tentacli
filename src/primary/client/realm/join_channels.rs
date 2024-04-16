@@ -22,19 +22,19 @@ impl PacketHandler for Handler {
             channel_id: COMMON_CHANNEL_ID,
             channel_name: TerminatedString::from(channel_labels.common.to_string()),
             ..JoinChannelOutcome::default()
-        }.unpack_with_opcode(Opcode::CMSG_JOIN_CHANNEL)?));
+        }.unpack_with_client_opcode(Opcode::CMSG_JOIN_CHANNEL)?));
 
         response.push(HandlerOutput::Data(JoinChannelOutcome {
             channel_id: LFG_CHANNEL_ID,
             channel_name: TerminatedString::from(channel_labels.common.to_string()),
             ..JoinChannelOutcome::default()
-        }.unpack_with_opcode(Opcode::CMSG_JOIN_CHANNEL)?));
+        }.unpack_with_client_opcode(Opcode::CMSG_JOIN_CHANNEL)?));
 
         response.push(HandlerOutput::Data(JoinChannelOutcome {
             channel_id: TRADE_CHANNEL_ID,
             channel_name: TerminatedString::from(channel_labels.common.to_string()),
             ..JoinChannelOutcome::default()
-        }.unpack_with_opcode(Opcode::CMSG_JOIN_CHANNEL)?));
+        }.unpack_with_client_opcode(Opcode::CMSG_JOIN_CHANNEL)?));
 
         Ok(response)
     }

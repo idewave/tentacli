@@ -88,7 +88,7 @@ impl PacketHandler for Handler {
                 Ok(vec![
                     HandlerOutput::Data(Outcome {
                         warden_opcode: WardenOpcode::WARDEN_CMSG_MODULE_OK,
-                    }.unpack_with_opcode(Opcode::CMSG_WARDEN_DATA)?),
+                    }.unpack_with_client_opcode(Opcode::CMSG_WARDEN_DATA)?),
                 ])
             },
             WardenOpcode::WARDEN_SMSG_MODULE_CACHE => {
@@ -113,7 +113,7 @@ impl PacketHandler for Handler {
 
                         response.push(HandlerOutput::Data(Outcome {
                             warden_opcode: WardenOpcode::WARDEN_CMSG_MODULE_OK,
-                        }.unpack_with_opcode(Opcode::CMSG_WARDEN_DATA)?));
+                        }.unpack_with_client_opcode(Opcode::CMSG_WARDEN_DATA)?));
 
                         return Ok(response);
                     }

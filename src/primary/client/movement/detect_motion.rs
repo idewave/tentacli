@@ -45,7 +45,7 @@ impl PacketHandler for Handler {
 
             if player.is_none() {
                 response.push(HandlerOutput::Data(
-                    NameQueryOutcome { guid }.unpack_with_opcode(Opcode::CMSG_NAME_QUERY)?
+                    NameQueryOutcome { guid }.unpack_with_client_opcode(Opcode::CMSG_NAME_QUERY)?
                 ));
 
                 return Ok(response);

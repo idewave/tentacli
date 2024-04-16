@@ -88,7 +88,7 @@ impl PacketHandler for Handler {
             digest: digest.try_into().unwrap(),
             addons_count: addon_info.len() as u32,
             addons: compress(&addon_info)?,
-        }.unpack_with_opcode(Opcode::CMSG_AUTH_SESSION)?));
+        }.unpack_with_client_opcode(Opcode::CMSG_AUTH_SESSION)?));
 
         Ok(response)
     }

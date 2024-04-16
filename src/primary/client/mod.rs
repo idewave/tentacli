@@ -382,7 +382,9 @@ impl Client {
                                         data,
                                         json_details
                                     ) = LogoutOutcome::default()
-                                        .unpack_with_opcode(Opcode::CMSG_LOGOUT_REQUEST).unwrap();
+                                        .unpack_with_client_opcode(
+                                            Opcode::CMSG_LOGOUT_REQUEST
+                                        ).unwrap();
 
                                     output_sender.send(OutgoingPacket {
                                         opcode,

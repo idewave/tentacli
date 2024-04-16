@@ -91,7 +91,9 @@ impl PacketHandler for Handler {
                                         return Ok(
                                             vec![HandlerOutput::Data(
                                                 NameQueryOutcome { guid }
-                                                    .unpack_with_opcode(Opcode::CMSG_NAME_QUERY)?
+                                                    .unpack_with_client_opcode(
+                                                        Opcode::CMSG_NAME_QUERY
+                                                    )?
                                             )]
                                         );
                                     }
@@ -127,7 +129,7 @@ impl PacketHandler for Handler {
                                 vec![
                                     HandlerOutput::Data(
                                         NameQueryOutcome { guid }
-                                            .unpack_with_opcode(Opcode::CMSG_NAME_QUERY)?
+                                            .unpack_with_client_opcode(Opcode::CMSG_NAME_QUERY)?
                                     )
                                 ]
                             );

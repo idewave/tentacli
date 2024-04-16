@@ -16,7 +16,7 @@ impl PacketHandler for Handler {
         let response = vec![
             HandlerOutput::Data(Outcome {
                 unknown: [0xFF, 0xFF, 0xFF, 0xFF]
-            }.unpack_with_opcode(Opcode::CMSG_REALM_SPLIT)?)
+            }.unpack_with_client_opcode(Opcode::CMSG_REALM_SPLIT)?)
         ];
 
         Ok(response)

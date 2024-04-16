@@ -59,12 +59,12 @@ impl PacketHandler for Handler {
                         hair_color: 0,
                         facial_hair: 0,
                         outfit_id: 0,
-                    }.unpack_with_opcode(Opcode::CMSG_CHAR_CREATE)?));
+                    }.unpack_with_client_opcode(Opcode::CMSG_CHAR_CREATE)?));
 
                     response.push(
                         HandlerOutput::Data(
                             CharacterEnumOutcome::default()
-                                .unpack_with_opcode(Opcode::CMSG_CHAR_ENUM)?
+                                .unpack_with_client_opcode(Opcode::CMSG_CHAR_ENUM)?
                         )
                     );
                 }

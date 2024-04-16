@@ -28,7 +28,8 @@ impl PacketHandler for Handler {
         let players_map = &mut input.data_storage.lock().unwrap().players_map;
         if players_map.get(&sender_guid).is_none() {
             response.push(HandlerOutput::Data(
-                NameQueryOutcome { guid: sender_guid }.unpack_with_opcode(Opcode::CMSG_NAME_QUERY)?
+                NameQueryOutcome { guid: sender_guid }
+                    .unpack_with_client_opcode(Opcode::CMSG_NAME_QUERY)?
             ));
 
             return Ok(response);
