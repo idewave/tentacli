@@ -40,7 +40,7 @@ impl PacketHandler for Handler {
 
         response.push(
             HandlerOutput::Data(
-                Outcome { guid: my_guid }.unpack_with_opcode(Opcode::CMSG_PLAYER_LOGIN)?
+                Outcome { guid: my_guid }.unpack_with_client_opcode(Opcode::CMSG_PLAYER_LOGIN)?
             )
         );
 

@@ -8,6 +8,12 @@ mod types;
 
 use types::{Attributes, Imports};
 
+/// LoginPacket is a part of tentacli-based projects.
+/// This proc-macro allows to send and receive packets from WoW Login server.
+/// It supports #[options(with_async)] option to include `from_stream` method, which allows
+/// to perform a partial read (since there's no guarantee the TCP packet will arrive all at once)
+/// #[dynamic_field] attribute indicates that the function for this field will be defined manually.
+
 #[proc_macro_derive(LoginPacket, attributes(options, dynamic_field))]
 pub fn derive_login_packet(input: TokenStream) -> TokenStream {
     let ItemStruct { ident, fields, attrs, .. } = parse_macro_input!(input);
@@ -166,6 +172,12 @@ pub fn derive_login_packet(input: TokenStream) -> TokenStream {
     TokenStream::from(output)
 }
 
+/// WorldPacket is a part of tentacli-based projects.
+/// This proc-macro allows to send and receive packets from WoW World server.
+/// It supports #[options(compressed)] option to indicated the packet as zlib-compressed, so it will
+/// be uncompressed before parsing.
+/// #[dynamic_field] attribute indicates that the function for this field will be defined manually.
+
 #[proc_macro_derive(WorldPacket, attributes(options, dynamic_field))]
 pub fn derive_world_packet(input: TokenStream) -> TokenStream {
     let ItemStruct { ident, fields, attrs, .. } = parse_macro_input!(input);
@@ -248,14 +260,24 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
                 Ok((instance, details))
             }
 
-            pub fn to_binary_with_opcode(&mut self, opcode: u32) -> #result<Vec<u8>> {
+            pub fn to_binary_with_server_opcode(&mut self, opcode: u16) -> #result<Vec<u8>> {
                 let body = self._build_body()?;
-                let header = Self::_build_header(body.len(), opcode)?;
+                let header = Self::_build_header_for_server_packet(body.len(), opcode)?;
                 Ok([header, body].concat())
             }
 
-            pub fn unpack_with_opcode(&mut self, opcode: u32) -> #result<(u32, Vec<u8>, String)> {
-                Ok((opcode, self.to_binary_with_opcode(opcode)?, self.get_json_details()?))
+            pub fn to_binary_with_client_opcode(&mut self, opcode: u32) -> #result<Vec<u8>> {
+                let body = self._build_body()?;
+                let header = Self::_build_header_for_client_packet(body.len(), opcode)?;
+                Ok([header, body].concat())
+            }
+
+            pub fn unpack_with_server_opcode(&mut self, opcode: u16) -> #result<(u16, Vec<u8>, String)> {
+                Ok((opcode, self.to_binary_with_server_opcode(opcode)?, self.get_json_details()?))
+            }
+
+            pub fn unpack_with_client_opcode(&mut self, opcode: u32) -> #result<(u32, Vec<u8>, String)> {
+                Ok((opcode, self.to_binary_with_client_opcode(opcode)?, self.get_json_details()?))
             }
 
             pub fn get_json_details(&mut self) -> #result<String> {
@@ -276,7 +298,30 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
                 Ok(body)
             }
 
-            fn _build_header(body_len: usize, opcode: u32) -> #result<Vec<u8>> {
+            fn _build_header_for_server_packet(body_len: usize, opcode: u16) -> #result<Vec<u8>> {
+                let mut header: Vec<u8> = Vec::new();
+
+                let is_large_packet = body_len > 0x7FFF;
+
+                #byteorder_write::write_u16::<#byteorder_be>(
+                    &mut header,
+                    // header is 2 bytes packet size + 2 bytes outcoming opcode size
+                    (body_len as u16) + 2,
+                )?;
+
+                #byteorder_write::write_u16::<#byteorder_le>(
+                    &mut header,
+                    opcode,
+                )?;
+
+                if is_large_packet {
+                    header.insert(0, 128);
+                }
+
+                Ok(header)
+           }
+
+            fn _build_header_for_client_packet(body_len: usize, opcode: u32) -> #result<Vec<u8>> {
                 let mut header: Vec<u8> = Vec::new();
                 #byteorder_write::write_u16::<#byteorder_be>(
                     &mut header,
@@ -296,6 +341,11 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
 
     TokenStream::from(output)
 }
+
+/// FieldsSerializer is a part of tentacli-based projects.
+/// This proc-macro is used mostly for serialization, when there's a need to serialize set of fields
+/// into byte-array.
+/// #[dynamic_field] attribute indicates that the function for this field will be defined manually.
 
 #[proc_macro_derive(FieldsSerializer, attributes(dynamic_field))]
 pub fn derive_fields_serializer(input: TokenStream) -> TokenStream {

@@ -11,7 +11,7 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, _: &mut HandlerInput) -> HandlerResult {
         let response = vec![
             HandlerOutput::Data(
-                CharacterEnumOutcome::default().unpack_with_opcode(Opcode::CMSG_CHAR_ENUM)?
+                CharacterEnumOutcome::default().unpack_with_client_opcode(Opcode::CMSG_CHAR_ENUM)?
             )
         ];
 
