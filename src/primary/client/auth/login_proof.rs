@@ -1,7 +1,5 @@
-use std::io::BufRead;
 use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
-use tokio::io::{AsyncBufRead, AsyncReadExt};
 use tentacli_crypto::Srp;
 use tentacli_traits::PacketHandler;
 use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
@@ -16,47 +14,15 @@ pub struct LoginChallengeResponse {
     #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
     server_ephemeral: [u8; 32],
     g_len: u8,
-    #[dynamic_field]
+    #[depends_on(g_len)]
     g: Vec<u8>,
     n_len: u8,
-    #[dynamic_field]
+    #[depends_on(n_len)]
     n: Vec<u8>,
     #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
     salt: [u8; 32],
     version_challenge: [u8; 16],
     unknown2: u8,
-}
-
-impl LoginChallengeResponse {
-    fn g<R: BufRead>(mut reader: R, cache: &mut Self) -> Vec<u8> {
-        let mut buffer = vec![0u8; cache.g_len as usize];
-        reader.read_exact(&mut buffer).unwrap();
-        buffer
-    }
-
-    // this function is used for partial reading feature (when only part of the packet can be read)
-    async fn async_g<R>(stream: &mut R, cache: &mut Self) -> Vec<u8>
-        where R: AsyncBufRead + Unpin + Send
-    {
-        let mut buffer = vec![0u8; cache.g_len as usize];
-        stream.read_exact(&mut buffer).await.unwrap();
-        buffer
-    }
-
-    fn n<R: BufRead>(mut reader: R, cache: &mut Self) -> Vec<u8> {
-        let mut buffer = vec![0u8; cache.n_len as usize];
-        reader.read_exact(&mut buffer).unwrap();
-        buffer
-    }
-
-    // this function is used for partial reading feature (when only part of the packet can be read)
-    async fn async_n<R>(stream: &mut R, cache: &mut Self) -> Vec<u8>
-        where R: AsyncBufRead + Unpin + Send
-    {
-        let mut buffer = vec![0u8; cache.n_len as usize];
-        stream.read_exact(&mut buffer).await.unwrap();
-        buffer
-    }
 }
 
 #[derive(LoginPacket, Serialize, Deserialize, Debug)]

@@ -3,7 +3,6 @@ use async_trait::async_trait;
 use regex::Regex;
 use tentacli_traits::{CharacterListError, PacketHandler};
 use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
-use tentacli_traits::types::custom_fields::TerminatedString;
 use tentacli_traits::types::opcodes::Opcode;
 use tentacli_traits::types::player::Player;
 
@@ -13,6 +12,8 @@ use crate::primary::client::player::traits::CharacterCreateToolkit;
 
 #[derive(WorldPacket, Serialize, Deserialize, Debug)]
 struct Income {
+    characters_count: u8,
+    #[depends_on(characters_count)]
     characters: Vec<Player>,
 }
 
@@ -22,7 +23,7 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let mut response = Vec::new();
 
-        let (Income { characters }, json) = Income::from_binary(&input.data)?;
+        let (Income { characters, .. }, json) = Income::from_binary(&input.data)?;
 
         response.push(HandlerOutput::ResponseMessage(
             Opcode::get_opcode_name(input.opcode as u32)
@@ -54,7 +55,7 @@ impl PacketHandler for Handler {
                 ));
 
                 response.push(HandlerOutput::Data(CharCreateOutcome {
-                    name: TerminatedString::from(random_name),
+                    name: format!("{}\0", random_name),
                     race: Self::get_random_race(),
                     class: Self::get_random_class(),
                     gender: Self::get_random_gender(),

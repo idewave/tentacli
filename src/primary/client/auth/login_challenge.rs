@@ -1,6 +1,5 @@
 use std::net::Ipv4Addr;
 use anyhow::{Result as AnyResult};
-use tentacli_traits::types::custom_fields::TerminatedString;
 use tentacli_traits::types::opcodes::Opcode;
 use tentacli_traits::types::OutgoingPacket;
 
@@ -8,12 +7,12 @@ use tentacli_traits::types::OutgoingPacket;
 struct Outcome {
     unknown: u8,
     packet_size: u16,
-    game_name: TerminatedString,
+    game_name: String,
     #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
     version: [u8; 3],
     build: u16,
-    platform: TerminatedString,
-    os: TerminatedString,
+    platform: String,
+    os: String,
     locale: String,
     timezone: u32,
     ip: u32,
@@ -31,11 +30,11 @@ pub fn handler(account: &str) -> AnyResult<OutgoingPacket> {
     let (opcode, data, json_details) = Outcome {
         unknown: 0,
         packet_size,
-        game_name: TerminatedString::from("WoW"),
+        game_name: "WoW\0".to_string(),
         version: [3, 3, 5],
         build: 12340,
-        platform: TerminatedString::from("68x"),
-        os: TerminatedString::from("niW"),
+        platform: "68x\0".to_string(),
+        os: "niW\0".to_string(),
         locale: String::from("URur"),
         timezone: 0,
         ip: Ipv4Addr::new(127, 0, 0, 1).into(),

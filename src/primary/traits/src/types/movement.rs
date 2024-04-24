@@ -114,9 +114,12 @@ impl BinaryConverter for MovementInfo {
         todo!()
     }
 
-    fn read_from<R: BufRead>(mut reader: R) -> Result<Self, FieldError> where Self: Sized {
-        Self::parse(&mut reader)
-            .map_err(|e| FieldError::CannotRead(e, "MovementInfo".to_string()))
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> Result<Self, FieldError> {
+        Self::parse(reader).map_err(|e| FieldError::CannotRead(e, "MovementInfo".to_string()))
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        todo!()
     }
 }
 

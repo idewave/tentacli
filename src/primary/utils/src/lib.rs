@@ -1,7 +1,6 @@
 use std::{num::ParseIntError};
-use std::io::{BufRead, Read, Write};
+use std::io::{Read, Write};
 use anyhow::{anyhow, Result as AnyResult};
-use byteorder::ReadBytesExt;
 use flate2::Compression;
 use flate2::read::ZlibDecoder;
 use flate2::read::DeflateDecoder;
@@ -33,27 +32,6 @@ pub fn encode_hex(bytes: &[u8]) -> String {
         items.push(format!("{:02x}", b).to_uppercase());
     }
     items.join(" ")
-}
-
-pub fn read_packed_guid<R: BufRead>(reader: &mut R) -> u64 {
-    let mask = reader.read_u8().unwrap_or(0);
-
-    if mask == 0 {
-        return 0;
-    }
-
-    let mut guid: u64 = 0;
-    let mut i = 0;
-
-    while i < 8 {
-        if (mask & 1 << i) != 0 {
-            guid |= (reader.read_u8().unwrap() as u64) << (i * 8);
-        }
-
-        i += 1;
-    }
-
-    guid
 }
 
 pub fn zlib_decompress(data: &[u8]) -> AnyResult<Vec<u8>> {

@@ -1,7 +1,6 @@
 use sha1::{Digest, Sha1};
 use async_trait::async_trait;
 use tentacli_traits::PacketHandler;
-use tentacli_traits::types::custom_fields::TerminatedString;
 use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
 use tentacli_traits::types::config::AddonInfo;
 use tentacli_traits::types::opcodes::Opcode;
@@ -21,7 +20,7 @@ struct Income {
 struct Outcome {
     build: u32,
     unknown: u32,
-    account: TerminatedString,
+    account: String,
     unknown2: u32,
     #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
     client_seed: [u8; SEED_SIZE],
@@ -79,7 +78,7 @@ impl PacketHandler for Handler {
         response.push(HandlerOutput::Data(Outcome {
             build: 12340,
             unknown: 0,
-            account: TerminatedString::from(account),
+            account: format!("{}\0", account),
             unknown2: 0,
             client_seed,
             unknown3: 0,

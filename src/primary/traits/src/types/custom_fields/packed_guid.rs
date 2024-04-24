@@ -77,7 +77,7 @@ impl BinaryConverter for PackedGuid {
         Ok(())
     }
 
-    fn read_from<R: BufRead>(mut reader: R) -> Result<Self, FieldError> {
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> Result<Self, FieldError> {
         let mask = reader.read_u8().unwrap_or(0);
 
         if mask == 0 {
@@ -99,5 +99,10 @@ impl BinaryConverter for PackedGuid {
         }
 
         Ok(PackedGuid(guid))
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        let PackedGuid(guid) = self;
+        guid.to_le_bytes().to_vec()
     }
 }

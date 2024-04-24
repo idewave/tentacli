@@ -1,4 +1,3 @@
-use std::io::{BufRead};
 use async_trait::async_trait;
 use tentacli_traits::PacketHandler;
 use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
@@ -22,17 +21,9 @@ struct ModuleUseIncome {
 #[derive(WorldPacket, Serialize, Deserialize, Debug, Default)]
 struct ModuleCacheIncome {
     partial_size: u16,
-    #[dynamic_field]
     #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
+    #[depends_on(partial_size)]
     partial: Vec<u8>,
-}
-
-impl ModuleCacheIncome {
-    fn partial<R: BufRead>(mut reader: R, initial: &mut Self) -> Vec<u8> {
-        let mut buffer = vec![0u8; initial.partial_size as usize];
-        reader.read_exact(&mut buffer).unwrap();
-        buffer
-    }
 }
 
 #[derive(WorldPacket, Serialize, Deserialize, Debug, Default)]

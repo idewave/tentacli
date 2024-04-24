@@ -10,6 +10,8 @@ use tentacli_traits::types::realm::Realm;
 #[options(with_async)]
 pub struct RealmlistResponse {
     skip: [u8; 6],
+    realms_count: u16,
+    #[depends_on(realms_count)]
     realms: Vec<Realm>,
 }
 

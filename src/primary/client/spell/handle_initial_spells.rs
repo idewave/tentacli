@@ -7,7 +7,11 @@ use tentacli_traits::types::spell::{CooldownInfo, Spell};
 #[derive(WorldPacket, Serialize, Deserialize, Debug, Default)]
 struct Income {
     skip: u8,
+    spell_count: u16,
+    #[depends_on(spell_count)]
     spells: Vec<Spell>,
+    cooldown_count: u16,
+    #[depends_on(cooldown_count)]
     cooldowns: Vec<CooldownInfo>
 }
 

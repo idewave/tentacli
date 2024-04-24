@@ -58,139 +58,120 @@ impl Serialize for Realm {
     }
 }
 
-impl BinaryConverter for Vec<Realm> {
+impl BinaryConverter for Realm {
     fn write_into(&mut self, buffer: &mut Vec<u8>) -> Result<(), FieldError> {
-        let label = "Vec<Realm>";
+        let label = "Realm";
 
-        buffer.write_u16::<LittleEndian>(self.len() as u16)
-            .map_err(|e| FieldError::CannotWrite(e, format!("u16 ({})", label)))?;
-
-        for realm in self.iter_mut() {
-            buffer.write_u8(realm.icon)
-                .map_err(|e| FieldError::CannotRead(e, format!("icon:u8 ({})", label)))?;
-            buffer.write_u8(realm.lock)
-                .map_err(|e| FieldError::CannotRead(e, format!("lock:u8 ({})", label)))?;
-            buffer.write_u8(realm.flags)
-                .map_err(|e| FieldError::CannotRead(e, format!("flags:u8 ({})", label)))?;
-            buffer.write_all(realm.name.as_bytes())
-                .map_err(|e| FieldError::CannotWrite(e, format!("name bytes ({})", label)))?;
-            buffer.write_u8(0)
-                .map_err(|e| FieldError::CannotWrite(e, format!("u8 zero ({})", label)))?;
-            buffer.write_all(realm.address.as_bytes())
-                .map_err(|e| FieldError::CannotWrite(e, format!("address bytes ({})", label)))?;
-            buffer.write_u8(0)
-                .map_err(|e| FieldError::CannotWrite(e, format!("u8 zero ({})", label)))?;
-            buffer.write_f32::<LittleEndian>(realm.population)
-                .map_err(|e| FieldError::CannotRead(e, format!("population:f32 ({})", label)))?;
-            buffer.write_u8(realm.characters)
-                .map_err(|e| FieldError::CannotRead(e, format!("characters:u8 ({})", label)))?;
-            buffer.write_u8(realm.timezone)
-                .map_err(|e| FieldError::CannotRead(e, format!("timezone:u8 ({})", label)))?;
-            buffer.write_u8(realm.server_id)
-                .map_err(|e| FieldError::CannotRead(e, format!("server_id:u8 ({})", label)))?;
-        }
+        buffer.write_u8(self.icon)
+            .map_err(|e| FieldError::CannotRead(e, format!("icon:u8 ({})", label)))?;
+        buffer.write_u8(self.lock)
+            .map_err(|e| FieldError::CannotRead(e, format!("lock:u8 ({})", label)))?;
+        buffer.write_u8(self.flags)
+            .map_err(|e| FieldError::CannotRead(e, format!("flags:u8 ({})", label)))?;
+        buffer.write_all(self.name.as_bytes())
+            .map_err(|e| FieldError::CannotWrite(e, format!("name bytes ({})", label)))?;
+        buffer.write_u8(0)
+            .map_err(|e| FieldError::CannotWrite(e, format!("u8 zero ({})", label)))?;
+        buffer.write_all(self.address.as_bytes())
+            .map_err(|e| FieldError::CannotWrite(e, format!("address bytes ({})", label)))?;
+        buffer.write_u8(0)
+            .map_err(|e| FieldError::CannotWrite(e, format!("u8 zero ({})", label)))?;
+        buffer.write_f32::<LittleEndian>(self.population)
+            .map_err(|e| FieldError::CannotRead(e, format!("population:f32 ({})", label)))?;
+        buffer.write_u8(self.characters)
+            .map_err(|e| FieldError::CannotRead(e, format!("characters:u8 ({})", label)))?;
+        buffer.write_u8(self.timezone)
+            .map_err(|e| FieldError::CannotRead(e, format!("timezone:u8 ({})", label)))?;
+        buffer.write_u8(self.server_id)
+            .map_err(|e| FieldError::CannotRead(e, format!("server_id:u8 ({})", label)))?;
 
         Ok(())
     }
 
-    fn read_from<R: BufRead>(mut reader: R) -> Result<Self, FieldError> {
-        let mut realms = Vec::new();
-        let label = "Vec<Realm>";
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> Result<Self, FieldError> {
+        let label = "Realm";
+        let mut name = Vec::new();
+        let mut address = Vec::new();
 
-        let realms_count = reader.read_i16::<LittleEndian>()
-            .map_err(|e| FieldError::CannotRead(e, format!("realms_count:i16 ({})", label)))?;
-        for _ in 0 .. realms_count {
-            let mut name = Vec::new();
-            let mut address = Vec::new();
+        let icon = reader.read_u8()
+            .map_err(|e| FieldError::CannotRead(e, format!("icon:u8 ({})", label)))?;
+        let lock = reader.read_u8()
+            .map_err(|e| FieldError::CannotRead(e, format!("lock:u8 ({})", label)))?;
+        let flags = reader.read_u8()
+            .map_err(|e| FieldError::CannotRead(e, format!("flags:u8 ({})", label)))?;
 
-            let icon = reader.read_u8()
-                .map_err(|e| FieldError::CannotRead(e, format!("icon:u8 ({})", label)))?;
-            let lock = reader.read_u8()
-                .map_err(|e| FieldError::CannotRead(e, format!("lock:u8 ({})", label)))?;
-            let flags = reader.read_u8()
-                .map_err(|e| FieldError::CannotRead(e, format!("flags:u8 ({})", label)))?;
+        reader.read_until(0, &mut name)
+            .map_err(|e| FieldError::CannotRead(e, format!("name:Vec<u8> ({})", label)))?;
+        reader.read_until(0, &mut address)
+            .map_err(|e| FieldError::CannotRead(e, format!("address:Vec<u8> ({})", label)))?;
 
-            reader.read_until(0, &mut name)
-                .map_err(|e| FieldError::CannotRead(e, format!("name:Vec<u8> ({})", label)))?;
-            reader.read_until(0, &mut address)
-                .map_err(|e| FieldError::CannotRead(e, format!("address:Vec<u8> ({})", label)))?;
+        let population = reader.read_f32::<LittleEndian>()
+            .map_err(|e| FieldError::CannotRead(e, format!("population:f32 ({})", label)))?;
+        let characters = reader.read_u8()
+            .map_err(|e| FieldError::CannotRead(e, format!("characters:u8 ({})", label)))?;
+        let timezone = reader.read_u8()
+            .map_err(|e| FieldError::CannotRead(e, format!("timezone:u8 ({})", label)))?;
+        let server_id = reader.read_u8()
+            .map_err(|e| FieldError::CannotRead(e, format!("server_id:u8 ({})", label)))?;
 
-            let population = reader.read_f32::<LittleEndian>()
-                .map_err(|e| FieldError::CannotRead(e, format!("population:f32 ({})", label)))?;
-            let characters = reader.read_u8()
-                .map_err(|e| FieldError::CannotRead(e, format!("characters:u8 ({})", label)))?;
-            let timezone = reader.read_u8()
-                .map_err(|e| FieldError::CannotRead(e, format!("timezone:u8 ({})", label)))?;
-            let server_id = reader.read_u8()
-                .map_err(|e| FieldError::CannotRead(e, format!("server_id:u8 ({})", label)))?;
+        Ok(Realm {
+            icon,
+            lock,
+            flags,
+            name: String::from_utf8_lossy(&name).trim_matches(char::from(0)).to_string(),
+            address: String::from_utf8_lossy(&address).trim_matches(char::from(0)).to_string(),
+            population,
+            characters,
+            timezone,
+            server_id,
+        })
+    }
 
-            realms.push(Realm {
-                icon,
-                lock,
-                flags,
-                name: String::from_utf8_lossy(&name).trim_matches(char::from(0)).to_string(),
-                address: String::from_utf8_lossy(&address).trim_matches(char::from(0)).to_string(),
-                population,
-                characters,
-                timezone,
-                server_id,
-            });
-        }
-
-        Ok(realms)
+    fn to_bytes(&self) -> Vec<u8> {
+        todo!()
     }
 }
 
 #[async_trait]
-impl StreamReader for Vec<Realm> {
-    async fn read_from<R>(stream: &mut R) -> Result<Self, FieldError>
-        where
-            Self: Sized,
-            R: AsyncBufRead + Unpin + Send,
+impl StreamReader for Realm {
+    async fn read_from<R>(stream: &mut R, _: &mut Vec<u8>) -> Result<Self, FieldError>
+        where Self: Sized, R: AsyncBufRead + Unpin + Send
     {
-        let mut realms = Vec::new();
-        let label = "Vec<Realm>";
+        let label = "Realm";
+        let mut name = Vec::new();
+        let mut address = Vec::new();
 
-        let realms_count = stream.read_i16_le().await
-            .map_err(|e| FieldError::CannotRead(e, format!("realms_count:i16 ({})", label)))?;
-        for _ in 0 .. realms_count {
-            let mut name = Vec::new();
-            let mut address = Vec::new();
+        let icon = stream.read_u8().await
+            .map_err(|e| FieldError::CannotRead(e, format!("icon:u8 ({})", label)))?;
+        let lock = stream.read_u8().await
+            .map_err(|e| FieldError::CannotRead(e, format!("lock:u8 ({})", label)))?;
+        let flags = stream.read_u8().await
+            .map_err(|e| FieldError::CannotRead(e, format!("flags:u8 ({})", label)))?;
 
-            let icon = stream.read_u8().await
-                .map_err(|e| FieldError::CannotRead(e, format!("icon:u8 ({})", label)))?;
-            let lock = stream.read_u8().await
-                .map_err(|e| FieldError::CannotRead(e, format!("lock:u8 ({})", label)))?;
-            let flags = stream.read_u8().await
-                .map_err(|e| FieldError::CannotRead(e, format!("flags:u8 ({})", label)))?;
+        stream.read_until(0, &mut name).await
+            .map_err(|e| FieldError::CannotRead(e, format!("name:Vec<u8> ({})", label)))?;
+        stream.read_until(0, &mut address).await
+            .map_err(|e| FieldError::CannotRead(e, format!("address:Vec<u8> ({})", label)))?;
 
-            stream.read_until(0, &mut name).await
-                .map_err(|e| FieldError::CannotRead(e, format!("name:Vec<u8> ({})", label)))?;
-            stream.read_until(0, &mut address).await
-                .map_err(|e| FieldError::CannotRead(e, format!("address:Vec<u8> ({})", label)))?;
+        let population = stream.read_f32_le().await
+            .map_err(|e| FieldError::CannotRead(e, format!("population:f32 ({})", label)))?;
+        let characters = stream.read_u8().await
+            .map_err(|e| FieldError::CannotRead(e, format!("characters:u8 ({})", label)))?;
+        let timezone = stream.read_u8().await
+            .map_err(|e| FieldError::CannotRead(e, format!("timezone:u8 ({})", label)))?;
+        let server_id = stream.read_u8().await
+            .map_err(|e| FieldError::CannotRead(e, format!("server_id:u8 ({})", label)))?;
 
-            let population = stream.read_f32_le().await
-                .map_err(|e| FieldError::CannotRead(e, format!("population:f32 ({})", label)))?;
-            let characters = stream.read_u8().await
-                .map_err(|e| FieldError::CannotRead(e, format!("characters:u8 ({})", label)))?;
-            let timezone = stream.read_u8().await
-                .map_err(|e| FieldError::CannotRead(e, format!("timezone:u8 ({})", label)))?;
-            let server_id = stream.read_u8().await
-                .map_err(|e| FieldError::CannotRead(e, format!("server_id:u8 ({})", label)))?;
-
-            realms.push(Realm {
-                icon,
-                lock,
-                flags,
-                name: String::from_utf8_lossy(&name).trim_matches(char::from(0)).to_string(),
-                address: String::from_utf8_lossy(&address).trim_matches(char::from(0)).to_string(),
-                population,
-                characters,
-                timezone,
-                server_id,
-            });
-        }
-
-        Ok(realms)
+        Ok(Realm {
+            icon,
+            lock,
+            flags,
+            name: String::from_utf8_lossy(&name).trim_matches(char::from(0)).to_string(),
+            address: String::from_utf8_lossy(&address).trim_matches(char::from(0)).to_string(),
+            population,
+            characters,
+            timezone,
+            server_id,
+        })
     }
 }

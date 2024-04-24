@@ -1,11 +1,13 @@
-use std::io::{BufRead, Write};
+use std::io::{BufRead, Cursor, Write};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use crate::errors::FieldError;
 
 pub trait BinaryConverter {
     fn write_into(&mut self, buffer: &mut Vec<u8>) -> Result<(), FieldError>;
-    fn read_from<R: BufRead>(reader: R) -> Result<Self, FieldError> where Self: Sized;
+    fn read_from<R: BufRead>(reader: &mut R, dependencies: &mut Vec<u8>) -> Result<Self, FieldError>
+        where Self: Sized;
+    fn to_bytes(&self) -> Vec<u8>;
 }
 
 impl BinaryConverter for u8 {
@@ -13,8 +15,12 @@ impl BinaryConverter for u8 {
         buffer.write_u8(*self).map_err(|e| FieldError::CannotWrite(e, "u8".to_string()))
     }
 
-    fn read_from<R: BufRead>(mut reader: R) -> Result<Self, FieldError> {
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> Result<Self, FieldError> {
         reader.read_u8().map_err(|e| FieldError::CannotRead(e, "u8".to_string()))
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        vec![*self]
     }
 }
 
@@ -24,8 +30,12 @@ impl BinaryConverter for u16 {
             .map_err(|e| FieldError::CannotWrite(e, "u16".to_string()))
     }
 
-    fn read_from<R: BufRead>(mut reader: R) -> Result<Self, FieldError> {
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> Result<Self, FieldError> {
         reader.read_u16::<LittleEndian>().map_err(|e| FieldError::CannotRead(e, "u16".to_string()))
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        self.to_le_bytes().to_vec()
     }
 }
 
@@ -35,8 +45,12 @@ impl BinaryConverter for u32 {
             .map_err(|e| FieldError::CannotWrite(e, "u32".to_string()))
     }
 
-    fn read_from<R: BufRead>(mut reader: R) -> Result<Self, FieldError> {
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> Result<Self, FieldError> {
         reader.read_u32::<LittleEndian>().map_err(|e| FieldError::CannotRead(e, "u32".to_string()))
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        self.to_le_bytes().to_vec()
     }
 }
 
@@ -46,8 +60,12 @@ impl BinaryConverter for u64 {
             .map_err(|e| FieldError::CannotWrite(e, "u64".to_string()))
     }
 
-    fn read_from<R: BufRead>(mut reader: R) -> Result<Self, FieldError> {
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> Result<Self, FieldError> {
         reader.read_u64::<LittleEndian>().map_err(|e| FieldError::CannotRead(e, "u64".to_string()))
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        self.to_le_bytes().to_vec()
     }
 }
 
@@ -56,8 +74,12 @@ impl BinaryConverter for i8 {
         buffer.write_i8(*self).map_err(|e| FieldError::CannotWrite(e, "i8".to_string()))
     }
 
-    fn read_from<R: BufRead>(mut reader: R) -> Result<Self, FieldError> {
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> Result<Self, FieldError> {
         reader.read_i8().map_err(|e| FieldError::CannotRead(e, "i8".to_string()))
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        self.to_le_bytes().to_vec()
     }
 }
 
@@ -67,8 +89,12 @@ impl BinaryConverter for i16 {
             .map_err(|e| FieldError::CannotWrite(e, "i16".to_string()))
     }
 
-    fn read_from<R: BufRead>(mut reader: R) -> Result<Self, FieldError> {
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> Result<Self, FieldError> {
         reader.read_i16::<LittleEndian>().map_err(|e| FieldError::CannotRead(e, "i16".to_string()))
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        self.to_le_bytes().to_vec()
     }
 }
 
@@ -78,8 +104,12 @@ impl BinaryConverter for i32 {
             .map_err(|e| FieldError::CannotWrite(e, "i32".to_string()))
     }
 
-    fn read_from<R: BufRead>(mut reader: R) -> Result<Self, FieldError> {
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> Result<Self, FieldError> {
         reader.read_i32::<LittleEndian>().map_err(|e| FieldError::CannotRead(e, "i32".to_string()))
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        self.to_le_bytes().to_vec()
     }
 }
 
@@ -89,8 +119,12 @@ impl BinaryConverter for i64 {
             .map_err(|e| FieldError::CannotWrite(e, "i64".to_string()))
     }
 
-    fn read_from<R: BufRead>(mut reader: R) -> Result<Self, FieldError> {
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> Result<Self, FieldError> {
         reader.read_i64::<LittleEndian>().map_err(|e| FieldError::CannotRead(e, "i64".to_string()))
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        self.to_le_bytes().to_vec()
     }
 }
 
@@ -100,8 +134,12 @@ impl BinaryConverter for f32 {
             .map_err(|e| FieldError::CannotWrite(e, "f32".to_string()))
     }
 
-    fn read_from<R: BufRead>(mut reader: R) -> Result<Self, FieldError> {
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> Result<Self, FieldError> {
         reader.read_f32::<LittleEndian>().map_err(|e| FieldError::CannotRead(e, "f32".to_string()))
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        self.to_le_bytes().to_vec()
     }
 }
 
@@ -111,23 +149,59 @@ impl BinaryConverter for f64 {
             .map_err(|e| FieldError::CannotWrite(e, "f64".to_string()))
     }
 
-    fn read_from<R: BufRead>(mut reader: R) -> Result<Self, FieldError> {
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> Result<Self, FieldError> {
         reader.read_f64::<LittleEndian>().map_err(|e| FieldError::CannotRead(e, "f64".to_string()))
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        self.to_le_bytes().to_vec()
     }
 }
 
 impl BinaryConverter for String {
     fn write_into(&mut self, buffer: &mut Vec<u8>) -> Result<(), FieldError> {
-        buffer.write_all(self.as_bytes()).map_err(|e| FieldError::CannotWrite(e, "String".to_string()))
+        buffer.write_all(self.as_bytes())
+            .map_err(|e| FieldError::CannotWrite(e, "String".to_string()))?;
+
+        Ok(())
     }
 
-    fn read_from<R: BufRead>(mut reader: R) -> Result<Self, FieldError> {
-        let mut internal_buf = vec![];
-        reader.read_until(0, &mut internal_buf)
-            .map_err(|e| FieldError::CannotRead(e, "String".to_string()))?;
-        String::from_utf8(
-            internal_buf[..internal_buf.len()].to_vec()
-        ).map_err(|e| FieldError::InvalidString(e, "String".to_string()))
+    fn read_from<R: BufRead>(
+        reader: &mut R,
+        dependencies: &mut Vec<u8>
+    ) -> Result<Self, FieldError> {
+        let mut cursor = Cursor::new(dependencies.to_vec());
+
+        let size = match dependencies.len() {
+            1 => ReadBytesExt::read_u8(&mut cursor)
+                .map_err(|e| FieldError::CannotRead(e, format!("String u8 size")))? as usize,
+            2 => ReadBytesExt::read_u16::<LittleEndian>(&mut cursor)
+                .map_err(|e| FieldError::CannotRead(e, format!("String u16 size")))? as usize,
+            4 => ReadBytesExt::read_u32::<LittleEndian>(&mut cursor)
+                .map_err(|e| FieldError::CannotRead(e, format!("String u32 size")))? as usize,
+            _ => 0,
+        };
+
+        let buffer = if size > 0 {
+            let mut buffer = vec![0u8; size];
+            reader.read_exact(&mut buffer)
+                .map_err(|e| FieldError::CannotRead(e, "String".to_string()))?;
+            buffer
+        } else {
+            let mut buffer = vec![];
+            reader.read_until(0, &mut buffer)
+                .map_err(|e| FieldError::CannotRead(e, "String".to_string()))?;
+            buffer
+        };
+
+        let string = String::from_utf8(buffer)
+            .map_err(|e| FieldError::InvalidString(e, "String".to_string()))?;
+
+        Ok(string.trim_end_matches(char::from(0)).to_string())
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        self.as_bytes().to_vec()
     }
 }
 
@@ -136,20 +210,48 @@ impl<const N: usize> BinaryConverter for [u8; N] {
         buffer.write_all(self).map_err(|e| FieldError::CannotWrite(e, "[u8; N]".to_string()))
     }
 
-    fn read_from<R: BufRead>(mut reader: R) -> Result<Self, FieldError> {
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> Result<Self, FieldError> {
         let mut internal_buf = [0; N];
         reader.read_exact(&mut internal_buf)
             .map_err(|e| FieldError::CannotRead(e, "[u8; N]".to_string()))?;
         Ok(internal_buf)
     }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        self.to_vec()
+    }
 }
 
-impl BinaryConverter for Vec<u8> {
+impl<T: BinaryConverter + Clone> BinaryConverter for Vec<T> where T: Sized {
     fn write_into(&mut self, buffer: &mut Vec<u8>) -> Result<(), FieldError> {
-        buffer.write_all(self).map_err(|e| FieldError::CannotWrite(e, "Vec<u8>".to_string()))
+        self.iter_mut().for_each(|item| item.write_into(buffer).unwrap());
+
+        Ok(())
     }
 
-    fn read_from<R: BufRead>(_reader: R) -> Result<Self, FieldError> where Self: Sized {
+    fn read_from<R: BufRead>(
+        reader: &mut R,
+        dependencies: &mut Vec<u8>
+    ) -> Result<Self, FieldError> {
+        let mut cursor = Cursor::new(dependencies.to_vec());
+        let size = match dependencies.len() {
+            1 => ReadBytesExt::read_u8(&mut cursor)
+                .map_err(|e| FieldError::CannotRead(e, format!("Vec<T> u8 size")))? as usize,
+            2 => ReadBytesExt::read_u16::<LittleEndian>(&mut cursor)
+                .map_err(|e| FieldError::CannotRead(e, format!("Vec<T> u16 size")))? as usize,
+            _ => ReadBytesExt::read_u32::<LittleEndian>(&mut cursor)
+                .map_err(|e| FieldError::CannotRead(e, format!("Vec<T> u32 size")))? as usize,
+        };
+        let mut buffer: Vec<T> = vec![];
+
+        for _ in 0..size {
+            buffer.push(T::read_from(reader, dependencies)?);
+        }
+
+        Ok(buffer)
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
         todo!()
     }
 }

@@ -33,9 +33,9 @@ serde = { version = "1.0", features = ["derive"] }
 sha-1 = "0.9.8"
 tentacli-crypto = "0.1.0"
 tentacli-formatters = "0.1.0"
-tentacli-packet = "3.0.0"
-tentacli-traits = "0.2.0"
-tentacli-utils = "1.1.1"
+tentacli-packet = "4.0.0"
+tentacli-traits = "1.0.0"
+tentacli-utils = "2.0.0"
 tokio = { version = "1", features = ["sync", "net", "io-util", "macros", "time", "rt-multi-thread"] }
 #tokio-util = { version = "0.7.10", features = ["io"] }
 tui = { version = "0", features = ["crossterm"], optional = true }

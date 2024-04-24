@@ -1,13 +1,12 @@
 use async_trait::async_trait;
 use tentacli_traits::PacketHandler;
-use tentacli_traits::types::custom_fields::TerminatedString;
 use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
 use tentacli_traits::types::opcodes::Opcode;
 
 #[derive(WorldPacket, Serialize, Deserialize, Debug)]
 struct Income {
     skip: u32,
-    message: TerminatedString,
+    message: String,
 }
 
 pub struct Handler;

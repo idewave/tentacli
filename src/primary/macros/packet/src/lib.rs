@@ -1,21 +1,37 @@
 use proc_macro::{TokenStream};
 use proc_macro2::{Ident};
-use syn::ItemStruct;
-use syn::{parse_macro_input};
-use quote::{quote, format_ident};
+use quote::{quote};
+use std::collections::BTreeMap;
+use syn::{parse_macro_input, Token, ItemStruct};
+use syn::parse::{Parse, ParseStream};
+use syn::punctuated::Punctuated;
 
 mod types;
 
 use types::{Attributes, Imports};
 
+struct DependsOnAttribute {
+    pub name: Ident,
+}
+
+impl Parse for DependsOnAttribute {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let name: Ident = input.parse()?;
+
+        Ok(Self { name })
+    }
+}
+
 /// LoginPacket is a part of tentacli-based projects.
 /// This proc-macro allows to send and receive packets from WoW Login server.
-/// It supports #[options(with_async)] option to include `from_stream` method, which allows
+/// It supports `#[options(with_async)]` option to include `from_stream` method, which allows
 /// to perform a partial read (since there's no guarantee the TCP packet will arrive all at once)
-/// #[dynamic_field] attribute indicates that the function for this field will be defined manually.
+/// `#[depends_on]` attribute indicates that the field depends on another fields. These fields will be
+/// converted into bytes and the byte-array will be used as dependency for `read_from` method of
+/// BinaryConverter
 
-#[proc_macro_derive(LoginPacket, attributes(options, dynamic_field))]
-pub fn derive_login_packet(input: TokenStream) -> TokenStream {
+#[proc_macro_derive(LoginPacket, attributes(options, depends_on))]
+pub fn login_packet(input: TokenStream) -> TokenStream {
     let ItemStruct { ident, fields, attrs, .. } = parse_macro_input!(input);
     let Imports {
         buf_read,
@@ -43,12 +59,26 @@ pub fn derive_login_packet(input: TokenStream) -> TokenStream {
         f.ident.clone()
     }).collect::<Vec<Option<Ident>>>();
 
-    let mut dynamic_fields: Vec<Option<Ident>> = vec![];
+    let mut depends_on: BTreeMap<Option<Ident>, Vec<Ident>> = BTreeMap::new();
     for field in fields.iter() {
-        let ident = format_ident!("{}", field.ident.as_ref().unwrap());
+        let ident = field.ident.clone();
 
-        if field.attrs.iter().any(|attr| attr.path().is_ident("dynamic_field")) {
-            dynamic_fields.push(Some(ident));
+        if field.attrs.iter().any(|attr| attr.path().is_ident("depends_on")) {
+            let mut dependencies: Vec<Ident> = vec![];
+
+            field.attrs.iter().for_each(|attr| {
+                if attr.path().is_ident("depends_on") {
+                    let parsed_attrs = attr.parse_args_with(
+                        Punctuated::<DependsOnAttribute, Token![,]>::parse_terminated
+                    ).unwrap();
+
+                    for a in parsed_attrs {
+                        dependencies.push(a.name);
+                    }
+                }
+            });
+
+            depends_on.insert(ident, dependencies);
         }
     }
 
@@ -58,12 +88,23 @@ pub fn derive_login_packet(input: TokenStream) -> TokenStream {
             let field_name = f.ident.clone();
             let field_type = f.ty.clone();
 
-            if dynamic_fields.contains(&field_name) {
-                quote!{ Self::#field_name(&mut reader, &mut cache) }
+            if let Some(dep_fields) = depends_on.get(&field_name) {
+                quote! {
+                    {
+                        let mut data: Vec<u8> = vec![];
+                        #(
+                            let bytes = #binary_converter::to_bytes(
+                                &mut cache.#dep_fields,
+                            );
+                            data.extend(bytes);
+                        )*
+                        #binary_converter::read_from(&mut reader, &mut data)?
+                    }
+                }
             } else {
                 quote! {
                     {
-                        let value: #field_type = #binary_converter::read_from(&mut reader)?;
+                        let value: #field_type = #binary_converter::read_from(&mut reader, &mut vec![])?;
                         cache.#field_name = value.clone();
                         value
                     }
@@ -134,17 +175,27 @@ pub fn derive_login_packet(input: TokenStream) -> TokenStream {
                 let field_name = f.ident.clone();
                 let field_type = f.ty.clone();
 
-                if dynamic_fields.contains(&field_name) {
-                    let async_field_name = format_ident!("async_{}", field_name.unwrap());
-                    quote!{ Self::#async_field_name(&mut stream, &mut cache).await }
+                if let Some(dep_fields) = depends_on.get(&field_name) {
+                    quote! {
+                        {
+                            let mut data: Vec<u8> = vec![];
+                            #(
+                                let bytes = #binary_converter::to_bytes(
+                                    &mut cache.#dep_fields,
+                                );
+                                data.extend(bytes);
+                            )*
+                            #stream_reader::read_from(&mut stream, &mut data).await?
+                        }
+                    }
                 } else {
                     quote! {
-                    {
-                        let value: #field_type = #stream_reader::read_from(&mut stream).await?;
-                        cache.#field_name = value.clone();
-                        value
+                        {
+                            let value: #field_type = #stream_reader::read_from(&mut stream, &mut vec![]).await?;
+                            cache.#field_name = value.clone();
+                            value
+                        }
                     }
-                }
                 }
             });
 
@@ -174,13 +225,16 @@ pub fn derive_login_packet(input: TokenStream) -> TokenStream {
 
 /// WorldPacket is a part of tentacli-based projects.
 /// This proc-macro allows to send and receive packets from WoW World server.
-/// It supports #[options(compressed)] option to indicated the packet as zlib-compressed, so it will
-/// be uncompressed before parsing.
-/// #[dynamic_field] attribute indicates that the function for this field will be defined manually.
+/// `#[depends_on]` attribute indicates that the field depends on another fields. These fields will be
+/// converted into bytes and the byte-array will be used as dependency for `read_from` method of
+/// `BinaryConverter`.
+/// `#[conditional]` attribute indicates that the field's value will be parsed only if condition
+/// is true. The result for condition will be parsed from implemented method with same name as
+/// field name.
 
-#[proc_macro_derive(WorldPacket, attributes(options, dynamic_field))]
-pub fn derive_world_packet(input: TokenStream) -> TokenStream {
-    let ItemStruct { ident, fields, attrs, .. } = parse_macro_input!(input);
+#[proc_macro_derive(WorldPacket, attributes(depends_on, conditional))]
+pub fn world_packet(input: TokenStream) -> TokenStream {
+    let ItemStruct { ident, fields, .. } = parse_macro_input!(input);
     let Imports {
         binary_converter,
         byteorder_be,
@@ -194,26 +248,35 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
         ..
     } = Imports::get();
 
-    let mut is_compressed = quote!(false);
-    if attrs.iter().any(|attr| attr.path().is_ident("options")) {
-        let attributes = attrs.iter().next().unwrap();
-        let attrs: Attributes = attributes.parse_args().unwrap();
-
-        if let Some(_span) = attrs.compressed.span {
-            is_compressed = quote!(true);
-        }
-    }
-
     let field_names = fields.iter().map(|f| {
         f.ident.clone()
     }).collect::<Vec<Option<Ident>>>();
 
-    let mut dynamic_fields: Vec<Option<Ident>> = vec![];
+    let mut depends_on: BTreeMap<Option<Ident>, Vec<Ident>> = BTreeMap::new();
+    let mut conditional: Vec<Option<Ident>> = vec![];
     for field in fields.iter() {
-        let ident = format_ident!("{}", field.ident.as_ref().unwrap());
+        let ident = field.ident.clone();
 
-        if field.attrs.iter().any(|attr| attr.path().is_ident("dynamic_field")) {
-            dynamic_fields.push(Some(ident));
+        if field.attrs.iter().any(|attr| attr.path().is_ident("depends_on")) {
+            let mut dependencies: Vec<Ident> = vec![];
+
+            field.attrs.iter().for_each(|attr| {
+                if attr.path().is_ident("depends_on") {
+                    let parsed_attrs = attr.parse_args_with(
+                        Punctuated::<DependsOnAttribute, Token![,]>::parse_terminated
+                    ).unwrap();
+
+                    for a in parsed_attrs {
+                        dependencies.push(a.name);
+                    }
+                }
+            });
+
+            depends_on.insert(ident.clone(), dependencies);
+        }
+
+        if field.attrs.iter().any(|attr| attr.path().is_ident("conditional")) {
+            conditional.push(ident);
         }
     }
 
@@ -223,41 +286,53 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
             let field_name = f.ident.clone();
             let field_type = f.ty.clone();
 
-            if dynamic_fields.contains(&field_name) {
-                quote!{ Self::#field_name(&mut reader, &mut cache) }
+            let output = if let Some(dep_fields) = depends_on.get(&field_name) {
+                quote! {
+                    {
+                        let mut data: Vec<u8> = vec![];
+                        #(
+                            let bytes = #binary_converter::to_bytes(
+                                &mut cache.#dep_fields,
+                            );
+                            data.extend(bytes);
+                        )*
+                        #binary_converter::read_from(&mut reader, &mut data)?
+                    }
+                }
             } else {
                 quote! {
                     {
-                        let value: #field_type = #binary_converter::read_from(&mut reader)?;
+                        let value: #field_type = #binary_converter::read_from(&mut reader, &mut vec![])?;
                         cache.#field_name = value.clone();
                         value
                     }
                 }
+            };
+
+            if conditional.contains(&field_name) {
+                quote! {
+                    {
+                        if Self::#field_name(&mut cache) {
+                            #output
+                        } else {
+                            Default::default()
+                        }
+                    }
+                }
+            } else {
+                output
             }
         });
 
     let output = quote! {
         impl #ident {
             pub fn from_binary(buffer: &[u8]) -> #result<(Self, String)> {
-                let mut buffer = match #is_compressed {
-                    true => {
-                        // 4 bytes uncompressed + 2 bytes used by zlib
-                        #utils::deflate_decompress(&buffer[6..])?
-                    },
-                    false => buffer.to_vec(),
-                };
+                Ok(Self::build_instance(buffer)?)
+            }
 
-                let mut cache = Self {
-                    #(#field_names: Default::default()),*
-                };
-
-                let mut reader = #cursor::new(buffer);
-                let mut instance = Self {
-                    #(#field_names: #initializers),*
-                };
-                let details = instance.get_json_details()?;
-
-                Ok((instance, details))
+            pub fn from_compressed_binary(buffer: &[u8]) -> #result<(Self, String)> {
+                let mut buffer = #utils::deflate_decompress(&buffer[6..])?;
+                Ok(Self::build_instance(&buffer)?)
             }
 
             pub fn to_binary_with_server_opcode(&mut self, opcode: u16) -> #result<Vec<u8>> {
@@ -336,19 +411,39 @@ pub fn derive_world_packet(input: TokenStream) -> TokenStream {
 
                 Ok(header)
            }
+
+            fn build_instance(buffer: &[u8]) -> #result<(Self, String)> {
+                let mut cache = Self {
+                    #(#field_names: Default::default()),*
+                };
+
+                let mut reader = #cursor::new(buffer);
+                let mut instance = Self {
+                    #(#field_names: #initializers),*
+                };
+
+                let details = instance.get_json_details()?;
+
+                Ok((instance, details))
+            }
         }
     };
 
     TokenStream::from(output)
 }
 
-/// FieldsSerializer is a part of tentacli-based projects.
+/// Segment is a part of tentacli-based projects.
 /// This proc-macro is used mostly for serialization, when there's a need to serialize set of fields
-/// into byte-array.
-/// #[dynamic_field] attribute indicates that the function for this field will be defined manually.
+/// into byte-array. Can be useful for sharing duplicated parts between different packets.
+/// `#[depends_on]` attribute indicates that the field depends on another fields. These fields will be
+/// converted into bytes and the byte-array will be used as dependency for `read_from` method of
+/// `BinaryConverter`.
+/// `#[conditional]` attribute indicates that the field's value will be parsed only if condition
+/// is true. The result for condition will be parsed from implemented method with same name as
+/// field name.
 
-#[proc_macro_derive(FieldsSerializer, attributes(dynamic_field))]
-pub fn derive_fields_serializer(input: TokenStream) -> TokenStream {
+#[proc_macro_derive(Segment, attributes(depends_on, conditional))]
+pub fn segment(input: TokenStream) -> TokenStream {
     let ItemStruct { ident, fields, .. } = parse_macro_input!(input);
     let Imports {
         binary_converter,
@@ -363,12 +458,31 @@ pub fn derive_fields_serializer(input: TokenStream) -> TokenStream {
         f.ident.clone()
     }).collect::<Vec<Option<Ident>>>();
 
-    let mut dynamic_fields: Vec<Option<Ident>> = vec![];
+    let mut depends_on: BTreeMap<Option<Ident>, Vec<Ident>> = BTreeMap::new();
+    let mut conditional: Vec<Option<Ident>> = vec![];
     for field in fields.iter() {
-        let ident = format_ident!("{}", field.ident.as_ref().unwrap());
+        let ident = field.ident.clone();
 
-        if field.attrs.iter().any(|attr| attr.path().is_ident("dynamic_field")) {
-            dynamic_fields.push(Some(ident));
+        if field.attrs.iter().any(|attr| attr.path().is_ident("depends_on")) {
+            let mut dependencies: Vec<Ident> = vec![];
+
+            field.attrs.iter().for_each(|attr| {
+                if attr.path().is_ident("depends_on") {
+                    let parsed_attrs = attr.parse_args_with(
+                        Punctuated::<DependsOnAttribute, Token![,]>::parse_terminated
+                    ).unwrap();
+
+                    for a in parsed_attrs {
+                        dependencies.push(a.name);
+                    }
+                }
+            });
+
+            depends_on.insert(ident.clone(), dependencies);
+        }
+
+        if field.attrs.iter().any(|attr| attr.path().is_ident("conditional")) {
+            conditional.push(ident);
         }
     }
 
@@ -378,16 +492,41 @@ pub fn derive_fields_serializer(input: TokenStream) -> TokenStream {
             let field_name = f.ident.clone();
             let field_type = f.ty.clone();
 
-            if dynamic_fields.contains(&field_name) {
-                quote!{ Self::#field_name(&mut reader, &mut cache) }
+            let output = if let Some(dep_fields) = depends_on.get(&field_name) {
+                quote! {
+                    {
+                        let mut data: Vec<u8> = vec![];
+                        #(
+                            let bytes = #binary_converter::to_bytes(
+                                &mut cache.#dep_fields,
+                            );
+                            data.extend(bytes);
+                        )*
+                        #binary_converter::read_from(&mut reader, &mut data)?
+                    }
+                }
             } else {
                 quote! {
                     {
-                        let value: #field_type = #binary_converter::read_from(&mut reader)?;
+                        let value: #field_type = #binary_converter::read_from(&mut reader, &mut vec![])?;
                         cache.#field_name = value.clone();
                         value
                     }
                 }
+            };
+
+            if conditional.contains(&field_name) {
+                quote! {
+                    {
+                        if Self::#field_name(&mut cache) {
+                            #output
+                        } else {
+                            Default::default()
+                        }
+                    }
+                }
+            } else {
+                output
             }
         });
 

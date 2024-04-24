@@ -63,12 +63,10 @@ impl Processor for PlayerProcessor {
 }
 
 pub mod packet {
-    use tentacli_traits::types::custom_fields::TerminatedString;
-
     // Opcode::CMSG_CHAR_CREATE
     #[derive(WorldPacket, Serialize, Deserialize, Debug)]
     pub struct CharCreateOutcome {
-        pub name: TerminatedString,
+        pub name: String,
         pub race: u8,
         pub class: u8,
         pub gender: u8,

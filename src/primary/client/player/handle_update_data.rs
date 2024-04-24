@@ -12,28 +12,16 @@ struct Income {
     parsed_blocks: Vec<ParsedBlock>,
 }
 
-#[derive(WorldPacket, Serialize, Deserialize, Debug)]
-#[options(compressed)]
-struct CompressedIncome {
-    parsed_blocks: Vec<ParsedBlock>,
-}
-
 pub struct Handler;
 #[async_trait]
 impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let mut response = Vec::new();
 
-        let (parsed_blocks, json) = if input.opcode == Opcode::SMSG_UPDATE_OBJECT {
-            let (Income { parsed_blocks }, json) = Income::from_binary(&input.data)?;
-
-            (parsed_blocks, json)
+        let (Income { parsed_blocks }, json) = if input.opcode == Opcode::SMSG_COMPRESSED_UPDATE_OBJECT {
+            Income::from_compressed_binary(&input.data)?
         } else {
-            let (CompressedIncome {
-                parsed_blocks
-            }, json) = CompressedIncome::from_binary(&input.data)?;
-
-            (parsed_blocks, json)
+            Income::from_binary(&input.data)?
         };
 
         response.push(HandlerOutput::ResponseMessage(

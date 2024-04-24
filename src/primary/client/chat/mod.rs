@@ -28,14 +28,13 @@ impl Processor for ChatProcessor {
 }
 
 pub mod packet {
-    use tentacli_traits::types::custom_fields::TerminatedString;
-
     // Opcode::CMSG_MESSAGECHAT
     #[derive(WorldPacket, Serialize, Deserialize, Debug)]
     pub struct ChatOutcome {
         pub message_type: u32,
         pub language: u32,
-        pub message: TerminatedString,
+        // string should be terminated
+        pub message: String,
     }
 
     // Opcode::CMSG_EMOTE

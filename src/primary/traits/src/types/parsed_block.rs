@@ -395,10 +395,14 @@ impl BinaryConverter for Vec<ParsedBlock> {
         todo!()
     }
 
-    fn read_from<R: BufRead>(mut reader: R) -> Result<Self, FieldError> {
-        let parsed_blocks = ParsedBlock::parse(&mut reader)
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> Result<Self, FieldError> {
+        let parsed_blocks = ParsedBlock::parse(reader)
             .map_err(|e| FieldError::CannotRead(e, "Vec<ParsedBlock>".to_string()))?;
         Ok(parsed_blocks)
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        todo!()
     }
 }
 

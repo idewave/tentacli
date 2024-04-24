@@ -273,29 +273,27 @@ impl Serialize for Spell {
     }
 }
 
-impl BinaryConverter for Vec<Spell> {
-    fn write_into(&mut self, _buffer: &mut Vec<u8>) -> Result<(), FieldError> {
+impl BinaryConverter for Spell {
+    fn write_into(&mut self, _: &mut Vec<u8>) -> Result<(), FieldError> {
         todo!()
     }
 
-    fn read_from<R: BufRead>(mut reader: R) -> Result<Self, FieldError> where Self: Sized {
-        let mut spells = Vec::new();
-        let label = "Vec<Spell>";
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> Result<Self, FieldError> {
+        let label = "Spell";
 
-        let spell_count = reader.read_u16::<LittleEndian>()
-            .map_err(|e| FieldError::CannotRead(e, format!("spell_count:u16 ({})", label)))?;
-        for _ in 0..spell_count {
-            let spell = Spell {
-                spell_id: reader.read_u32::<LittleEndian>()
-                    .map_err(|e| FieldError::CannotRead(e, format!("spell_id:u32 ({})", label)))?
-            };
-            reader.read_u16::<LittleEndian>()
-                .map_err(|e| FieldError::CannotRead(e, format!("unknown:u16 ({})", label)))?;
+        let spell = Spell {
+            spell_id: reader.read_u32::<LittleEndian>()
+                .map_err(|e| FieldError::CannotRead(e, format!("spell_id:u32 ({})", label)))?
+        };
 
-            spells.push(spell);
-        }
+        reader.read_u16::<LittleEndian>()
+            .map_err(|e| FieldError::CannotRead(e, format!("unknown:u16 ({})", label)))?;
 
-        Ok(spells)
+        Ok(spell)
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        todo!()
     }
 }
 
@@ -327,42 +325,39 @@ impl Serialize for CooldownInfo {
     }
 }
 
-impl BinaryConverter for Vec<CooldownInfo> {
-    fn write_into(&mut self, _buffer: &mut Vec<u8>) -> Result<(), FieldError> {
+impl BinaryConverter for CooldownInfo {
+    fn write_into(&mut self, _: &mut Vec<u8>) -> Result<(), FieldError> {
         todo!()
     }
 
-    fn read_from<R: BufRead>(mut reader: R) -> Result<Self, FieldError> where Self: Sized {
-        let mut cooldowns = Vec::new();
-        let label = "Vec<CooldownInfo>";
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> Result<Self, FieldError> {
+        let label = "CooldownInfo";
 
-        let cooldown_count = reader.read_u16::<LittleEndian>()
-            .map_err(|e| FieldError::CannotRead(e, format!("unknown:u16 ({})", label)))?;
-        for _ in 0..cooldown_count {
-            let spell_id = reader.read_u32::<LittleEndian>()
-                .map_err(|e| FieldError::CannotRead(e, format!("spell_id:u32 ({})", label)))?;
-            let item_id = reader.read_u16::<LittleEndian>()
-                .map_err(|e| FieldError::CannotRead(e, format!("item_id:u16 ({})", label)))?;
-            let spell_category = reader.read_u16::<LittleEndian>()
-                .map_err(|e| FieldError::CannotRead(e, format!("spell_category:u16 ({})", label)))?;
-            let cooldown_duration = reader.read_u32::<LittleEndian>()
-                .map_err(
-                    |e| FieldError::CannotRead(e, format!("cooldown_duration:u32 ({})", label))
-                )?;
-            let cooldown_category = reader.read_u32::<LittleEndian>()
-                .map_err(
-                    |e| FieldError::CannotRead(e, format!("cooldown_category:u32 ({})", label))
-                )?;
+        let spell_id = reader.read_u32::<LittleEndian>()
+            .map_err(|e| FieldError::CannotRead(e, format!("spell_id:u32 ({})", label)))?;
+        let item_id = reader.read_u16::<LittleEndian>()
+            .map_err(|e| FieldError::CannotRead(e, format!("item_id:u16 ({})", label)))?;
+        let spell_category = reader.read_u16::<LittleEndian>()
+            .map_err(|e| FieldError::CannotRead(e, format!("spell_category:u16 ({})", label)))?;
+        let cooldown_duration = reader.read_u32::<LittleEndian>()
+            .map_err(
+                |e| FieldError::CannotRead(e, format!("cooldown_duration:u32 ({})", label))
+            )?;
+        let cooldown_category = reader.read_u32::<LittleEndian>()
+            .map_err(
+                |e| FieldError::CannotRead(e, format!("cooldown_category:u32 ({})", label))
+            )?;
 
-            cooldowns.push(CooldownInfo {
-                spell_id,
-                item_id,
-                spell_category,
-                cooldown_duration,
-                cooldown_category,
-            })
-        }
+        Ok(CooldownInfo {
+            spell_id,
+            item_id,
+            spell_category,
+            cooldown_duration,
+            cooldown_category,
+        })
+    }
 
-        Ok(cooldowns)
+    fn to_bytes(&self) -> Vec<u8> {
+        todo!()
     }
 }

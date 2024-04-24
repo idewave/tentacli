@@ -1,8 +1,6 @@
 use async_trait::async_trait;
-use std::io::BufRead;
 use tentacli_traits::PacketHandler;
 use tentacli_traits::types::chat::{Message, MessageType};
-use tentacli_traits::types::custom_fields::TerminatedString;
 use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
 use tentacli_traits::types::opcodes::Opcode;
 
@@ -14,31 +12,18 @@ struct Income {
     language: u32,
     sender_guid: u64,
     skip: u32,
-    #[dynamic_field]
-    channel_name: TerminatedString,
+    #[depends_on(message_type)]
+    #[conditional]
+    channel_name: String,
     target_guid: u64,
     message_length: u32,
-    #[dynamic_field]
-    message: TerminatedString,
+    #[depends_on(message_length)]
+    message: String,
 }
 
 impl Income {
-    fn message<R: BufRead>(mut reader: R, initial: &mut Self) -> TerminatedString {
-        let mut buffer = vec![0u8; initial.message_length as usize];
-        match reader.read_exact(&mut buffer) {
-            Ok(_) => TerminatedString::from(buffer),
-            Err(err) => TerminatedString::from(format!("Cannot parse chat message: \"{}\"", err))
-        }
-    }
-
-    fn channel_name<R: BufRead>(mut reader: R, initial: &mut Self) -> TerminatedString {
-        if initial.message_type == MessageType::CHANNEL {
-            let mut buffer = Vec::new();
-            reader.read_until(0, &mut buffer).unwrap();
-            TerminatedString::from(buffer)
-        } else {
-            TerminatedString::default()
-        }
+    fn channel_name(instance: &mut Self) -> bool {
+        instance.message_type == MessageType::CHANNEL
     }
 }
 
