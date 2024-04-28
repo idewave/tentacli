@@ -3,7 +3,7 @@ use tentacli_traits::PacketHandler;
 use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
 use tentacli_traits::types::opcodes::Opcode;
 
-#[derive(WorldPacket, Serialize, Deserialize, Debug, Default)]
+#[derive(WorldPacket, Serialize, Debug, Default)]
 struct Outcome {}
 
 pub struct Handler;

@@ -29,7 +29,7 @@ impl Processor for ChatProcessor {
 
 pub mod packet {
     // Opcode::CMSG_MESSAGECHAT
-    #[derive(WorldPacket, Serialize, Deserialize, Debug)]
+    #[derive(WorldPacket, Serialize, Debug)]
     pub struct ChatOutcome {
         pub message_type: u32,
         pub language: u32,
@@ -38,13 +38,13 @@ pub mod packet {
     }
 
     // Opcode::CMSG_EMOTE
-    #[derive(WorldPacket, Serialize, Deserialize, Debug)]
+    #[derive(WorldPacket, Serialize, Debug)]
     pub struct EmoteOutcome {
         pub emote_type: u32,
     }
 
     // Opcode::CMSG_TEXT_EMOTE
-    #[derive(WorldPacket, Serialize, Deserialize, Debug)]
+    #[derive(WorldPacket, Serialize, Debug)]
     pub struct TextEmoteOutcome {
         pub text_emote_type: u32,
         pub emote_num: u32,

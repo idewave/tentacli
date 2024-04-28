@@ -1,6 +1,7 @@
+use anyhow::{Result as AnyResult};
 use std::io::BufRead;
 use byteorder::{LittleEndian, ReadBytesExt};
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Serialize, Serializer};
 use serde::ser::SerializeStruct;
 
 use crate::BinaryConverter;
@@ -258,12 +259,6 @@ pub struct Spell {
     pub spell_id: u32,
 }
 
-impl<'de> Deserialize<'de> for Spell {
-    fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
-        todo!()
-    }
-}
-
 impl Serialize for Spell {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
         const FIELDS_AMOUNT: usize = 1;
@@ -274,11 +269,11 @@ impl Serialize for Spell {
 }
 
 impl BinaryConverter for Spell {
-    fn write_into(&mut self, _: &mut Vec<u8>) -> Result<(), FieldError> {
+    fn write_into(&mut self, _: &mut Vec<u8>) -> AnyResult<()> {
         todo!()
     }
 
-    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> Result<Self, FieldError> {
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
         let label = "Spell";
 
         let spell = Spell {
@@ -306,12 +301,6 @@ pub struct CooldownInfo {
     pub cooldown_category: u32,
 }
 
-impl<'de> Deserialize<'de> for CooldownInfo {
-    fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
-        todo!()
-    }
-}
-
 impl Serialize for CooldownInfo {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
         const FIELDS_AMOUNT: usize = 5;
@@ -326,11 +315,11 @@ impl Serialize for CooldownInfo {
 }
 
 impl BinaryConverter for CooldownInfo {
-    fn write_into(&mut self, _: &mut Vec<u8>) -> Result<(), FieldError> {
+    fn write_into(&mut self, _: &mut Vec<u8>) -> AnyResult<()> {
         todo!()
     }
 
-    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> Result<Self, FieldError> {
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
         let label = "CooldownInfo";
 
         let spell_id = reader.read_u32::<LittleEndian>()

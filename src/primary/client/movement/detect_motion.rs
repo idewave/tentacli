@@ -7,7 +7,7 @@ use tentacli_traits::types::movement::MovementInfo;
 use crate::primary::client::Opcode;
 use crate::primary::client::player::globals::NameQueryOutcome;
 
-#[derive(WorldPacket, Serialize, Deserialize, Debug)]
+#[derive(WorldPacket, Serialize, Debug)]
 struct Income {
     packed_guid: PackedGuid,
     movement_info: MovementInfo,
@@ -31,7 +31,7 @@ impl PacketHandler for Handler {
 
         {
             input.data_storage.lock().unwrap().players_map.entry(guid).and_modify(|p| {
-                p.position = Some(movement_info.position);
+                p.location = Some(movement_info.location);
             });
         }
 

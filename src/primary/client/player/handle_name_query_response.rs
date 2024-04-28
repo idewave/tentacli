@@ -6,13 +6,13 @@ use tentacli_traits::types::opcodes::Opcode;
 use tentacli_traits::types::player::Player;
 
 
-#[derive(WorldPacket, Serialize, Deserialize, Debug)]
+#[derive(WorldPacket, Serialize, Debug)]
 struct CheckEmptyIncome {
     packed_guid: PackedGuid,
     unknown: u8,
 }
 
-#[derive(WorldPacket, Serialize, Deserialize, Debug)]
+#[derive(WorldPacket, Serialize, Debug)]
 struct Income {
     packed_guid: PackedGuid,
     unknown: u8,

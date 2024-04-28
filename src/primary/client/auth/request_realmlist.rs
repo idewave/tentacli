@@ -3,7 +3,7 @@ use tentacli_traits::PacketHandler;
 use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
 use tentacli_traits::types::opcodes::Opcode;
 
-#[derive(LoginPacket, Serialize, Deserialize, Debug, Default)]
+#[derive(LoginPacket, Serialize, Debug, Default)]
 struct Outcome {
     unknown: i32,
 }

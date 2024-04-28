@@ -3,6 +3,7 @@ use quote::{quote};
 use structmeta::{Flag, StructMeta};
 
 pub struct Imports {
+    pub async_buf_read: TokenStream2,
     pub async_read: TokenStream2,
     pub binary_converter: TokenStream2,
     pub buf_read: TokenStream2,
@@ -20,9 +21,10 @@ pub struct Imports {
 impl Imports {
     pub fn get() -> Self {
         Self {
+            async_buf_read: quote!(tokio::io::AsyncBufRead),
             async_read: quote!(tokio::io::AsyncRead),
             binary_converter: quote!(tentacli_traits::BinaryConverter),
-            buf_read: quote!(tokio::io::AsyncBufRead),
+            buf_read: quote!(std::io::BufRead),
             byteorder_be: quote!(byteorder::BigEndian),
             byteorder_le: quote!(byteorder::LittleEndian),
             byteorder_write: quote!(byteorder::WriteBytesExt),

@@ -2,20 +2,20 @@ use anyhow::{Result as AnyResult};
 use std::sync::{Arc, Mutex as SyncMutex};
 use tokio::sync::Mutex;
 
+pub mod auth;
 pub mod chat;
 pub mod config;
 pub mod custom_fields;
-pub mod movement;
 pub mod opcodes;
-pub mod parsed_block;
+pub mod movement;
 pub mod player;
 pub mod position;
 pub mod realm;
 pub mod shared;
 pub mod spell;
 pub mod trade;
+pub mod update_data;
 pub mod warden;
-pub mod auth;
 
 use chat::{Message};
 use player::{Player};

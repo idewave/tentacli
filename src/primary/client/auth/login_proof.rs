@@ -1,12 +1,12 @@
 use async_trait::async_trait;
-use serde::{Serialize, Deserialize};
+use serde::{Serialize};
 use tentacli_crypto::Srp;
 use tentacli_traits::PacketHandler;
 use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
 use tentacli_traits::types::opcodes::Opcode;
 use tentacli_utils::encode_hex;
 
-#[derive(LoginPacket, Serialize, Deserialize, Debug)]
+#[derive(LoginPacket, Serialize, Debug)]
 #[options(with_async)]
 pub struct LoginChallengeResponse {
     unknown: u8,
@@ -25,7 +25,7 @@ pub struct LoginChallengeResponse {
     unknown2: u8,
 }
 
-#[derive(LoginPacket, Serialize, Deserialize, Debug)]
+#[derive(LoginPacket, Serialize, Debug)]
 struct Outcome {
     #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
     public_ephemeral: [u8; 32],

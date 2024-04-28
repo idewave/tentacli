@@ -283,8 +283,8 @@ impl UIComponent for DebugPanel {
         let horizontal_chunks = Layout::default()
             .direction(Direction::Horizontal)
             .constraints(vec![
-                Constraint::Percentage(70),
-                Constraint::Percentage(30),
+                Constraint::Percentage(60),
+                Constraint::Percentage(40),
             ])
             .split(rect);
 

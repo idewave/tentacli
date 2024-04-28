@@ -4,8 +4,7 @@ use tentacli_traits::types::chat::{Message, MessageType};
 use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
 use tentacli_traits::types::opcodes::Opcode;
 
-
-#[derive(WorldPacket, Serialize, Deserialize)]
+#[derive(WorldPacket, Serialize)]
 #[allow(dead_code)]
 struct Income {
     message_type: u8,

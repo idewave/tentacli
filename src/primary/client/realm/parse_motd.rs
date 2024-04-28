@@ -3,7 +3,7 @@ use tentacli_traits::PacketHandler;
 use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
 use tentacli_traits::types::opcodes::Opcode;
 
-#[derive(WorldPacket, Serialize, Deserialize, Debug)]
+#[derive(WorldPacket, Serialize, Debug)]
 struct Income {
     skip: u32,
     message: String,

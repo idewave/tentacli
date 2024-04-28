@@ -34,7 +34,7 @@ impl Parse for DependsOnAttribute {
 pub fn login_packet(input: TokenStream) -> TokenStream {
     let ItemStruct { ident, fields, attrs, .. } = parse_macro_input!(input);
     let Imports {
-        buf_read,
+        async_buf_read,
         binary_converter,
         byteorder_write,
         cursor,
@@ -204,7 +204,7 @@ pub fn login_packet(input: TokenStream) -> TokenStream {
 
             impl #ident {
                 pub async fn from_stream<R>(mut stream: &mut R) -> #result<Vec<u8>>
-                    where R: #buf_read + Unpin + Send
+                    where R: #async_buf_read + Unpin + Send
                 {
                     let mut cache = Self {
                         #(#field_names: Default::default()),*
@@ -447,10 +447,8 @@ pub fn segment(input: TokenStream) -> TokenStream {
     let ItemStruct { ident, fields, .. } = parse_macro_input!(input);
     let Imports {
         binary_converter,
-        cursor,
-        json_formatter,
+        buf_read,
         result,
-        serialize,
         ..
     } = Imports::get();
 
@@ -532,24 +530,16 @@ pub fn segment(input: TokenStream) -> TokenStream {
 
     let output = quote! {
         impl #ident {
-            pub fn from_binary(buffer: &[u8]) -> #result<(Self, String)> {
+            pub fn read_from<R: #buf_read>(mut reader: &mut R) -> #result<Self> {
                 let mut cache = Self {
                     #(#field_names: Default::default()),*
                 };
 
-                let mut reader = #cursor::new(buffer);
                 let mut instance = Self {
                     #(#field_names: #initializers),*
                 };
-                let details = instance.get_json_details()?;
 
-                Ok((instance, details))
-            }
-
-            pub fn get_json_details(&mut self) -> #result<String> {
-                let mut serializer = #json_formatter::init();
-                #serialize::serialize(self, &mut serializer)?;
-                String::from_utf8(serializer.into_inner()).map_err(|e| e.into())
+                Ok(instance)
             }
 
             pub fn to_binary(&mut self) -> #result<Vec<u8>> {
@@ -562,6 +552,21 @@ pub fn segment(input: TokenStream) -> TokenStream {
                 )*
 
                 Ok(body)
+            }
+        }
+
+        impl #binary_converter for #ident {
+            fn write_into(&mut self, buffer: &mut Vec<u8>) -> #result<()> {
+                self.to_binary()?;
+                Ok(())
+            }
+
+            fn read_from<R: #buf_read>(reader: &mut R, _: &mut Vec<u8>) -> #result<Self> {
+                Self::read_from(reader)
+            }
+
+            fn to_bytes(&self) -> Vec<u8> {
+                todo!()
             }
         }
     };

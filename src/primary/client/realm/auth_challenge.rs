@@ -8,7 +8,7 @@ use tentacli_utils::compress;
 
 const SEED_SIZE: usize = 4;
 
-#[derive(WorldPacket, Serialize, Deserialize, Debug)]
+#[derive(WorldPacket, Serialize, Debug)]
 struct Income {
     skip: u32,
     server_seed: [u8; SEED_SIZE],
@@ -16,7 +16,7 @@ struct Income {
     seed: [u8; 32],
 }
 
-#[derive(WorldPacket, Serialize, Deserialize, Debug)]
+#[derive(WorldPacket, Serialize, Debug)]
 struct Outcome {
     build: u32,
     unknown: u32,

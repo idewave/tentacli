@@ -1,8 +1,9 @@
+use anyhow::{Result as AnyResult};
 use std::fmt::{Debug, Formatter};
 use std::io::{BufRead, Write};
 use async_trait::async_trait;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use serde::{Deserialize, Deserializer, Serialize, Serializer, ser::SerializeStruct};
+use serde::{Serialize, Serializer, ser::SerializeStruct};
 use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncReadExt};
 
 use crate::{BinaryConverter, StreamReader};
@@ -35,12 +36,6 @@ impl Debug for Realm {
     }
 }
 
-impl<'de> Deserialize<'de> for Realm {
-    fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
-        todo!()
-    }
-}
-
 impl Serialize for Realm {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
         const FIELDS_AMOUNT: usize = 8;
@@ -59,7 +54,7 @@ impl Serialize for Realm {
 }
 
 impl BinaryConverter for Realm {
-    fn write_into(&mut self, buffer: &mut Vec<u8>) -> Result<(), FieldError> {
+    fn write_into(&mut self, buffer: &mut Vec<u8>) -> AnyResult<()> {
         let label = "Realm";
 
         buffer.write_u8(self.icon)
@@ -88,7 +83,7 @@ impl BinaryConverter for Realm {
         Ok(())
     }
 
-    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> Result<Self, FieldError> {
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
         let label = "Realm";
         let mut name = Vec::new();
         let mut address = Vec::new();

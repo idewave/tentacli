@@ -4,7 +4,7 @@ use tentacli_traits::{CharacterListError, PacketHandler};
 use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
 use tentacli_traits::types::opcodes::Opcode;
 
-#[derive(WorldPacket, Serialize, Deserialize, Debug)]
+#[derive(WorldPacket, Serialize, Debug)]
 struct Outcome {
     guid: u64,
 }

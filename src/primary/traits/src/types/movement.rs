@@ -1,121 +1,109 @@
-use std::io::{BufRead, Error};
-use bitflags::{bitflags};
+use anyhow::{Result as AnyResult};
+use std::collections::BTreeMap;
+use std::io::{BufRead, Cursor};
+use bitflags::bitflags;
 use byteorder::{LittleEndian, ReadBytesExt};
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Serialize, Serializer};
 use serde::ser::SerializeStruct;
-use crate::BinaryConverter;
 
-use crate::errors::FieldError;
-use crate::types::custom_fields::read_packed_guid;
-use crate::types::position::Position;
+use crate::{BinaryConverter, impl_serialize_for_flags};
+use crate::types::custom_fields::PackedGuid;
+use crate::types::position::{Point3D, Vector3D};
 
 #[derive(Clone, Default, Debug)]
-pub struct MovementInfo {
-    pub movement_flags: MovementFlags,
-    pub movement_flags_extra: MovementFlagsExtra,
-    pub time: u32,
-    pub position: Position,
-    pub fall_time: u32,
-    pub jump_info: JumpInfo,
+pub struct Movement {
+    pub object_update_flags: ObjectUpdateFlags,
+    pub movement_info: Option<MovementInfo>,
+    pub high_guid: u32,
+    pub low_guid: u32,
+    pub target_guid: Option<PackedGuid>,
+    pub movement_speed: BTreeMap<u8, f32>,
+    pub spline_info: Option<SplineInfo>,
+    pub position_info: Option<PositionInfo>,
 }
 
-impl MovementInfo {
-    pub fn parse<R: BufRead>(reader: &mut R) -> Result<MovementInfo, Error> {
-        let movement_flags = MovementFlags::from_bits(
-            reader.read_u32::<LittleEndian>()?
-        ).unwrap_or(MovementFlags::NONE);
+impl BinaryConverter for Movement {
+    fn write_into(&mut self, _: &mut Vec<u8>) -> AnyResult<()> {
+        todo!()
+    }
 
-        let movement_flags_extra = MovementFlagsExtra::from_bits(
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
+        let mut instance = Self::default();
+
+        instance.object_update_flags = ObjectUpdateFlags::from_bits(
             reader.read_u16::<LittleEndian>()?
-        ).unwrap_or(MovementFlagsExtra::NONE);
+        ).unwrap();
 
-        let time = reader.read_u32::<LittleEndian>()?;
+        if instance.object_update_flags.contains(ObjectUpdateFlags::SELF)  {}
 
-        let position = Position::parse(reader)?;
+        if instance.object_update_flags.contains(ObjectUpdateFlags::LIVING) {
+            let movement_info = MovementInfo::read_from(reader, &mut vec![])?;
 
-        if movement_flags.contains(MovementFlags::TAXI) {
-            let _transport_guid = read_packed_guid(reader);
+            instance.movement_speed = {
+                let mut movement_speed: BTreeMap<u8, f32> = BTreeMap::new();
+                for move_type in [
+                    UnitMoveType::MOVE_WALK,
+                    UnitMoveType::MOVE_RUN,
+                    UnitMoveType::MOVE_RUN_BACK,
+                    UnitMoveType::MOVE_SWIM,
+                    UnitMoveType::MOVE_SWIM_BACK,
+                    UnitMoveType::MOVE_FLIGHT,
+                    UnitMoveType::MOVE_FLIGHT_BACK,
+                    UnitMoveType::MOVE_TURN_RATE,
+                    UnitMoveType::MOVE_PITCH_RATE,
+                ] {
+                    movement_speed.insert(move_type, reader.read_f32::<LittleEndian>()?);
+                }
 
-            // transport x, y, z, orientation
-            let _position = Position::parse(reader);
+                movement_speed
+            };
 
-            let _transport_time = reader.read_u32::<LittleEndian>()?;
-            let _transport_seat = reader.read_u8()?;
+            if movement_info.movement_flags.contains(MovementFlags::SPLINE_ENABLED) {
+                instance.spline_info = Some(SplineInfo::parse(reader)?);
+            }
 
-            if movement_flags_extra.contains(MovementFlagsExtra::INTERPOLATED_MOVEMENT) {
-                let _transport_time = reader.read_u32::<LittleEndian>()?;
+            instance.movement_info = Some(movement_info);
+
+        } else {
+            if instance.object_update_flags.contains(ObjectUpdateFlags::POSITION) {
+                instance.position_info = Some(PositionInfo::read_from(reader, &mut vec![])?);
+            }
+
+            if instance.object_update_flags.contains(ObjectUpdateFlags::STATIONARY_POSITION) {
+                let _ = Vector3D::read_from(reader, &mut vec![])?;
             }
         }
 
-        if movement_flags.contains(MovementFlags::SWIMMING)  ||
-            movement_flags.contains(MovementFlags::FLYING) ||
-            movement_flags_extra.contains(MovementFlagsExtra::ALWAYS_ALLOW_PITCHING) {
-            let _pitch = reader.read_f32::<LittleEndian>()?;
+        if instance.object_update_flags.contains(ObjectUpdateFlags::LOWGUID) {
+            instance.low_guid = reader.read_u32::<LittleEndian>()?;
         }
 
-        let fall_time = reader.read_u32::<LittleEndian>()?;
-
-        let mut jump_vertical_speed = 0.0;
-        let mut jump_sin_angle = 0.0;
-        let mut jump_cos_angle = 0.0;
-        let mut jump_horizontal_speed = 0.0;
-
-        if movement_flags.contains(MovementFlags::JUMPING) {
-            jump_vertical_speed = reader.read_f32::<LittleEndian>()?;
-            jump_sin_angle = reader.read_f32::<LittleEndian>()?;
-            jump_cos_angle = reader.read_f32::<LittleEndian>()?;
-            jump_horizontal_speed = reader.read_f32::<LittleEndian>()?;
+        if instance.object_update_flags.contains(ObjectUpdateFlags::HIGHGUID) {
+            instance.high_guid = reader.read_u32::<LittleEndian>()?;
         }
 
-        if movement_flags.contains(MovementFlags::SPLINE_ELEVATION) {
-            let _spline_elevation = reader.read_f32::<LittleEndian>()?;
+        if instance.object_update_flags.contains(ObjectUpdateFlags::HAS_TARGET) {
+            instance.target_guid = {
+                let target_guid = PackedGuid::read_from(reader, &mut vec![])?;
+                let PackedGuid(guid) = target_guid;
+                if guid == 0 { None } else { Some(target_guid) }
+            };
         }
 
-        let movement_info = MovementInfo {
-            movement_flags,
-            movement_flags_extra,
-            time,
-            position,
-            fall_time,
-            jump_info: JumpInfo {
-                jump_vertical_speed,
-                jump_sin_angle,
-                jump_cos_angle,
-                jump_horizontal_speed
-            },
-        };
+        if instance.object_update_flags.contains(ObjectUpdateFlags::TRANSPORT) {
+            let _transport_timer = reader.read_u32::<LittleEndian>()?;
+        }
 
-        Ok(movement_info)
-    }
-}
+        if instance.object_update_flags.contains(ObjectUpdateFlags::VEHICLE) {
+            let _vehicle_id = reader.read_u32::<LittleEndian>()?;
+            let _vehicle_orientation = reader.read_f32::<LittleEndian>()?;
+        }
 
-impl<'de> Deserialize<'de> for MovementInfo {
-    fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
-        todo!()
-    }
-}
+        if instance.object_update_flags.contains(ObjectUpdateFlags::ROTATION) {
+            let _go_rotation = reader.read_i64::<LittleEndian>()?;
+        }
 
-impl Serialize for MovementInfo {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        const FIELDS_AMOUNT: usize = 6;
-        let mut state = serializer.serialize_struct("MovementInfo", FIELDS_AMOUNT)?;
-        state.serialize_field("movement_flags", &self.movement_flags.bits())?;
-        state.serialize_field("movement_flags_extra", &self.movement_flags_extra.bits())?;
-        state.serialize_field("time", &self.time)?;
-        state.serialize_field("position", &self.position)?;
-        state.serialize_field("fall_time", &self.fall_time)?;
-        state.serialize_field("jump_info", &self.jump_info)?;
-        state.end()
-    }
-}
-
-impl BinaryConverter for MovementInfo {
-    fn write_into(&mut self, _buffer: &mut Vec<u8>) -> Result<(), FieldError> {
-        todo!()
-    }
-
-    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> Result<Self, FieldError> {
-        Self::parse(reader).map_err(|e| FieldError::CannotRead(e, "MovementInfo".to_string()))
+        Ok(instance)
     }
 
     fn to_bytes(&self) -> Vec<u8> {
@@ -123,17 +111,117 @@ impl BinaryConverter for MovementInfo {
     }
 }
 
-#[derive(Clone, Default, Debug)]
-pub struct JumpInfo {
-    pub jump_vertical_speed: f32,
-    pub jump_sin_angle: f32,
-    pub jump_cos_angle: f32,
-    pub jump_horizontal_speed: f32,
+impl Serialize for Movement {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+        const FIELDS_AMOUNT: usize = 8;
+        let mut state = serializer.serialize_struct("Movement", FIELDS_AMOUNT)?;
+        state.serialize_field("object_update_flags", &self.object_update_flags)?;
+        state.serialize_field("movement_info", &self.movement_info)?;
+        state.serialize_field("high_guid", &self.high_guid)?;
+        state.serialize_field("low_guid", &self.low_guid)?;
+        state.serialize_field("target_guid", &self.target_guid)?;
+        state.serialize_field("movement_speed", &self.movement_speed)?;
+        state.serialize_field("spline_info", &self.spline_info)?;
+        state.serialize_field("position_info", &self.position_info)?;
+        state.end()
+    }
 }
 
-impl<'de> Deserialize<'de> for JumpInfo {
-    fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
+#[derive(Clone, Default, Debug)]
+pub struct MovementInfo {
+    pub movement_flags: MovementFlags,
+    pub movement_extra_flags: MovementExtraFlags,
+    pub time: u32,
+    pub location: Vector3D,
+    pub taxi_info: Option<TaxiInfo>,
+    pub fall_time: u32,
+    pub jump_info: Option<JumpInfo>,
+}
+
+impl BinaryConverter for MovementInfo {
+    fn write_into(&mut self, _: &mut Vec<u8>) -> AnyResult<()> {
         todo!()
+    }
+
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
+        let mut instance = Self::default();
+
+        instance.movement_flags = MovementFlags::from_bits(
+            reader.read_u32::<LittleEndian>()?
+        ).unwrap();
+
+        instance.movement_extra_flags = MovementExtraFlags::from_bits(
+            reader.read_u16::<LittleEndian>()?
+        ).unwrap();
+
+        instance.time = reader.read_u32::<LittleEndian>()?;
+        instance.location = Vector3D::read_from(reader, &mut vec![])?;
+
+        if instance.movement_flags.contains(MovementFlags::TAXI) {
+            let mut dependencies = instance.movement_extra_flags.bits().to_le_bytes().to_vec();
+            instance.taxi_info = Some(TaxiInfo::read_from(reader, &mut dependencies)?);
+        }
+
+        if instance.movement_flags.contains(MovementFlags::SWIMMING)  ||
+            instance.movement_flags.contains(MovementFlags::FLYING) ||
+            instance.movement_extra_flags.contains(MovementExtraFlags::ALWAYS_ALLOW_PITCHING) {
+            let _pitch = reader.read_f32::<LittleEndian>()?;
+        }
+
+        instance.fall_time = reader.read_u32::<LittleEndian>()?;
+
+        if instance.movement_flags.contains(MovementFlags::JUMPING) {
+            instance.jump_info = Some(JumpInfo::parse(reader)?);
+        }
+
+        if instance.movement_flags.contains(MovementFlags::SPLINE_ELEVATION) {
+            let _ = reader.read_f32::<LittleEndian>()?;
+        }
+
+        Ok(instance)
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        todo!()
+    }
+}
+
+impl Serialize for MovementInfo {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+        const FIELDS_AMOUNT: usize = 7;
+        let mut state = serializer.serialize_struct("MovementInfo", FIELDS_AMOUNT)?;
+        state.serialize_field("movement_flags", &self.movement_flags)?;
+        state.serialize_field("movement_flags_extra", &self.movement_extra_flags)?;
+        state.serialize_field("time", &self.time)?;
+        state.serialize_field("location", &self.location)?;
+        state.serialize_field("taxi_info", &self.taxi_info)?;
+        state.serialize_field("fall_time", &self.fall_time)?;
+        state.serialize_field("jump_info", &self.jump_info)?;
+        state.end()
+    }
+}
+
+#[derive(Clone, Default, Debug)]
+pub struct JumpInfo {
+    pub vertical_speed: f32,
+    pub sin_angle: f32,
+    pub cos_angle: f32,
+    pub horizontal_speed: f32,
+}
+
+impl JumpInfo {
+    pub fn parse<R: BufRead>(reader: &mut R) -> AnyResult<Self> {
+        let vertical_speed = reader.read_f32::<LittleEndian>()?;
+        let sin_angle = reader.read_f32::<LittleEndian>()?;
+        let cos_angle = reader.read_f32::<LittleEndian>()?;
+        let horizontal_speed = reader.read_f32::<LittleEndian>()?;
+
+        Ok(Self {
+            vertical_speed,
+            sin_angle,
+            cos_angle,
+            horizontal_speed,
+        })
     }
 }
 
@@ -141,16 +229,179 @@ impl Serialize for JumpInfo {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
         const FIELDS_AMOUNT: usize = 4;
         let mut state = serializer.serialize_struct("JumpInfo", FIELDS_AMOUNT)?;
-        state.serialize_field("jump_vertical_speed", &self.jump_vertical_speed)?;
-        state.serialize_field("jump_sin_angle", &self.jump_sin_angle)?;
-        state.serialize_field("jump_cos_angle", &self.jump_cos_angle)?;
-        state.serialize_field("jump_horizontal_speed", &self.jump_horizontal_speed)?;
+        state.serialize_field("vertical_speed", &self.vertical_speed)?;
+        state.serialize_field("sin_angle", &self.sin_angle)?;
+        state.serialize_field("cos_angle", &self.cos_angle)?;
+        state.serialize_field("horizontal_speed", &self.horizontal_speed)?;
         state.end()
     }
 }
 
+#[derive(Clone, Default, Debug)]
+pub struct SplineInfo {
+    pub spline_flags: SplineFlags,
+}
+
+impl SplineInfo {
+    pub fn parse<R: BufRead>(reader: &mut R) -> AnyResult<Self> {
+        let mut instance = Self::default();
+
+        let spline_flags = SplineFlags::from_bits(
+            reader.read_u32::<LittleEndian>()?
+        ).unwrap_or(SplineFlags::NONE);
+
+        instance.spline_flags = spline_flags;
+
+        if spline_flags.contains(SplineFlags::FINAL_ANGLE) {
+            let _spline_facing_angle = reader.read_f32::<LittleEndian>()?;
+        }
+
+        if spline_flags.contains(SplineFlags::FINAL_TARGET) {
+            let _spline_facing_target_guid = reader.read_u64::<LittleEndian>()?;
+        }
+
+        if spline_flags.contains(SplineFlags::FINAL_POINT) {
+            let _spline_facing_point = Point3D::read_from(reader, &mut vec![])?;
+        }
+
+        let _ = reader.read_u32::<LittleEndian>()?;
+        let _ = reader.read_u32::<LittleEndian>()?;
+        let _ = reader.read_u32::<LittleEndian>()?;
+
+        let _ = reader.read_u32::<LittleEndian>()?;
+        let _ = reader.read_u32::<LittleEndian>()?;
+        let _ = reader.read_u32::<LittleEndian>()?;
+        let _ = reader.read_u32::<LittleEndian>()?;
+
+        let spline_amount = reader.read_u32::<LittleEndian>()?;
+
+        for _ in 0..spline_amount {
+            let _spline_point = Point3D::read_from(reader, &mut vec![])?;
+        }
+
+        let _spline_evaluation_mode = reader.read_u8()?;
+        let _spline_end_point = Point3D::read_from(reader, &mut vec![])?;
+
+        Ok(instance)
+    }
+}
+
+impl Serialize for SplineInfo {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+        const FIELDS_AMOUNT: usize = 1;
+        let mut state = serializer.serialize_struct("SplineInfo", FIELDS_AMOUNT)?;
+        state.serialize_field("spline_flags", &self.spline_flags)?;
+        state.end()
+    }
+}
+
+#[derive(Clone, Default, Debug)]
+pub struct TaxiInfo {
+    pub guid: PackedGuid,
+    pub location: Vector3D,
+    pub time: u32,
+    pub seat: u8,
+    pub time2: Option<u32>,
+}
+
+impl BinaryConverter for TaxiInfo {
+    fn write_into(&mut self, _: &mut Vec<u8>) -> AnyResult<()> {
+        todo!()
+    }
+
+    fn read_from<R: BufRead>(reader: &mut R, dependencies: &mut Vec<u8>) -> AnyResult<Self> {
+        let mut instance = Self::default();
+
+        instance.guid = PackedGuid::read_from(reader, &mut vec![])?;
+        instance.location = Vector3D::read_from(reader, &mut vec![])?;
+        instance.time = reader.read_u32::<LittleEndian>()?;
+        instance.seat = reader.read_u8()?;
+
+        let mut deps_reader = Cursor::new(&dependencies);
+        let extra_flags = deps_reader.read_u16::<LittleEndian>()?;
+
+        if extra_flags == MovementExtraFlags::INTERPOLATED_MOVEMENT.bits() {
+            instance.time2 = Some(reader.read_u32::<LittleEndian>()?);
+        }
+
+        Ok(instance)
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        todo!()
+    }
+}
+
+impl Serialize for TaxiInfo {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+        const FIELDS_AMOUNT: usize = 5;
+        let mut state = serializer.serialize_struct("TaxiInfo", FIELDS_AMOUNT)?;
+        state.serialize_field("guid", &self.guid)?;
+        state.serialize_field("location", &self.location)?;
+        state.serialize_field("time", &self.time)?;
+        state.serialize_field("seat", &self.seat)?;
+        state.serialize_field("time2", &self.time2)?;
+        state.end()
+    }
+}
+
+#[derive(Clone, Default, Debug)]
+pub struct PositionInfo {
+    pub transport_guid: Option<PackedGuid>,
+    pub location: Vector3D,
+}
+
+impl BinaryConverter for PositionInfo {
+    fn write_into(&mut self, _: &mut Vec<u8>) -> AnyResult<()> {
+        todo!()
+    }
+
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
+        let transport_guid = PackedGuid::read_from(reader, &mut vec![])?;
+        let _ = Point3D::read_from(reader, &mut vec![])?;
+        let location = Vector3D::read_from(reader, &mut vec![])?;
+        let _ = reader.read_f32::<LittleEndian>()?;
+
+        Ok(Self {
+            transport_guid: {
+                let PackedGuid(guid) = transport_guid;
+                if guid == 0 { None } else { Some(transport_guid) }
+            },
+            location,
+        })
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        todo!()
+    }
+}
+
+impl Serialize for PositionInfo {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+        const FIELDS_AMOUNT: usize = 2;
+        let mut state = serializer.serialize_struct("PositionInfo", FIELDS_AMOUNT)?;
+        state.serialize_field("transport_guid", &self.transport_guid)?;
+        state.serialize_field("location", &self.location)?;
+        state.end()
+    }
+}
+
+#[non_exhaustive]
+pub struct UnitMoveType;
+impl UnitMoveType {
+    pub const MOVE_WALK: u8 = 0;
+    pub const MOVE_RUN: u8 = 1;
+    pub const MOVE_RUN_BACK: u8 = 2;
+    pub const MOVE_SWIM: u8 = 3;
+    pub const MOVE_SWIM_BACK: u8 = 4;
+    pub const MOVE_TURN_RATE: u8 = 5;
+    pub const MOVE_FLIGHT: u8 = 6;
+    pub const MOVE_FLIGHT_BACK: u8 = 7;
+    pub const MOVE_PITCH_RATE: u8 = 8;
+}
+
 bitflags! {
-    #[derive(Default, Clone, Debug)]
+    #[derive(Copy, Clone, Debug)]
     pub struct MovementFlags: u32 {
         const NONE = 0x00000000;
         const FORWARD = 0x00000001;
@@ -187,9 +438,17 @@ bitflags! {
     }
 }
 
+impl Default for MovementFlags {
+    fn default() -> Self {
+        Self::NONE
+    }
+}
+
+impl_serialize_for_flags!(MovementFlags);
+
 bitflags! {
-    #[derive(Default, Clone, Debug)]
-    pub struct MovementFlagsExtra: u16 {
+    #[derive(Copy, Clone, Debug)]
+    pub struct MovementExtraFlags: u16 {
         const NONE = 0x00000000;
         const NO_STRAFE = 0x00000001;
         const NO_JUMPING = 0x00000002;
@@ -210,21 +469,16 @@ bitflags! {
     }
 }
 
-#[non_exhaustive]
-pub struct UnitMoveType;
-impl UnitMoveType {
-    pub const MOVE_WALK: u8 = 0;
-    pub const MOVE_RUN: u8 = 1;
-    pub const MOVE_RUN_BACK: u8 = 2;
-    pub const MOVE_SWIM: u8 = 3;
-    pub const MOVE_SWIM_BACK: u8 = 4;
-    pub const MOVE_TURN_RATE: u8 = 5;
-    pub const MOVE_FLIGHT: u8 = 6;
-    pub const MOVE_FLIGHT_BACK: u8 = 7;
-    pub const MOVE_PITCH_RATE: u8 = 8;
+impl Default for MovementExtraFlags {
+    fn default() -> Self {
+        Self::NONE
+    }
 }
 
+impl_serialize_for_flags!(MovementExtraFlags);
+
 bitflags! {
+    #[derive(Copy, Clone, Debug)]
     pub struct SplineFlags: u32 {
         const NONE = 0x00000000;
         const DONE = 0x00000100;
@@ -253,3 +507,36 @@ bitflags! {
         const UNKNOWN13 = 0x80000000;
     }
 }
+
+impl Default for SplineFlags {
+    fn default() -> Self {
+        Self::NONE
+    }
+}
+
+impl_serialize_for_flags!(SplineFlags);
+
+bitflags! {
+    #[derive(Copy, Clone, Debug)]
+    pub struct ObjectUpdateFlags: u16 {
+        const NONE = 0x0000;
+        const SELF = 0x0001;
+        const TRANSPORT = 0x0002;
+        const HAS_TARGET = 0x0004;
+        const HIGHGUID = 0x0008;
+        const LOWGUID = 0x0010;
+        const LIVING = 0x0020;
+        const STATIONARY_POSITION = 0x0040;
+        const VEHICLE = 0x0080;
+        const POSITION = 0x0100;
+        const ROTATION = 0x0200;
+    }
+}
+
+impl Default for ObjectUpdateFlags {
+    fn default() -> Self {
+        Self::NONE
+    }
+}
+
+impl_serialize_for_flags!(ObjectUpdateFlags);

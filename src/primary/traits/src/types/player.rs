@@ -1,14 +1,15 @@
+use anyhow::{Result as AnyResult};
 use std::collections::BTreeMap;
 use std::fmt::{Debug, Formatter};
 use std::io::BufRead;
 use bitflags::bitflags;
 use byteorder::{LittleEndian, ReadBytesExt};
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Serialize, Serializer};
 use serde::ser::{SerializeStruct, SerializeTuple};
-use crate::errors::FieldError;
 
+use crate::errors::FieldError;
 use crate::BinaryConverter;
-use crate::types::position::Position;
+use crate::types::position::{Point3D, Vector3D};
 
 pub type UpdateFields = BTreeMap<u32, FieldValue>;
 
@@ -22,7 +23,7 @@ pub struct Player {
     pub level: u8,
     pub fields: UpdateFields,
     pub movement_speed: BTreeMap<u8, f32>,
-    pub position: Option<Position>,
+    pub location: Option<Vector3D>,
 }
 
 impl Player {
@@ -36,7 +37,7 @@ impl Player {
             level,
             fields: BTreeMap::new(),
             movement_speed: BTreeMap::new(),
-            position: None,
+            location: None,
         }
     }
 }
@@ -51,16 +52,10 @@ impl Debug for Player {
             self.name,
             self.race,
             self.class,
-            self.position,
+            self.location,
             self.fields,
             self.movement_speed,
         )
-    }
-}
-
-impl<'de> Deserialize<'de> for Player {
-    fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
-        todo!()
     }
 }
 
@@ -74,17 +69,17 @@ impl Serialize for Player {
         state.serialize_field("class", &self.class)?;
         state.serialize_field("gender", &self.gender)?;
         state.serialize_field("level", &self.level)?;
-        state.serialize_field("position", &self.position)?;
+        state.serialize_field("location", &self.location)?;
         state.end()
     }
 }
 
 impl BinaryConverter for Player {
-    fn write_into(&mut self, _: &mut Vec<u8>) -> Result<(), FieldError> {
+    fn write_into(&mut self, _: &mut Vec<u8>) -> AnyResult<()> {
         todo!()
     }
 
-    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> Result<Self, FieldError> {
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
         let label = "Player";
 
         let guid = reader.read_u64::<LittleEndian>()
@@ -123,12 +118,7 @@ impl BinaryConverter for Player {
         let _map_id = reader.read_u32::<LittleEndian>()
             .map_err(|e| FieldError::CannotRead(e, format!("map_id:u32 ({})", label)))?;
 
-        let _x = reader.read_f32::<LittleEndian>()
-            .map_err(|e| FieldError::CannotRead(e, format!("x:f32 ({})", label)))?;
-        let _y = reader.read_f32::<LittleEndian>()
-            .map_err(|e| FieldError::CannotRead(e, format!("y:f32 ({})", label)))?;
-        let _z = reader.read_f32::<LittleEndian>()
-            .map_err(|e| FieldError::CannotRead(e, format!("z:f32 ({})", label)))?;
+        let _location = Point3D::read_from(reader, &mut vec![])?;
 
         let _guild_id = reader.read_u32::<LittleEndian>()
             .map_err(|e| FieldError::CannotRead(e, format!("guild_id:u32 ({})", label)))?;

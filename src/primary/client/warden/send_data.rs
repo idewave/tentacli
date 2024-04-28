@@ -4,12 +4,12 @@ use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
 use tentacli_traits::types::opcodes::{Opcode, WardenOpcode};
 use tentacli_traits::types::warden::WardenModuleInfo;
 
-#[derive(WorldPacket, Serialize, Deserialize, Debug, Default)]
+#[derive(WorldPacket, Serialize, Debug, Default)]
 struct OpcodeIncome {
     opcode: u8,
 }
 
-#[derive(WorldPacket, Serialize, Deserialize, Debug, Default)]
+#[derive(WorldPacket, Serialize, Debug, Default)]
 struct ModuleUseIncome {
     #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
     module_md5: [u8; 16],
@@ -18,7 +18,7 @@ struct ModuleUseIncome {
     compressed_size: u32,
 }
 
-#[derive(WorldPacket, Serialize, Deserialize, Debug, Default)]
+#[derive(WorldPacket, Serialize, Debug, Default)]
 struct ModuleCacheIncome {
     partial_size: u16,
     #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
@@ -26,14 +26,13 @@ struct ModuleCacheIncome {
     partial: Vec<u8>,
 }
 
-#[derive(WorldPacket, Serialize, Deserialize, Debug, Default)]
+#[derive(WorldPacket, Serialize, Debug, Default)]
 struct HashRequestIncome {
     #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
     seed: [u8; 16],
 }
 
-// @world_opcode(Opcode::CMSG_WARDEN_DATA)
-#[derive(WorldPacket, Serialize, Deserialize, Debug)]
+#[derive(WorldPacket, Serialize, Debug)]
 struct Outcome {
     warden_opcode: u8,
 }

@@ -3,7 +3,7 @@ use anyhow::{Result as AnyResult};
 use tentacli_traits::types::opcodes::Opcode;
 use tentacli_traits::types::OutgoingPacket;
 
-#[derive(LoginPacket, Serialize, Deserialize, Debug)]
+#[derive(LoginPacket, Serialize, Debug)]
 struct Outcome {
     unknown: u8,
     packet_size: u16,

@@ -10,7 +10,7 @@ use crate::primary::client::player::globals::CharacterEnumOutcome;
 use crate::primary::client::player::packet::CharCreateOutcome;
 use crate::primary::client::player::traits::CharacterCreateToolkit;
 
-#[derive(WorldPacket, Serialize, Deserialize, Debug)]
+#[derive(WorldPacket, Serialize, Debug)]
 struct Income {
     characters_count: u8,
     #[depends_on(characters_count)]

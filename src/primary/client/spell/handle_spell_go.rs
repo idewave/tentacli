@@ -5,7 +5,7 @@ use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
 use tentacli_traits::types::opcodes::Opcode;
 use tentacli_traits::types::shared::ActionFlags;
 
-#[derive(WorldPacket, Serialize, Deserialize, Debug)]
+#[derive(WorldPacket, Serialize, Debug)]
 struct Income {
     cast_item_guid: PackedGuid,
     caster_guid: PackedGuid,

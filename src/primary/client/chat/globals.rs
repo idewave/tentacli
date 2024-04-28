@@ -1,5 +1,5 @@
 // Opcode::CMSG_JOIN_CHANNEL
-#[derive(WorldPacket, Serialize, Deserialize, Debug, Default)]
+#[derive(WorldPacket, Serialize, Debug, Default)]
 pub struct JoinChannelOutcome {
     pub channel_id: u32,
     pub unknown: u8,

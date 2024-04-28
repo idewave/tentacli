@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use tentacli_traits::PacketHandler;
 use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
 
-#[derive(LoginPacket, Serialize, Deserialize, Debug)]
+#[derive(LoginPacket, Serialize, Debug)]
 #[options(with_async)]
 pub struct LoginProofResponse {
     error: u8,

@@ -4,7 +4,7 @@ use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
 use tentacli_traits::types::opcodes::Opcode;
 use tentacli_traits::types::spell::{CooldownInfo, Spell};
 
-#[derive(WorldPacket, Serialize, Deserialize, Debug, Default)]
+#[derive(WorldPacket, Serialize, Debug, Default)]
 struct Income {
     skip: u8,
     spell_count: u16,

@@ -6,7 +6,7 @@ use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
 use tentacli_traits::types::opcodes::Opcode;
 use tentacli_traits::types::realm::Realm;
 
-#[derive(LoginPacket, Serialize, Deserialize, Debug, Default)]
+#[derive(LoginPacket, Serialize, Debug, Default)]
 #[options(with_async)]
 pub struct RealmlistResponse {
     skip: [u8; 6],

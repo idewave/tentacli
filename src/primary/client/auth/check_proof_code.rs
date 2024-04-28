@@ -1,10 +1,9 @@
 use async_trait::async_trait;
-use serde::{Serialize, Deserialize};
 use tentacli_traits::PacketHandler;
 use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
 use tentacli_traits::types::auth::AuthLogonResult;
 
-#[derive(LoginPacket, Serialize, Deserialize, Debug)]
+#[derive(LoginPacket, Serialize, Debug)]
 struct Income {
     unknown: u8,
     code: u8,

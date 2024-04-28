@@ -64,7 +64,7 @@ impl Processor for PlayerProcessor {
 
 pub mod packet {
     // Opcode::CMSG_CHAR_CREATE
-    #[derive(WorldPacket, Serialize, Deserialize, Debug)]
+    #[derive(WorldPacket, Serialize, Debug)]
     pub struct CharCreateOutcome {
         pub name: String,
         pub race: u8,

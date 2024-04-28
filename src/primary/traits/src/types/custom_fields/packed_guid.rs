@@ -1,28 +1,9 @@
+use anyhow::{Result as AnyResult};
 use std::io::{BufRead, Write};
 use byteorder::ReadBytesExt;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Serialize, Serializer};
+
 use crate::{BinaryConverter, FieldError};
-
-pub fn read_packed_guid<R: BufRead>(reader: &mut R) -> u64 {
-    let mask = reader.read_u8().unwrap_or(0);
-
-    if mask == 0 {
-        return 0;
-    }
-
-    let mut guid: u64 = 0;
-    let mut i = 0;
-
-    while i < 8 {
-        if (mask & 1 << i) != 0 {
-            guid |= (reader.read_u8().unwrap() as u64) << (i * 8);
-        }
-
-        i += 1;
-    }
-
-    guid
-}
 
 #[derive(Debug, Default, Clone)]
 pub struct PackedGuid(pub u64);
@@ -41,12 +22,6 @@ impl PartialEq<PackedGuid> for u64 {
     }
 }
 
-impl<'de> Deserialize<'de> for PackedGuid {
-    fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
-        todo!()
-    }
-}
-
 impl Serialize for PackedGuid {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
         serializer.serialize_u64(self.0)
@@ -54,7 +29,7 @@ impl Serialize for PackedGuid {
 }
 
 impl BinaryConverter for PackedGuid {
-    fn write_into(&mut self, buffer: &mut Vec<u8>) -> Result<(), FieldError> {
+    fn write_into(&mut self, buffer: &mut Vec<u8>) -> AnyResult<()> {
         let PackedGuid(mut guid) = self;
         let mut packed_guid = [0u8; 9];
         let mut size = 1;
@@ -77,7 +52,7 @@ impl BinaryConverter for PackedGuid {
         Ok(())
     }
 
-    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> Result<Self, FieldError> {
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
         let mask = reader.read_u8().unwrap_or(0);
 
         if mask == 0 {
