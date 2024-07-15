@@ -15,6 +15,7 @@ pub mod shared;
 pub mod spell;
 pub mod trade;
 pub mod update_data;
+pub mod update_fields;
 pub mod warden;
 
 use chat::{Message};

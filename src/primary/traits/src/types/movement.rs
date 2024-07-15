@@ -22,6 +22,18 @@ pub struct Movement {
     pub position_info: Option<PositionInfo>,
 }
 
+impl Movement {
+    pub fn is_empty(instance: &Self) -> bool {
+        return instance.movement_info.is_none()
+            && instance.high_guid == 0
+            && instance.low_guid == 0
+            && instance.target_guid.is_none()
+            && instance.spline_info.is_none()
+            && instance.movement_speed.is_empty()
+            && instance.position_info.is_none()
+    }
+}
+
 impl BinaryConverter for Movement {
     fn write_into(&mut self, _: &mut Vec<u8>) -> AnyResult<()> {
         todo!()
@@ -113,16 +125,54 @@ impl BinaryConverter for Movement {
 
 impl Serialize for Movement {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        const FIELDS_AMOUNT: usize = 8;
-        let mut state = serializer.serialize_struct("Movement", FIELDS_AMOUNT)?;
+        let mut fields_amount = 3;
+
+        if self.movement_info.is_some() {
+            fields_amount += 1;
+        }
+
+        if self.target_guid.is_some() {
+            fields_amount += 1;
+        }
+
+        if !self.movement_speed.is_empty() {
+            fields_amount += 1;
+        }
+
+        if self.spline_info.is_some() {
+            fields_amount += 1;
+        }
+
+        if self.position_info.is_some() {
+            fields_amount += 1;
+        }
+
+        let mut state = serializer.serialize_struct("Movement", fields_amount)?;
         state.serialize_field("object_update_flags", &self.object_update_flags)?;
-        state.serialize_field("movement_info", &self.movement_info)?;
+
+        if self.movement_info.is_some() {
+            state.serialize_field("movement_info", &self.movement_info)?;
+        }
+
         state.serialize_field("high_guid", &self.high_guid)?;
         state.serialize_field("low_guid", &self.low_guid)?;
-        state.serialize_field("target_guid", &self.target_guid)?;
-        state.serialize_field("movement_speed", &self.movement_speed)?;
-        state.serialize_field("spline_info", &self.spline_info)?;
-        state.serialize_field("position_info", &self.position_info)?;
+
+        if self.target_guid.is_some() {
+            state.serialize_field("target_guid", &self.target_guid)?;
+        }
+
+        if !self.movement_speed.is_empty() {
+            state.serialize_field("movement_speed", &self.movement_speed)?;
+        }
+
+        if self.spline_info.is_some() {
+            state.serialize_field("spline_info", &self.spline_info)?;
+        }
+
+        if self.position_info.is_some() {
+            state.serialize_field("position_info", &self.position_info)?;
+        }
+
         state.end()
     }
 }
@@ -188,15 +238,47 @@ impl BinaryConverter for MovementInfo {
 
 impl Serialize for MovementInfo {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        const FIELDS_AMOUNT: usize = 7;
-        let mut state = serializer.serialize_struct("MovementInfo", FIELDS_AMOUNT)?;
-        state.serialize_field("movement_flags", &self.movement_flags)?;
-        state.serialize_field("movement_flags_extra", &self.movement_extra_flags)?;
+        let mut fields_amount = 3;
+
+        if !self.movement_flags.is_empty() {
+            fields_amount += 1;
+        }
+
+        if !self.movement_extra_flags.is_empty() {
+            fields_amount += 1;
+        }
+
+        if self.taxi_info.is_some() {
+            fields_amount += 1;
+        }
+
+        if self.jump_info.is_some() {
+            fields_amount += 1;
+        }
+
+        let mut state = serializer.serialize_struct("MovementInfo", fields_amount)?;
+
+        if !self.movement_flags.is_empty() {
+            state.serialize_field("movement_flags", &self.movement_flags)?;
+        }
+
+        if !self.movement_extra_flags.is_empty() {
+            state.serialize_field("movement_flags_extra", &self.movement_extra_flags)?;
+        }
+
         state.serialize_field("time", &self.time)?;
         state.serialize_field("location", &self.location)?;
-        state.serialize_field("taxi_info", &self.taxi_info)?;
+
+        if self.taxi_info.is_some() {
+            state.serialize_field("taxi_info", &self.taxi_info)?;
+        }
+
         state.serialize_field("fall_time", &self.fall_time)?;
-        state.serialize_field("jump_info", &self.jump_info)?;
+
+        if self.jump_info.is_some() {
+            state.serialize_field("jump_info", &self.jump_info)?;
+        }
+
         state.end()
     }
 }

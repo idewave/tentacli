@@ -1,6 +1,6 @@
 [package]
 name = "tentacli-utils"
-version = "2.0.0"
+version = "2.1.0"
 edition = "2021"
 authors = ["Sergio Ivanuzzo <sergio.ivanuzzo@gmail.com>"]
 description = "Utils for tentacli and related projects"

@@ -57,6 +57,21 @@ pub fn compress(data: &[u8]) -> AnyResult<Vec<u8>> {
     encoder.finish().map_err(|e| anyhow!("Error on compress: {}", e))
 }
 
+pub fn camel_to_upper_snake_case(name: &str) -> String {
+    let mut result = String::new();
+    let mut previous_was_upper = true;
+
+    for c in name.chars() {
+        if c.is_uppercase() && !previous_was_upper {
+            result.push('_');
+        }
+        result.push(c.to_uppercase().next().unwrap());
+        previous_was_upper = c.is_uppercase() || c.is_numeric();
+    }
+
+    result
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{decode_hex, zlib_decompress, compress, encode_hex};

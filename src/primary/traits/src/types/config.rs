@@ -179,7 +179,7 @@ impl EnvConfig {
         Ok(Self {
             host,
             port: u16::from_str(&port)
-                .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?,
+                .map_err(|e| Error::new(std::io::ErrorKind::InvalidInput, e))?,
         })
     }
 }

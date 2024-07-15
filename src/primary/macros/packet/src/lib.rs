@@ -557,7 +557,7 @@ pub fn segment(input: TokenStream) -> TokenStream {
 
         impl #binary_converter for #ident {
             fn write_into(&mut self, buffer: &mut Vec<u8>) -> #result<()> {
-                self.to_binary()?;
+                buffer.extend(self.to_binary()?);
                 Ok(())
             }
 
