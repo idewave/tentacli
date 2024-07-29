@@ -33,16 +33,15 @@ serde = { version = "1.0", features = ["derive"] }
 sha-1 = "0.9.8"
 tentacli-crypto = "0.1.0"
 tentacli-formatters = "0.1.0"
-tentacli-packet = "3.0.0"
-tentacli-traits = "0.2.0"
-tentacli-utils = "1.1.1"
+tentacli-packet = "6.0.0"
+tentacli-traits = "3.0.0"
+tentacli-utils = "2.1.0"
 tokio = { version = "1", features = ["sync", "net", "io-util", "macros", "time", "rt-multi-thread"] }
 #tokio-util = { version = "0.7.10", features = ["io"] }
 tui = { version = "0", features = ["crossterm"], optional = true }
 
 [dev-dependencies]
 rusty-hook = "0.11.2"
-tempdir = "0.3.7"
 
 [features]
 default = ["ui"]

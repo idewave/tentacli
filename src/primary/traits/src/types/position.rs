@@ -1,59 +1,86 @@
-use std::fmt::{Debug, Formatter};
-use std::io::{BufRead, Error};
+use anyhow::{Result as AnyResult};
+use std::io::{BufRead};
 use byteorder::{LittleEndian, ReadBytesExt};
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Serialize, Serializer};
 use serde::ser::SerializeStruct;
 
-#[derive(Copy, Clone, Default)]
-pub struct Position {
+use crate::{BinaryConverter};
+
+#[derive(Copy, Clone, Default, Debug, PartialEq)]
+pub struct Point3D {
     pub x: f32,
     pub y: f32,
     pub z: f32,
-    pub orientation: f32,
 }
 
-impl Position {
-    pub fn new(x: f32, y: f32, z: f32, orientation: f32) -> Self {
-        Self { x, y, z, orientation }
+impl Point3D {
+    pub fn new(x: f32, y: f32, z: f32) -> Self {
+        Self { x, y, z }
+    }
+}
+
+impl BinaryConverter for Point3D {
+    fn write_into(&mut self, buffer: &mut Vec<u8>) -> AnyResult<()> {
+        self.x.write_into(buffer)?;
+        self.y.write_into(buffer)?;
+        self.z.write_into(buffer)?;
+
+        Ok(())
     }
 
-    pub fn parse<R: BufRead>(reader: &mut R) -> Result<Position, Error> {
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
         let x = reader.read_f32::<LittleEndian>()?;
         let y = reader.read_f32::<LittleEndian>()?;
         let z = reader.read_f32::<LittleEndian>()?;
-        let orientation = reader.read_f32::<LittleEndian>()?;
 
-        Ok(Position::new(x, y, z, orientation))
+        Ok(Self { x, y, z })
     }
 }
 
-impl Debug for Position {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "x: {:?}, y: {:?}, z: {:?}, orientation: {:?}",
-            self.x,
-            self.y,
-            self.z,
-            self.orientation,
-        )
-    }
-}
-
-impl<'de> Deserialize<'de> for Position {
-    fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
-        todo!()
-    }
-}
-
-impl Serialize for Position {
+impl Serialize for Point3D {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        const FIELDS_AMOUNT: usize = 4;
-        let mut state = serializer.serialize_struct("Position", FIELDS_AMOUNT)?;
+        const FIELDS_AMOUNT: usize = 3;
+        let mut state = serializer.serialize_struct("Point3D", FIELDS_AMOUNT)?;
         state.serialize_field("x", &self.x)?;
         state.serialize_field("y", &self.y)?;
         state.serialize_field("z", &self.z)?;
-        state.serialize_field("orientation", &self.orientation)?;
+        state.end()
+    }
+}
+
+#[derive(Copy, Clone, Default, Debug, PartialEq)]
+pub struct Vector3D {
+    pub point: Point3D,
+    pub direction: f32,
+}
+
+impl Vector3D {
+    pub fn new(x: f32, y: f32, z: f32, direction: f32) -> Self {
+        Self { point: Point3D::new(x, y, z), direction }
+    }
+}
+
+impl BinaryConverter for Vector3D {
+    fn write_into(&mut self, buffer: &mut Vec<u8>) -> AnyResult<()> {
+        self.point.write_into(buffer)?;
+        self.direction.write_into(buffer)?;
+
+        Ok(())
+    }
+
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
+        let point = Point3D::read_from(reader, &mut vec![])?;
+        let direction = reader.read_f32::<LittleEndian>()?;
+        Ok(Self { point, direction })
+    }
+}
+
+impl Serialize for Vector3D {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+        const FIELDS_AMOUNT: usize = 2;
+        let mut state = serializer.serialize_struct("Vector3D", FIELDS_AMOUNT)?;
+        state.serialize_field("point", &self.point)?;
+        state.serialize_field("direction", &self.direction)?;
         state.end()
     }
 }

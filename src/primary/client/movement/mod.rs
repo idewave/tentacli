@@ -72,7 +72,7 @@ pub mod packet {
         pub const MSG_MOVE_HEARTBEAT: u16 = Opcode::MSG_MOVE_HEARTBEAT;
     }
 
-    #[derive(WorldPacket, Serialize, Deserialize, Debug)]
+    #[derive(WorldPacket, Serialize, Debug)]
     pub struct MovementOutcome {
         pub guid: PackedGuid,
         pub movement_flags: u32,

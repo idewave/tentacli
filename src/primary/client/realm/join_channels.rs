@@ -1,7 +1,6 @@
 use async_trait::async_trait;
 use tentacli_traits::PacketHandler;
 use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
-use tentacli_traits::types::custom_fields::TerminatedString;
 use tentacli_traits::types::opcodes::Opcode;
 
 use crate::primary::client::chat::globals::JoinChannelOutcome;
@@ -20,19 +19,19 @@ impl PacketHandler for Handler {
 
         response.push(HandlerOutput::Data(JoinChannelOutcome {
             channel_id: COMMON_CHANNEL_ID,
-            channel_name: TerminatedString::from(channel_labels.common.to_string()),
+            channel_name: format!("{}\0", channel_labels.common.to_string()),
             ..JoinChannelOutcome::default()
         }.unpack_with_client_opcode(Opcode::CMSG_JOIN_CHANNEL)?));
 
         response.push(HandlerOutput::Data(JoinChannelOutcome {
             channel_id: LFG_CHANNEL_ID,
-            channel_name: TerminatedString::from(channel_labels.common.to_string()),
+            channel_name: format!("{}\0", channel_labels.lfg.to_string()),
             ..JoinChannelOutcome::default()
         }.unpack_with_client_opcode(Opcode::CMSG_JOIN_CHANNEL)?));
 
         response.push(HandlerOutput::Data(JoinChannelOutcome {
             channel_id: TRADE_CHANNEL_ID,
-            channel_name: TerminatedString::from(channel_labels.common.to_string()),
+            channel_name: format!("{}\0", channel_labels.trade.to_string()),
             ..JoinChannelOutcome::default()
         }.unpack_with_client_opcode(Opcode::CMSG_JOIN_CHANNEL)?));
 

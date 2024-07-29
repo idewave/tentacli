@@ -1,7 +1,6 @@
 use async_trait::async_trait;
 use tentacli_traits::PacketHandler;
 use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
-use tentacli_traits::types::custom_fields::TerminatedString;
 use tentacli_traits::types::player::CharacterCreateResponseCode;
 
 use crate::primary::client::Opcode;
@@ -9,7 +8,7 @@ use crate::primary::client::player::globals::CharacterEnumOutcome;
 use crate::primary::client::player::packet::CharCreateOutcome;
 use crate::primary::client::player::traits::CharacterCreateToolkit;
 
-#[derive(WorldPacket, Serialize, Deserialize, Debug)]
+#[derive(WorldPacket, Serialize, Debug)]
 struct Income {
     code: u8,
 }
@@ -49,7 +48,7 @@ impl PacketHandler for Handler {
                     ));
 
                     response.push(HandlerOutput::Data(CharCreateOutcome {
-                        name: TerminatedString::from(random_name),
+                        name: format!("{}\0", random_name),
                         race: Self::get_random_race(),
                         class: Self::get_random_class(),
                         gender: Self::get_random_gender(),

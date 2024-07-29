@@ -5,7 +5,7 @@ use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
 use crate::primary::client::Opcode;
 use crate::primary::client::player::globals::NameQueryOutcome;
 
-#[derive(WorldPacket, Serialize, Deserialize, Debug)]
+#[derive(WorldPacket, Serialize, Debug)]
 struct Income {
     skip: [u8; 5],
     sender_guid: u64,

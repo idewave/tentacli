@@ -1,7 +1,6 @@
 use std::{num::ParseIntError};
-use std::io::{BufRead, Read, Write};
+use std::io::{Read, Write};
 use anyhow::{anyhow, Result as AnyResult};
-use byteorder::ReadBytesExt;
 use flate2::Compression;
 use flate2::read::ZlibDecoder;
 use flate2::read::DeflateDecoder;
@@ -35,27 +34,6 @@ pub fn encode_hex(bytes: &[u8]) -> String {
     items.join(" ")
 }
 
-pub fn read_packed_guid<R: BufRead>(reader: &mut R) -> u64 {
-    let mask = reader.read_u8().unwrap_or(0);
-
-    if mask == 0 {
-        return 0;
-    }
-
-    let mut guid: u64 = 0;
-    let mut i = 0;
-
-    while i < 8 {
-        if (mask & 1 << i) != 0 {
-            guid |= (reader.read_u8().unwrap() as u64) << (i * 8);
-        }
-
-        i += 1;
-    }
-
-    guid
-}
-
 pub fn zlib_decompress(data: &[u8]) -> AnyResult<Vec<u8>> {
     let mut buffer = Vec::new();
     let mut decoder = ZlibDecoder::new(data);
@@ -77,6 +55,21 @@ pub fn compress(data: &[u8]) -> AnyResult<Vec<u8>> {
     encoder.write_all(data)?;
 
     encoder.finish().map_err(|e| anyhow!("Error on compress: {}", e))
+}
+
+pub fn camel_to_upper_snake_case(name: &str) -> String {
+    let mut result = String::new();
+    let mut previous_was_upper = true;
+
+    for c in name.chars() {
+        if c.is_uppercase() && !previous_was_upper {
+            result.push('_');
+        }
+        result.push(c.to_uppercase().next().unwrap());
+        previous_was_upper = c.is_uppercase() || c.is_numeric();
+    }
+
+    result
 }
 
 #[cfg(test)]

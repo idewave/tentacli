@@ -76,6 +76,6 @@ impl Processor for RealmProcessor {
 
 pub mod packet {
     // Opcode::CMSG_LOGOUT_REQUEST
-    #[derive(WorldPacket, Serialize, Deserialize, Debug, Default)]
+    #[derive(WorldPacket, Serialize, Debug, Default)]
     pub struct LogoutOutcome {}
 }

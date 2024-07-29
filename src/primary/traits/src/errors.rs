@@ -22,8 +22,6 @@ pub enum FieldError {
     InvalidString(#[source] std::string::FromUtf8Error, String),
     #[error("Write error for field of type '{1}'")]
     CannotWrite(#[source] std::io::Error, String),
-    #[error("Invalid string length, it should be greater than 1")]
-    InvalidTerminatedString,
 }
 
 #[derive(Error, Debug)]

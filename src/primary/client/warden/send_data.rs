@@ -1,16 +1,15 @@
-use std::io::{BufRead};
 use async_trait::async_trait;
 use tentacli_traits::PacketHandler;
 use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
 use tentacli_traits::types::opcodes::{Opcode, WardenOpcode};
 use tentacli_traits::types::warden::WardenModuleInfo;
 
-#[derive(WorldPacket, Serialize, Deserialize, Debug, Default)]
+#[derive(WorldPacket, Serialize, Debug, Default)]
 struct OpcodeIncome {
     opcode: u8,
 }
 
-#[derive(WorldPacket, Serialize, Deserialize, Debug, Default)]
+#[derive(WorldPacket, Serialize, Debug, Default)]
 struct ModuleUseIncome {
     #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
     module_md5: [u8; 16],
@@ -19,30 +18,21 @@ struct ModuleUseIncome {
     compressed_size: u32,
 }
 
-#[derive(WorldPacket, Serialize, Deserialize, Debug, Default)]
+#[derive(WorldPacket, Serialize, Debug, Default)]
 struct ModuleCacheIncome {
     partial_size: u16,
-    #[dynamic_field]
     #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
+    #[depends_on(partial_size)]
     partial: Vec<u8>,
 }
 
-impl ModuleCacheIncome {
-    fn partial<R: BufRead>(mut reader: R, initial: &mut Self) -> Vec<u8> {
-        let mut buffer = vec![0u8; initial.partial_size as usize];
-        reader.read_exact(&mut buffer).unwrap();
-        buffer
-    }
-}
-
-#[derive(WorldPacket, Serialize, Deserialize, Debug, Default)]
+#[derive(WorldPacket, Serialize, Debug, Default)]
 struct HashRequestIncome {
     #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
     seed: [u8; 16],
 }
 
-// @world_opcode(Opcode::CMSG_WARDEN_DATA)
-#[derive(WorldPacket, Serialize, Deserialize, Debug)]
+#[derive(WorldPacket, Serialize, Debug)]
 struct Outcome {
     warden_opcode: u8,
 }

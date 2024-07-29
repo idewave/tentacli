@@ -63,12 +63,16 @@ impl Processor for PlayerProcessor {
 }
 
 pub mod packet {
-    use tentacli_traits::types::custom_fields::TerminatedString;
+    use serde::{Serialize, Serializer};
+    use serde::ser::SerializeStruct;
+    use tentacli_traits::types::custom_fields::PackedGuid;
+    use tentacli_traits::types::movement::Movement;
+    use tentacli_traits::types::update_data::{BlockType, ObjectTypeID, UpdateData};
 
     // Opcode::CMSG_CHAR_CREATE
-    #[derive(WorldPacket, Serialize, Deserialize, Debug)]
+    #[derive(WorldPacket, Serialize, Debug)]
     pub struct CharCreateOutcome {
-        pub name: TerminatedString,
+        pub name: String,
         pub race: u8,
         pub class: u8,
         pub gender: u8,
@@ -78,5 +82,138 @@ pub mod packet {
         pub hair_color: u8,
         pub facial_hair: u8,
         pub outfit_id: u8,
+    }
+
+    // Opcode::SMSG_UPDATE_OBJECT
+    // Opcode::SMSG_COMPRESSED_UPDATE_OBJECT
+    #[derive(WorldPacket, Serialize, Debug)]
+    pub struct UpdateDataIncoming {
+        pub blocks_amount: u32,
+        #[depends_on(blocks_amount)]
+        pub blocks: Vec<Block>,
+    }
+
+    #[derive(Segment, Debug, Clone, Default)]
+    pub struct Block {
+        pub block_type: BlockType,
+        #[conditional]
+        pub guid: PackedGuid,
+        #[conditional]
+        pub object_type_id: ObjectTypeID,
+        #[conditional]
+        pub movement: Movement,
+        #[conditional]
+        pub update_data: UpdateData,
+        #[conditional]
+        pub guid_count: u32,
+        #[depends_on(guid_count)]
+        #[conditional]
+        pub guids: Vec<PackedGuid>
+    }
+
+    impl Block {
+        fn guid(instance: &mut Self) -> bool {
+            matches!(
+                instance.block_type.0,
+                BlockType::VALUES |
+                BlockType::MOVEMENT |
+                BlockType::CREATE_OBJECT |
+                BlockType::CREATE_OBJECT2
+            )
+        }
+
+        fn object_type_id(instance: &mut Self) -> bool {
+            matches!(
+                instance.block_type.0,
+                BlockType::CREATE_OBJECT |
+                BlockType::CREATE_OBJECT2
+            )
+        }
+
+        fn movement(instance: &mut Self) -> bool {
+            matches!(
+                instance.block_type.0,
+                BlockType::MOVEMENT |
+                BlockType::CREATE_OBJECT |
+                BlockType::CREATE_OBJECT2
+            )
+        }
+
+        fn update_data(instance: &mut Self) -> bool {
+            matches!(
+                instance.block_type.0,
+                BlockType::VALUES |
+                BlockType::CREATE_OBJECT |
+                BlockType::CREATE_OBJECT2
+            )
+        }
+
+        fn guid_count(instance: &mut Self) -> bool {
+            matches!(
+                instance.block_type.0,
+                BlockType::NEAR_OBJECTS |
+                BlockType::OUT_OF_RANGE_OBJECTS
+            )
+        }
+
+        fn guids(instance: &mut Self) -> bool {
+            matches!(
+                instance.block_type.0,
+                BlockType::NEAR_OBJECTS |
+                BlockType::OUT_OF_RANGE_OBJECTS
+            )
+        }
+    }
+
+    impl Serialize for Block {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+            let mut fields_amount = 1;
+
+            if self.guid.0 != 0  {
+                fields_amount += 1;
+            }
+
+            if !ObjectTypeID::is_none(&self.object_type_id) {
+                fields_amount += 1;
+            }
+
+            if !Movement::is_empty(&self.movement) {
+                fields_amount += 1;
+            }
+
+            if !UpdateData::is_empty(&self.update_data) {
+                fields_amount += 1;
+            }
+
+            if self.guid_count > 0 {
+                fields_amount += 2;
+            }
+
+            let mut state = serializer.serialize_struct("Block", fields_amount)?;
+            state.serialize_field("block_type", &self.block_type)?;
+
+            if self.guid.0 != 0  {
+                state.serialize_field("guid", &self.guid)?;
+            }
+
+            if !ObjectTypeID::is_none(&self.object_type_id) {
+                state.serialize_field("object_type_id", &self.object_type_id)?;
+            }
+
+            if !Movement::is_empty(&self.movement) {
+                state.serialize_field("movement", &self.movement)?;
+            }
+
+            if !UpdateData::is_empty(&self.update_data) {
+                state.serialize_field("update_data", &self.update_data)?;
+            }
+
+            if self.guid_count > 0 {
+                state.serialize_field("guid_count", &self.guid_count)?;
+                state.serialize_field("guids", &self.guids)?;
+            }
+
+            state.end()
+        }
     }
 }
