@@ -8,7 +8,6 @@ pub trait BinaryConverter {
     fn write_into(&mut self, buffer: &mut Vec<u8>) -> AnyResult<()>;
     fn read_from<R: BufRead>(reader: &mut R, dependencies: &mut Vec<u8>) -> AnyResult<Self>
         where Self: Sized;
-    fn to_bytes(&self) -> Vec<u8>;
 }
 
 impl BinaryConverter for u8 {
@@ -18,10 +17,6 @@ impl BinaryConverter for u8 {
 
     fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
         reader.read_u8().map_err(|e| FieldError::CannotRead(e, "u8".to_string()).into())
-    }
-
-    fn to_bytes(&self) -> Vec<u8> {
-        vec![*self]
     }
 }
 
@@ -34,10 +29,6 @@ impl BinaryConverter for u16 {
     fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
         reader.read_u16::<LittleEndian>().map_err(|e| FieldError::CannotRead(e, "u16".to_string()).into())
     }
-
-    fn to_bytes(&self) -> Vec<u8> {
-        self.to_le_bytes().to_vec()
-    }
 }
 
 impl BinaryConverter for u32 {
@@ -48,10 +39,6 @@ impl BinaryConverter for u32 {
 
     fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
         reader.read_u32::<LittleEndian>().map_err(|e| FieldError::CannotRead(e, "u32".to_string()).into())
-    }
-
-    fn to_bytes(&self) -> Vec<u8> {
-        self.to_le_bytes().to_vec()
     }
 }
 
@@ -64,10 +51,6 @@ impl BinaryConverter for u64 {
     fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
         reader.read_u64::<LittleEndian>().map_err(|e| FieldError::CannotRead(e, "u64".to_string()).into())
     }
-
-    fn to_bytes(&self) -> Vec<u8> {
-        self.to_le_bytes().to_vec()
-    }
 }
 
 impl BinaryConverter for i8 {
@@ -77,10 +60,6 @@ impl BinaryConverter for i8 {
 
     fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
         reader.read_i8().map_err(|e| FieldError::CannotRead(e, "i8".to_string()).into())
-    }
-
-    fn to_bytes(&self) -> Vec<u8> {
-        self.to_le_bytes().to_vec()
     }
 }
 
@@ -93,10 +72,6 @@ impl BinaryConverter for i16 {
     fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
         reader.read_i16::<LittleEndian>().map_err(|e| FieldError::CannotRead(e, "i16".to_string()).into())
     }
-
-    fn to_bytes(&self) -> Vec<u8> {
-        self.to_le_bytes().to_vec()
-    }
 }
 
 impl BinaryConverter for i32 {
@@ -107,10 +82,6 @@ impl BinaryConverter for i32 {
 
     fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
         reader.read_i32::<LittleEndian>().map_err(|e| FieldError::CannotRead(e, "i32".to_string()).into())
-    }
-
-    fn to_bytes(&self) -> Vec<u8> {
-        self.to_le_bytes().to_vec()
     }
 }
 
@@ -123,10 +94,6 @@ impl BinaryConverter for i64 {
     fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
         reader.read_i64::<LittleEndian>().map_err(|e| FieldError::CannotRead(e, "i64".to_string()).into())
     }
-
-    fn to_bytes(&self) -> Vec<u8> {
-        self.to_le_bytes().to_vec()
-    }
 }
 
 impl BinaryConverter for f32 {
@@ -138,10 +105,6 @@ impl BinaryConverter for f32 {
     fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
         reader.read_f32::<LittleEndian>().map_err(|e| FieldError::CannotRead(e, "f32".to_string()).into())
     }
-
-    fn to_bytes(&self) -> Vec<u8> {
-        self.to_le_bytes().to_vec()
-    }
 }
 
 impl BinaryConverter for f64 {
@@ -152,10 +115,6 @@ impl BinaryConverter for f64 {
 
     fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
         reader.read_f64::<LittleEndian>().map_err(|e| FieldError::CannotRead(e, "f64".to_string()).into())
-    }
-
-    fn to_bytes(&self) -> Vec<u8> {
-        self.to_le_bytes().to_vec()
     }
 }
 
@@ -200,10 +159,6 @@ impl BinaryConverter for String {
 
         Ok(string.trim_end_matches(char::from(0)).to_string())
     }
-
-    fn to_bytes(&self) -> Vec<u8> {
-        self.as_bytes().to_vec()
-    }
 }
 
 impl<const N: usize> BinaryConverter for [u8; N] {
@@ -216,10 +171,6 @@ impl<const N: usize> BinaryConverter for [u8; N] {
         reader.read_exact(&mut internal_buf)
             .map_err(|e| FieldError::CannotRead(e, "[u8; N]".to_string()))?;
         Ok(internal_buf)
-    }
-
-    fn to_bytes(&self) -> Vec<u8> {
-        self.to_vec()
     }
 }
 
@@ -247,9 +198,5 @@ impl<T: BinaryConverter + Clone> BinaryConverter for Vec<T> where T: Sized {
         }
 
         Ok(buffer)
-    }
-
-    fn to_bytes(&self) -> Vec<u8> {
-        todo!()
     }
 }

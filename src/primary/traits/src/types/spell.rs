@@ -286,10 +286,6 @@ impl BinaryConverter for Spell {
 
         Ok(spell)
     }
-
-    fn to_bytes(&self) -> Vec<u8> {
-        todo!()
-    }
 }
 
 #[derive(Debug, Default, Clone)]
@@ -344,9 +340,5 @@ impl BinaryConverter for CooldownInfo {
             cooldown_duration,
             cooldown_category,
         })
-    }
-
-    fn to_bytes(&self) -> Vec<u8> {
-        todo!()
     }
 }

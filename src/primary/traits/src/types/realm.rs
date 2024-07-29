@@ -17,7 +17,7 @@ pub struct Realm {
     pub name: String,
     pub address: String,
     pub population: f32,
-    pub characters: u8,
+    pub characters_amount: u8,
     pub timezone: u8,
     pub server_id: u8,
 }
@@ -46,7 +46,7 @@ impl Serialize for Realm {
         state.serialize_field("name", &self.name)?;
         state.serialize_field("address", &self.address)?;
         state.serialize_field("population", &self.population)?;
-        state.serialize_field("characters", &self.characters)?;
+        state.serialize_field("characters_amount", &self.characters_amount)?;
         state.serialize_field("timezone", &self.timezone)?;
         state.serialize_field("server_id", &self.server_id)?;
         state.end()
@@ -55,30 +55,15 @@ impl Serialize for Realm {
 
 impl BinaryConverter for Realm {
     fn write_into(&mut self, buffer: &mut Vec<u8>) -> AnyResult<()> {
-        let label = "Realm";
-
-        buffer.write_u8(self.icon)
-            .map_err(|e| FieldError::CannotRead(e, format!("icon:u8 ({})", label)))?;
-        buffer.write_u8(self.lock)
-            .map_err(|e| FieldError::CannotRead(e, format!("lock:u8 ({})", label)))?;
-        buffer.write_u8(self.flags)
-            .map_err(|e| FieldError::CannotRead(e, format!("flags:u8 ({})", label)))?;
-        buffer.write_all(self.name.as_bytes())
-            .map_err(|e| FieldError::CannotWrite(e, format!("name bytes ({})", label)))?;
-        buffer.write_u8(0)
-            .map_err(|e| FieldError::CannotWrite(e, format!("u8 zero ({})", label)))?;
-        buffer.write_all(self.address.as_bytes())
-            .map_err(|e| FieldError::CannotWrite(e, format!("address bytes ({})", label)))?;
-        buffer.write_u8(0)
-            .map_err(|e| FieldError::CannotWrite(e, format!("u8 zero ({})", label)))?;
-        buffer.write_f32::<LittleEndian>(self.population)
-            .map_err(|e| FieldError::CannotRead(e, format!("population:f32 ({})", label)))?;
-        buffer.write_u8(self.characters)
-            .map_err(|e| FieldError::CannotRead(e, format!("characters:u8 ({})", label)))?;
-        buffer.write_u8(self.timezone)
-            .map_err(|e| FieldError::CannotRead(e, format!("timezone:u8 ({})", label)))?;
-        buffer.write_u8(self.server_id)
-            .map_err(|e| FieldError::CannotRead(e, format!("server_id:u8 ({})", label)))?;
+        self.icon.write_into(buffer)?;
+        self.lock.write_into(buffer)?;
+        self.flags.write_into(buffer)?;
+        format!("{}\0", self.name).write_into(buffer)?;
+        format!("{}\0", self.address).write_into(buffer)?;
+        self.population.write_into(buffer)?;
+        self.characters_amount.write_into(buffer)?;
+        self.timezone.write_into(buffer)?;
+        self.server_id.write_into(buffer)?;
 
         Ok(())
     }
@@ -116,14 +101,10 @@ impl BinaryConverter for Realm {
             name: String::from_utf8_lossy(&name).trim_matches(char::from(0)).to_string(),
             address: String::from_utf8_lossy(&address).trim_matches(char::from(0)).to_string(),
             population,
-            characters,
+            characters_amount: characters,
             timezone,
             server_id,
         })
-    }
-
-    fn to_bytes(&self) -> Vec<u8> {
-        todo!()
     }
 }
 
@@ -164,7 +145,7 @@ impl StreamReader for Realm {
             name: String::from_utf8_lossy(&name).trim_matches(char::from(0)).to_string(),
             address: String::from_utf8_lossy(&address).trim_matches(char::from(0)).to_string(),
             population,
-            characters,
+            characters_amount: characters,
             timezone,
             server_id,
         })

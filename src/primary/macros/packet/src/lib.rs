@@ -93,10 +93,10 @@ pub fn login_packet(input: TokenStream) -> TokenStream {
                     {
                         let mut data: Vec<u8> = vec![];
                         #(
-                            let bytes = #binary_converter::to_bytes(
+                            #binary_converter::write_into(
                                 &mut cache.#dep_fields,
-                            );
-                            data.extend(bytes);
+                                &mut data,
+                            )?;
                         )*
                         #binary_converter::read_from(&mut reader, &mut data)?
                     }
@@ -180,10 +180,10 @@ pub fn login_packet(input: TokenStream) -> TokenStream {
                         {
                             let mut data: Vec<u8> = vec![];
                             #(
-                                let bytes = #binary_converter::to_bytes(
+                                #binary_converter::write_into(
                                     &mut cache.#dep_fields,
-                                );
-                                data.extend(bytes);
+                                    &mut data,
+                                )?;
                             )*
                             #stream_reader::read_from(&mut stream, &mut data).await?
                         }
@@ -291,10 +291,10 @@ pub fn world_packet(input: TokenStream) -> TokenStream {
                     {
                         let mut data: Vec<u8> = vec![];
                         #(
-                            let bytes = #binary_converter::to_bytes(
+                            #binary_converter::write_into(
                                 &mut cache.#dep_fields,
-                            );
-                            data.extend(bytes);
+                                &mut data,
+                            )?;
                         )*
                         #binary_converter::read_from(&mut reader, &mut data)?
                     }
@@ -335,7 +335,10 @@ pub fn world_packet(input: TokenStream) -> TokenStream {
                 Ok(Self::build_instance(&buffer)?)
             }
 
-            pub fn to_binary_with_server_opcode(&mut self, opcode: u16) -> #result<Vec<u8>> {
+            pub fn to_binary_with_server_opcode(
+                &mut self,
+                opcode: u16
+            ) -> #result<Vec<u8>> {
                 let body = self._build_body()?;
                 let header = Self::_build_header_for_server_packet(body.len(), opcode)?;
                 Ok([header, body].concat())
@@ -347,8 +350,13 @@ pub fn world_packet(input: TokenStream) -> TokenStream {
                 Ok([header, body].concat())
             }
 
-            pub fn unpack_with_server_opcode(&mut self, opcode: u16) -> #result<(u16, Vec<u8>, String)> {
-                Ok((opcode, self.to_binary_with_server_opcode(opcode)?, self.get_json_details()?))
+            pub fn unpack_with_server_opcode(
+                &mut self,
+                opcode: u16
+            ) -> #result<(u16, Vec<u8>, String)> {
+                Ok((opcode,
+                    self.to_binary_with_server_opcode(opcode)?,
+                    self.get_json_details()?))
             }
 
             pub fn unpack_with_client_opcode(&mut self, opcode: u32) -> #result<(u32, Vec<u8>, String)> {
@@ -495,10 +503,10 @@ pub fn segment(input: TokenStream) -> TokenStream {
                     {
                         let mut data: Vec<u8> = vec![];
                         #(
-                            let bytes = #binary_converter::to_bytes(
+                            #binary_converter::write_into(
                                 &mut cache.#dep_fields,
-                            );
-                            data.extend(bytes);
+                                &mut data,
+                            )?;
                         )*
                         #binary_converter::read_from(&mut reader, &mut data)?
                     }
@@ -563,10 +571,6 @@ pub fn segment(input: TokenStream) -> TokenStream {
 
             fn read_from<R: #buf_read>(reader: &mut R, _: &mut Vec<u8>) -> #result<Self> {
                 Self::read_from(reader)
-            }
-
-            fn to_bytes(&self) -> Vec<u8> {
-                todo!()
             }
         }
     };

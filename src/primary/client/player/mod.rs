@@ -93,7 +93,7 @@ pub mod packet {
         pub blocks: Vec<Block>,
     }
 
-    #[derive(Segment, Debug, Clone)]
+    #[derive(Segment, Debug, Clone, Default)]
     pub struct Block {
         pub block_type: BlockType,
         #[conditional]
@@ -114,54 +114,54 @@ pub mod packet {
     impl Block {
         fn guid(instance: &mut Self) -> bool {
             matches!(
-            instance.block_type.0,
-            BlockType::VALUES |
-            BlockType::MOVEMENT |
-            BlockType::CREATE_OBJECT |
-            BlockType::CREATE_OBJECT2
-        )
+                instance.block_type.0,
+                BlockType::VALUES |
+                BlockType::MOVEMENT |
+                BlockType::CREATE_OBJECT |
+                BlockType::CREATE_OBJECT2
+            )
         }
 
         fn object_type_id(instance: &mut Self) -> bool {
             matches!(
-            instance.block_type.0,
-            BlockType::CREATE_OBJECT |
-            BlockType::CREATE_OBJECT2
-        )
+                instance.block_type.0,
+                BlockType::CREATE_OBJECT |
+                BlockType::CREATE_OBJECT2
+            )
         }
 
         fn movement(instance: &mut Self) -> bool {
             matches!(
-            instance.block_type.0,
-            BlockType::MOVEMENT |
-            BlockType::CREATE_OBJECT |
-            BlockType::CREATE_OBJECT2
-        )
+                instance.block_type.0,
+                BlockType::MOVEMENT |
+                BlockType::CREATE_OBJECT |
+                BlockType::CREATE_OBJECT2
+            )
         }
 
         fn update_data(instance: &mut Self) -> bool {
             matches!(
-            instance.block_type.0,
-            BlockType::VALUES |
-            BlockType::CREATE_OBJECT |
-            BlockType::CREATE_OBJECT2
-        )
+                instance.block_type.0,
+                BlockType::VALUES |
+                BlockType::CREATE_OBJECT |
+                BlockType::CREATE_OBJECT2
+            )
         }
 
         fn guid_count(instance: &mut Self) -> bool {
             matches!(
-            instance.block_type.0,
-            BlockType::NEAR_OBJECTS |
-            BlockType::OUT_OF_RANGE_OBJECTS
-        )
+                instance.block_type.0,
+                BlockType::NEAR_OBJECTS |
+                BlockType::OUT_OF_RANGE_OBJECTS
+            )
         }
 
         fn guids(instance: &mut Self) -> bool {
             matches!(
-            instance.block_type.0,
-            BlockType::NEAR_OBJECTS |
-            BlockType::OUT_OF_RANGE_OBJECTS
-        )
+                instance.block_type.0,
+                BlockType::NEAR_OBJECTS |
+                BlockType::OUT_OF_RANGE_OBJECTS
+            )
         }
     }
 

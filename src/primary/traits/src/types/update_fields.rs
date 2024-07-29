@@ -119,50 +119,31 @@ macro_rules! fields {
                 range: Range<u32>
             ) -> AnyResult<FieldValue> {
                 let value = match field_type {
-                    // Long can contains only low (for example, players GUID) (u32 only)
-                    // or it can contains both low and high (u32 + u32)
                     "Long" => {
-                        let mut values = vec![];
+                        let mut values: Vec<u32> = vec![];
                         let mut index_iter = field_indices.iter().peekable();
 
-                        let mut i = range.start;
-                        while i < range.end {
+                        for i in range {
                             if !field_indices.contains(&i) {
                                 values.push(0);
-                                i += 1;
                                 continue;
                             }
 
-                            let cur_i = index_iter.next()
-                                .ok_or(anyhow!("Cannot read cur_i"))?;
-                            let low = buffer_iter.next().ok_or(anyhow!("Cannot read low"))?;
+                            values.push(*buffer_iter.next()
+                                .ok_or(anyhow!("Cannot read item(u32 of u64)"))? as u32);
+                        }
 
-                            let mut has_high = false;
-                            if let Some(&&next_i) = index_iter.peek() {
-                                if *cur_i == (next_i - 1) {
-                                    has_high = true;
-                                    index_iter.next()
-                                        .ok_or(anyhow!("Cannot read index_iter"))?;
-
-                                    i += 1;
-                                }
-                            }
-
-                            if has_high {
-                                let high = buffer_iter.next()
-                                    .ok_or(anyhow!("Cannot read high"))?;
-                                values.push(u64::from(*low) | (u64::from(*high) << 32));
-                            } else {
-                                values.push(u64::from(*low));
-                            }
-
-                            i += 1;
+                        let mut values_u64 = vec![];
+                        for i in (0..values.len()).step_by(2) {
+                            let low = values[i] as u64;
+                            let high = values[i + 1] as u64;
+                            values_u64.push(low | (high << 32))
                         }
 
                         if values.len() > 2 {
-                            FieldValue::LongArray(values)
+                            FieldValue::LongArray(values_u64)
                         } else {
-                            FieldValue::Long(values[0])
+                            FieldValue::Long(values_u64[0])
                         }
                     }
                     "Integer" => {
@@ -299,7 +280,7 @@ macro_rules! fields {
                 }
             }
 
-            fn get_index(variant: &$enum_name) -> u32 {
+            pub fn get_index(variant: &$enum_name) -> u32 {
                 match variant {
                     $(
                         Self::$variant => $start_index,
@@ -394,9 +375,7 @@ fields! {
         Integer Flags = 150,
         Integer GuildId = 151,
         Integer GuildRank = 152,
-        Bytes Bytes = 153,
-        Bytes Bytes2 = 154,
-        Bytes Bytes3 = 155,
+        Bytes[3] Bytes = 153,
         Integer DuelTeam = 156,
         Integer GuildTimestamp = 157,
         Custom (Integer, Integer, TwoShorts, TwoShorts, Integer)[25] QuestLog = 158,
@@ -410,15 +389,14 @@ fields! {
         Long[7] BankBagSlot = 458,
         Long[12] VendorBuybackSlot = 472,
         Long[32] KeyringSlot = 496,
-        Long CurrencyTokenSlot1 = 560,
+        Long[32] CurrencyTokenSlot = 560,
         Long Farsight = 624,
         Long[3] KnownTitles = 626,
         Long KnownCurrencies = 632,
         Integer Xp = 634,
         Integer NextLevelXp = 635,
         TwoShorts[384] SkillInfo = 636,
-        Integer CharacterPoints1 = 1020,
-        Integer CharacterPoints2 = 1021,
+        Integer[2] CharacterPoints = 1020,
         Integer TrackCreatures = 1022,
         Integer TrackResources = 1023,
         Float BlockPercentage = 1024,
@@ -470,7 +448,7 @@ fields! {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum FieldValue {
     Integer(i32),
     IntegerArray(Vec<i32>),

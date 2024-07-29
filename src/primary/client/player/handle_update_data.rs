@@ -57,19 +57,13 @@ impl PacketHandler for Handler {
                                             .. Player::default()
                                         };
 
-                                        // if let Some(movement) = block.movement {
-                                            if let Some(movement_info) = block.movement.movement_info {
-                                                player.location = Some(movement_info.location);
-                                            }
+                                        if let Some(movement_info) = block.movement.movement_info {
+                                            player.location = Some(movement_info.location);
+                                        }
 
-                                            if !block.movement.movement_speed.is_empty() {
-                                                player.movement_speed = block.movement.movement_speed;
-                                            }
-                                        // }
-
-                                        // if !block.update_data.update_fields.is_empty() {
-                                        //     player.fields = block.update_data.update_fields;
-                                        // }
+                                        if let Some(movement_speed) = block.movement.movement_speed {
+                                            player.movement_speed = movement_speed;
+                                        }
 
                                         input.data_storage.lock()
                                             .unwrap().players_map.insert(guid, player);
@@ -95,19 +89,13 @@ impl PacketHandler for Handler {
                                 guid, String::new(), 0, 0, Gender::GENDER_NONE, 1
                             );
 
-                            // if let Some(movement_data) = block.movement {
-                                if let Some(movement_info) = block.movement.movement_info {
-                                    player.location = Some(movement_info.location);
-                                }
+                            if let Some(movement_info) = block.movement.movement_info {
+                                player.location = Some(movement_info.location);
+                            }
 
-                                if !block.movement.movement_speed.is_empty() {
-                                    player.movement_speed = block.movement.movement_speed;
-                                }
-                            // }
-
-                            // if !block.update_data.update_fields.is_empty() {
-                            //     player.fields = block.update_data.update_fields;
-                            // }
+                            if let Some(movement_speed) = block.movement.movement_speed {
+                                player.movement_speed = movement_speed;
+                            }
 
                             input.data_storage.lock().unwrap().players_map.insert(guid, player);
 
@@ -121,15 +109,13 @@ impl PacketHandler for Handler {
                             );
                         } else {
                             players_map.entry(guid).and_modify(|p| {
-                                // if let Some(movement_data) = block.movement_data {
-                                    if let Some(movement_info) = block.movement.movement_info {
-                                        p.location = Some(movement_info.location);
-                                    }
+                                if let Some(movement_info) = block.movement.movement_info {
+                                    p.location = Some(movement_info.location);
+                                }
 
-                                    if !block.movement.movement_speed.is_empty() {
-                                        p.movement_speed = block.movement.movement_speed;
-                                    }
-                                // }
+                                if let Some(movement_speed) = block.movement.movement_speed {
+                                    p.movement_speed = movement_speed;
+                                }
                             });
                         }
                     },
@@ -140,15 +126,10 @@ impl PacketHandler for Handler {
                         .me.as_mut().unwrap().location = Some(movement_info.location);
                 }
 
-                if !block.movement.movement_speed.is_empty() {
+                if let Some(movement_speed) = block.movement.movement_speed {
                     input.session.lock().await
-                        .me.as_mut().unwrap().movement_speed = block.movement.movement_speed;
+                        .me.as_mut().unwrap().movement_speed = movement_speed;
                 }
-
-                // if !block.update_data.update_fields.is_empty() {
-                //     input.session.lock().await
-                //         .me.as_mut().unwrap().fields = block.update_data.update_fields;
-                // }
 
                 let me = input.session.lock().await.me.clone().unwrap();
                 response.push(HandlerOutput::UpdatePlayer(me));
@@ -156,5 +137,138 @@ impl PacketHandler for Handler {
         }
 
         Ok(response)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use anyhow::{Result as AnyResult};
+    use std::collections::BTreeMap;
+    use bitflags::Flags;
+    use tentacli_traits::types::custom_fields::PackedGuid;
+    use tentacli_traits::types::movement::{Movement, MovementExtraFlags, MovementFlags, MovementInfo, ObjectUpdateFlags, UnitMoveType};
+    use tentacli_traits::types::opcodes::Opcode;
+    use tentacli_traits::types::update_data::{BlockType, ObjectTypeID, UpdateData};
+    use tentacli_traits::types::update_fields::{FieldValue, ObjectField, PlayerField, UnitField};
+    use crate::primary::client::player::packet::{Block, UpdateDataIncoming};
+
+    #[test]
+    fn test_packet_building() -> AnyResult<()> {
+        const GUID: u64 = 123;
+        const SCALE_X: f32 = 3.;
+        const AURA_STATE: i32 = 35;
+        const HEALTH: i32 = 52;
+        const XP: i32 = 152;
+
+        const CONSTANT_SPEED: f32 = 10.;
+
+        let block_type = BlockType::new(BlockType::CREATE_OBJECT);
+        let object_type_id = ObjectTypeID::new(ObjectTypeID::PLAYER);
+
+        let block = Block {
+            block_type: block_type.clone(),
+            guid: PackedGuid(GUID),
+            object_type_id: object_type_id.clone(),
+            movement: {
+                let mut movement = Movement::default();
+                let movement_info = MovementInfo {
+                    movement_flags: MovementFlags::NONE,
+                    movement_extra_flags: MovementExtraFlags::NONE,
+                    time: 0,
+                    location: Default::default(),
+                    taxi_info: None,
+                    fall_time: 0,
+                    jump_info: None,
+                };
+
+                movement.set_movement_info(movement_info);
+                movement.movement_speed = {
+                    let mut movement_speed: BTreeMap<u8, f32> = BTreeMap::new();
+                    for move_type in [
+                        UnitMoveType::MOVE_WALK,
+                        UnitMoveType::MOVE_RUN,
+                        UnitMoveType::MOVE_RUN_BACK,
+                        UnitMoveType::MOVE_SWIM,
+                        UnitMoveType::MOVE_SWIM_BACK,
+                        UnitMoveType::MOVE_FLIGHT,
+                        UnitMoveType::MOVE_FLIGHT_BACK,
+                        UnitMoveType::MOVE_TURN_RATE,
+                        UnitMoveType::MOVE_PITCH_RATE,
+                    ] {
+                        movement_speed.insert(move_type, CONSTANT_SPEED);
+                    }
+
+                    Some(movement_speed)
+                };
+
+                movement
+            },
+            update_data: UpdateData {
+                object_fields: {
+                    let mut map: BTreeMap<ObjectField, FieldValue> = BTreeMap::new();
+                    map.insert(ObjectField::Guid, FieldValue::Long(GUID));
+                    map.insert(ObjectField::ScaleX, FieldValue::Float(SCALE_X));
+
+                    map
+                },
+                unit_fields: {
+                    let mut map: BTreeMap<UnitField, FieldValue> = BTreeMap::new();
+                    map.insert(UnitField::AuraState, FieldValue::Integer(AURA_STATE));
+                    map.insert(UnitField::Charm, FieldValue::Long(GUID));
+                    map.insert(UnitField::Health, FieldValue::Integer(HEALTH));
+
+                    map
+                },
+                player_fields: {
+                    let mut map: BTreeMap<PlayerField, FieldValue> = BTreeMap::new();
+                    map.insert(PlayerField::Xp, FieldValue::Integer(XP));
+
+                    map
+                }
+            },
+            ..Block::default()
+        };
+
+        let blocks = vec![block];
+
+        let packet = UpdateDataIncoming {
+            blocks_amount: blocks.len() as u32,
+            blocks,
+        }.to_binary_with_server_opcode(Opcode::SMSG_UPDATE_OBJECT).unwrap();
+
+        let (UpdateDataIncoming { blocks, .. }, _) = UpdateDataIncoming::from_binary(&packet[4..])?;
+
+        assert_eq!(blocks[0].block_type, block_type);
+        assert_eq!(blocks[0].guid, GUID);
+        assert_eq!(blocks[0].object_type_id, object_type_id);
+
+        assert_eq!(blocks[0].movement.movement_speed.is_some(), true);
+        if let Some(movement_speed) = blocks[0].clone().movement.movement_speed {
+            assert_eq!(movement_speed.get(&UnitMoveType::MOVE_SWIM), Some(&CONSTANT_SPEED));
+        }
+
+        assert_eq!(
+            blocks[0].movement.object_update_flags.contains(ObjectUpdateFlags::LIVING),
+            true
+        );
+
+        assert_eq!(
+            blocks[0].update_data.object_fields.get(&ObjectField::Guid),
+            Some(&FieldValue::Long(GUID))
+        );
+        assert_eq!(
+            blocks[0].update_data.object_fields.get(&ObjectField::ScaleX),
+            Some(&FieldValue::Float(SCALE_X))
+        );
+        assert_eq!(
+            blocks[0].update_data.unit_fields.get(&UnitField::AuraState),
+            Some(&FieldValue::Integer(AURA_STATE))
+        );
+        assert_eq!(
+            blocks[0].update_data.player_fields.get(&PlayerField::Xp),
+            Some(&FieldValue::Integer(XP))
+        );
+
+        Ok(())
     }
 }

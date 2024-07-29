@@ -152,10 +152,6 @@ impl BinaryConverter for Player {
 
         Ok(player)
     }
-
-    fn to_bytes(&self) -> Vec<u8> {
-        todo!()
-    }
 }
 
 #[non_exhaustive]

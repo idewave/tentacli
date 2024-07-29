@@ -5,7 +5,7 @@ use serde::{Serialize, Serializer};
 
 use crate::{BinaryConverter, FieldError};
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct PackedGuid(pub u64);
 
 impl PartialEq<u64> for PackedGuid {
@@ -74,10 +74,5 @@ impl BinaryConverter for PackedGuid {
         }
 
         Ok(PackedGuid(guid))
-    }
-
-    fn to_bytes(&self) -> Vec<u8> {
-        let PackedGuid(guid) = self;
-        guid.to_le_bytes().to_vec()
     }
 }

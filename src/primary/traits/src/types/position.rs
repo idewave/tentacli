@@ -3,9 +3,10 @@ use std::io::{BufRead};
 use byteorder::{LittleEndian, ReadBytesExt};
 use serde::{Serialize, Serializer};
 use serde::ser::SerializeStruct;
+
 use crate::{BinaryConverter};
 
-#[derive(Copy, Clone, Default, Debug)]
+#[derive(Copy, Clone, Default, Debug, PartialEq)]
 pub struct Point3D {
     pub x: f32,
     pub y: f32,
@@ -19,8 +20,12 @@ impl Point3D {
 }
 
 impl BinaryConverter for Point3D {
-    fn write_into(&mut self, _: &mut Vec<u8>) -> AnyResult<()> {
-        todo!()
+    fn write_into(&mut self, buffer: &mut Vec<u8>) -> AnyResult<()> {
+        self.x.write_into(buffer)?;
+        self.y.write_into(buffer)?;
+        self.z.write_into(buffer)?;
+
+        Ok(())
     }
 
     fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
@@ -29,10 +34,6 @@ impl BinaryConverter for Point3D {
         let z = reader.read_f32::<LittleEndian>()?;
 
         Ok(Self { x, y, z })
-    }
-
-    fn to_bytes(&self) -> Vec<u8> {
-        todo!()
     }
 }
 
@@ -47,7 +48,7 @@ impl Serialize for Point3D {
     }
 }
 
-#[derive(Copy, Clone, Default, Debug)]
+#[derive(Copy, Clone, Default, Debug, PartialEq)]
 pub struct Vector3D {
     pub point: Point3D,
     pub direction: f32,
@@ -60,18 +61,17 @@ impl Vector3D {
 }
 
 impl BinaryConverter for Vector3D {
-    fn write_into(&mut self, _: &mut Vec<u8>) -> AnyResult<()> {
-        todo!()
+    fn write_into(&mut self, buffer: &mut Vec<u8>) -> AnyResult<()> {
+        self.point.write_into(buffer)?;
+        self.direction.write_into(buffer)?;
+
+        Ok(())
     }
 
     fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
         let point = Point3D::read_from(reader, &mut vec![])?;
         let direction = reader.read_f32::<LittleEndian>()?;
         Ok(Self { point, direction })
-    }
-
-    fn to_bytes(&self) -> Vec<u8> {
-        todo!()
     }
 }
 
