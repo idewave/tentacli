@@ -7,6 +7,7 @@ use tui::widgets::{Block, Borders, BorderType, Clear, Paragraph, Wrap};
 
 use crate::features::ui::traits::{UIComponent};
 
+#[derive(Default)]
 pub struct InfoPanel {
     selected_index: usize,
     total_items: usize,
@@ -44,13 +45,7 @@ impl InfoPanel {
 
 impl UIComponent for InfoPanel {
     fn new() -> Self {
-        Self {
-            selected_index: 0,
-            total_items: 0,
-            total_response_amount: 0,
-            total_request_amount: 0,
-            total_errors_amount: 0,
-        }
+        Self::default()
     }
 
     fn render<B: Backend>(&mut self, frame: &mut Frame<B>, rect: Rect) {
