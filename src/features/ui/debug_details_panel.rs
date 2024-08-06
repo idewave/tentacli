@@ -13,10 +13,12 @@ use crate::features::ui::types::{UIEventFlags};
 
 const PANEL_TITLE: &str = "DEBUG DETAILS";
 
+#[derive(Default)]
 pub struct DebugDetailsPanel {
     output: String,
     scroll_offset: u16,
-    panel_height: u16,
+    panel_height: usize,
+    panel_width: usize,
 }
 
 impl DebugDetailsPanel {
@@ -35,11 +37,13 @@ impl DebugDetailsPanel {
         let text = Text::styled(self.output.clone(), Style::default());
         match key_code {
             KeyCode::Down if key_modifiers.contains(KeyModifiers::CONTROL) => {
-                let text_height = text.height();
-                let panel_height = self.panel_height as usize;
+                let mut text_height = 0;
+                for line in text.lines.iter() {
+                    text_height += (line.width() + self.panel_width - 1) / self.panel_width;
+                }
 
-                if text_height > panel_height &&
-                    (self.scroll_offset as usize) < text_height - panel_height {
+                if text_height > self.panel_height &&
+                    (self.scroll_offset as usize) < text_height - self.panel_height {
                     self.scroll_offset += 1;
                 }
             },
@@ -55,17 +59,14 @@ impl DebugDetailsPanel {
 
 impl UIComponent for DebugDetailsPanel {
     fn new() -> Self {
-        Self {
-            output: String::default(),
-            scroll_offset: 0,
-            panel_height: 0,
-        }
+        Self::default()
     }
 
     fn render<B: Backend>(&mut self, frame: &mut Frame<B>, rect: Rect) {
         let text = Text::styled(self.output.clone(), Style::default());
 
-        self.panel_height = rect.height - MARGIN * 2;
+        self.panel_height = (rect.height - MARGIN * 2) as usize;
+        self.panel_width = (rect.width - MARGIN * 2) as usize;
 
         let block = Block::default()
             .title(PANEL_TITLE)

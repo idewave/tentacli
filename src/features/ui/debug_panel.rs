@@ -24,6 +24,7 @@ struct Item {
     color: Color,
 }
 
+#[derive(Default)]
 pub struct DebugPanel {
     items: Vec<Item>,
     state: ListState,
@@ -259,17 +260,9 @@ impl UIComponent for DebugPanel {
         let info_panel = InfoPanel::new();
 
         Self {
-            items: vec![],
-            state: ListState::default(),
-            start_index: 0,
-            per_page: 0,
-            absolute_index: None,
-            total_response_amount: 0,
-            total_request_amount: 0,
-            total_errors_amount: 0,
-            selected_output: String::default(),
             details_panel,
             info_panel,
+            ..Self::default()
         }
     }
 
