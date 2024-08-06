@@ -66,7 +66,7 @@ impl UIComponent for DebugDetailsPanel {
         let text = Text::styled(self.output.clone(), Style::default());
 
         self.panel_height = (rect.height - MARGIN * 2) as usize;
-        self.panel_width = ( rect.width - MARGIN * 2) as usize;
+        self.panel_width = (rect.width - MARGIN * 2) as usize;
 
         let block = Block::default()
             .title(PANEL_TITLE)
