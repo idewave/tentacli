@@ -144,7 +144,6 @@ impl PacketHandler for Handler {
 mod tests {
     use anyhow::{Result as AnyResult};
     use std::collections::BTreeMap;
-    use bitflags::Flags;
     use tentacli_traits::types::custom_fields::PackedGuid;
     use tentacli_traits::types::movement::{Movement, MovementExtraFlags, MovementFlags, MovementInfo, ObjectUpdateFlags, UnitMoveType};
     use tentacli_traits::types::opcodes::Opcode;

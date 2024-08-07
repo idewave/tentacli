@@ -1,3 +1,4 @@
+use anyhow::{Result as AnyResult};
 use tokio::task::JoinHandle;
 use async_broadcast::{Receiver as BroadcastReceiver, Sender as BroadcastSender};
 
@@ -10,5 +11,5 @@ pub trait Feature: Send {
         sender: BroadcastSender<HandlerOutput>,
         receiver: BroadcastReceiver<HandlerOutput>,
     );
-    fn get_tasks(&mut self) -> Vec<JoinHandle<()>>;
+    fn get_tasks(&mut self) -> AnyResult<Vec<JoinHandle<()>>>;
 }

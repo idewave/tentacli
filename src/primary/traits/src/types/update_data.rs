@@ -3,7 +3,7 @@ use std::collections::{BTreeMap};
 use std::io::{BufRead};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use serde::{Serialize, Serializer};
-use serde::ser::{SerializeStruct, SerializeTuple};
+use serde::ser::{SerializeStruct};
 
 use crate::{BinaryConverter, FieldError};
 use crate::types::update_fields::{FieldValue, ObjectField, PlayerField, UnitField};
@@ -68,7 +68,7 @@ impl BinaryConverter for UpdateData {
         let mut update_fields: BTreeMap<u32, u32> = BTreeMap::new();
 
         for (key, option) in self.object_fields.iter() {
-            let mut values = Self::parse_value(option);
+            let values = Self::parse_value(option);
             let start_index = ObjectField::get_index(key);
 
             for (i, &value) in values.iter().enumerate() {
@@ -115,7 +115,7 @@ impl BinaryConverter for UpdateData {
             .map_err(|e| FieldError::CannotWrite(e, "u8".to_string()))?;
 
         let mut update_mask: Vec<u32> = vec![0; blocks_amount as usize];
-        for (index, &field_value) in update_fields.iter() {
+        for index in update_fields.keys() {
             let block_index = index / 32;
             let bit_index = index % 32;
             update_mask[block_index as usize] |= 1 << bit_index;
@@ -171,8 +171,8 @@ impl BinaryConverter for UpdateData {
             }
 
             let mut unit_blocks = update_blocks.split_off(&ObjectField::get_limit());
-            let mut player_blocks = unit_blocks.split_off(&UnitField::get_limit());
-            let mut object_blocks = update_blocks.clone();
+            let player_blocks = unit_blocks.split_off(&UnitField::get_limit());
+            let object_blocks = update_blocks.clone();
 
             let object_values = object_blocks.values().copied().collect::<Vec<u32>>();
             let unit_values = unit_blocks.values().copied().collect::<Vec<u32>>();

@@ -20,11 +20,12 @@
 //! ## Examples
 //!
 //! ```rust
+//! use anyhow::{Result as AnyResult};
 //! use tokio::task::JoinHandle;
 //!
 //! use tentacli::async_broadcast::{BroadcastSender, BroadcastReceiver};
 //! use tentacli::{Client, RunOptions};
-//! use tentacli_traits::Feature;
+//! use tentacli_traits::{Feature, FeatureError};
 //! use tentacli_traits::types::HandlerOutput;
 //!
 //! #[tokio::main]
@@ -51,8 +52,8 @@
 //!             self._receiver = Some(receiver);
 //!         }
 //!
-//!         fn get_tasks(&mut self) -> Vec<JoinHandle<()>> {
-//!             let mut receiver = self._receiver.as_mut().unwrap().clone();
+//!         fn get_tasks(&mut self) -> AnyResult<Vec<JoinHandle<()>>> {
+//!             let mut receiver = self._receiver.as_mut().ok_or(FeatureError::ReceiverNotFound)?.clone();
 //!
 //!             let handle_smth = || {
 //!                 tokio::spawn(async move {
@@ -69,7 +70,7 @@
 //!                 })
 //!             };
 //!
-//!             vec![handle_smth()]
+//!             Ok(vec![handle_smth()])
 //!         }
 //!     }
 //!

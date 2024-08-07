@@ -1,7 +1,7 @@
 use anyhow::{Result as AnyResult};
 use std::collections::BTreeMap;
 use std::io::{BufRead, Cursor};
-use bitflags::{bitflags, Flags};
+use bitflags::{bitflags};
 use byteorder::{LittleEndian, ReadBytesExt};
 use serde::{Serialize, Serializer};
 use serde::ser::SerializeStruct;
@@ -585,7 +585,7 @@ pub struct SplineInfo {
 }
 
 impl BinaryConverter for SplineInfo {
-    fn write_into(&mut self, buffer: &mut Vec<u8>) -> AnyResult<()> {
+    fn write_into(&mut self, _: &mut Vec<u8>) -> AnyResult<()> {
         Ok(())
     }
 

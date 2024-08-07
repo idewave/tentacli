@@ -1,8 +1,8 @@
 use anyhow::{Result as AnyResult};
 use std::fmt::{Debug, Formatter};
-use std::io::{BufRead, Write};
+use std::io::{BufRead};
 use async_trait::async_trait;
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt};
 use serde::{Serialize, Serializer, ser::SerializeStruct};
 use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncReadExt};
 

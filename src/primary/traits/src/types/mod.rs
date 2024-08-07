@@ -38,6 +38,17 @@ pub struct HandlerInput {
     pub opcode: u16,
 }
 
+/// HandlerOutput represents messages for exchanging data between core and features.
+/// `HandlerOutput::ChatMessage` notifies about messages received in chat
+/// `HandlerOutput::Data` is used to send some packet to server, contains of opcode, packet body and extra string details.
+/// `TransferCharactersList` or `TransferRealmsList` notifies about parsed Characters/Realms list
+/// `UpdatePlayer(Player)` is used to notify third-party apps about current player updates
+/// (triggered by `SMSG_UPDATE_OBJECT`/`SMSG_COMPRESSED_UPDATE_OBJECT` packets)
+/// `HandlerOutput::ConnectionRequest` is used to set connection (each call will **replace** current connection)
+/// `HandlerOutput::Freeze` is mostly used to stop packet handling (to wait for user actions etc)
+/// `HandlerOutput::Drop` exits the handle_output task (since version v4.0.0 this behavior is wrong, should be fixed in future)
+/// `SelectRealm` and `SelectCharacter` are used to notify core about selection (should be used in features)
+/// messages are used to notify features about output (see features/ui and features/console how they processes the output)
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum HandlerOutput {
