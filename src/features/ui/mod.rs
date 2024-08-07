@@ -1,3 +1,4 @@
+use anyhow::{Result as AnyResult};
 use std::process::exit;
 use std::sync::{Arc, Mutex as SyncMutex};
 use std::time::Duration;
@@ -25,7 +26,7 @@ use tokio::time::sleep;
 use tui::backend::CrosstermBackend;
 use tui::layout::{Constraint, Direction, Layout};
 use tui::Terminal;
-use tentacli_traits::Feature;
+use tentacli_traits::{Feature, FeatureError};
 use tentacli_traits::types::HandlerOutput;
 
 mod characters_modal;
@@ -76,14 +77,20 @@ impl Feature for UI {
         self._receiver = Some(receiver);
     }
 
-    fn get_tasks(&mut self) -> Vec<JoinHandle<()>> {
-        let sender = self._sender.as_ref().unwrap().clone();
-        let mut receiver = self._receiver.as_mut().unwrap().clone();
+    fn get_tasks(&mut self) -> AnyResult<Vec<JoinHandle<()>>> {
+        let sender = self._sender.as_ref().ok_or(FeatureError::SenderNotFound)?.clone();
+        let mut receiver = self._receiver.as_mut().ok_or(FeatureError::ReceiverNotFound)?.clone();
 
         enable_raw_mode().unwrap();
         execute!(std::io::stdout(), EnterAlternateScreen, EnableMouseCapture).unwrap();
 
-        let terminal = Arc::new(SyncMutex::new(Terminal::new(CrosstermBackend::new(std::io::stdout())).unwrap()));
+        let terminal = Arc::new(
+            SyncMutex::new(
+                Terminal::new(
+                    CrosstermBackend::new(std::io::stdout())
+                )?
+            )
+        );
 
         let event_flags = Arc::new(SyncMutex::new(UIEventFlags::NONE));
         let characters_modal = Arc::new(SyncMutex::new(CharactersModal::new()));
@@ -112,7 +119,9 @@ impl Feature for UI {
                                 if let Event::Key(key) = event {
                                     let crossterm::event::KeyEvent { modifiers, code, .. } = key;
 
-                                    event_flags.lock().unwrap().set(UIEventFlags::IS_EVENT_HANDLED, false);
+                                    event_flags.lock().unwrap().set(
+                                        UIEventFlags::IS_EVENT_HANDLED, false
+                                    );
 
                                     let outputs: Vec<HandlerOutput> = vec![
                                         characters_modal.lock().unwrap().handle_key_event(
@@ -147,7 +156,8 @@ impl Feature for UI {
                                             event_flags.lock().unwrap().set(
                                                 UIEventFlags::IS_EXIT_REQUESTED, true
                                             );
-                                            sender.broadcast(HandlerOutput::ExitRequest).await.unwrap();
+                                            sender.broadcast(
+                                                HandlerOutput::ExitRequest).await.unwrap();
                                         }
                                     }
                                 } else if let Event::Resize(_, _) = event {
@@ -260,10 +270,10 @@ impl Feature for UI {
             })
         };
 
-        vec![
+        Ok(vec![
             handle_events(),
             handle_input(),
             handle_render(),
-        ]
+        ])
     }
 }

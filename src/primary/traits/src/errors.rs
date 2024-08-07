@@ -7,6 +7,20 @@ pub enum CharacterListError {
 }
 
 #[derive(Error, Debug)]
+pub enum FeatureError {
+    #[error("Sender not found, see set_broadcast_channel")]
+    SenderNotFound,
+    #[error("Receiver not found, see set_broadcast_channel")]
+    ReceiverNotFound,
+}
+
+#[derive(Error, Debug)]
+pub enum MutexError {
+    #[error("'{0}' is not available for locking")]
+    CannotLock(String),
+}
+
+#[derive(Error, Debug)]
 pub enum ConfigError {
     #[error("Config File is not found")]
     NotFound,

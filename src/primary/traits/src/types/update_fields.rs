@@ -64,6 +64,8 @@ macro_rules! fields {
                 let mut buffer_iter = buffer.iter();
 
                 $(
+                    #[allow(unused_assignments)]
+                    #[allow(unused_mut)]
                     let mut size: u32 = 1;
                     $(
                         size = $len;
@@ -73,6 +75,7 @@ macro_rules! fields {
 
                     let types = match field_type {
                         "Custom" => {
+                            #[allow(unused_mut)]
                             let mut types = Vec::new();
                             $(
                                 $(
@@ -121,7 +124,6 @@ macro_rules! fields {
                 let value = match field_type {
                     "Long" => {
                         let mut values: Vec<u32> = vec![];
-                        let mut index_iter = field_indices.iter().peekable();
 
                         for i in range {
                             if !field_indices.contains(&i) {

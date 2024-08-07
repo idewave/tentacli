@@ -195,10 +195,17 @@ impl Client {
             self.handle_write(output_receiver, query_sender),
         ];
 
-        let features_tasks: Vec<JoinHandle<()>> =
-            features.into_iter().flat_map(|mut feature| feature.get_tasks()).collect();
+        // let features_tasks: Vec<JoinHandle<()>> =
+        //     features.into_iter().flat_map(|mut feature| feature.get_tasks()?).collect();
 
-        all_tasks.extend(features_tasks);
+        for mut feature in features.into_iter() {
+            match feature.get_tasks() {
+                Ok(tasks) => all_tasks.extend(tasks),
+                Err(e) => eprintln!("Error on get_tasks: {:?}", e),
+            }
+        }
+
+        // all_tasks.extend(features_tasks);
 
         join_all(all_tasks).await;
 
