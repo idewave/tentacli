@@ -517,18 +517,18 @@ impl Serialize for FieldValue {
                 seq.end()
             },
             FieldValue::Custom(array) => {
-                serializer.serialize_none()
-                // let bytes: Vec<u8> = array.iter().flat_map(|&x| x.to_le_bytes()).collect();
-                // serializer.serialize_bytes(&bytes)
+                let mut seq = serializer.serialize_seq(Some(array.len()))?;
+                for item in array {
+                    seq.serialize_element(&item)?;
+                }
+                seq.end()
             },
             FieldValue::CustomArray(array) => {
-                // let mut seq = serializer.serialize_seq(Some(array.len()))?;
-                // for item in array {
-                //     let bytes: Vec<u8> = item.iter().flat_map(|&x| x.to_le_bytes()).collect();
-                //     seq.serialize_element(&bytes)?;
-                // }
-                // seq.end()
-                serializer.serialize_none()
+                let mut seq = serializer.serialize_seq(Some(array.len()))?;
+                for item in array {
+                    seq.serialize_element(item)?;
+                }
+                seq.end()
             },
             FieldValue::None => serializer.serialize_none(),
         }
