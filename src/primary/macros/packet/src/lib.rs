@@ -324,6 +324,22 @@ pub fn world_packet(input: TokenStream) -> TokenStream {
             }
         });
 
+    let writable_fields = fields.iter().map(|f| {
+        let field_name = f.ident.clone();
+
+        if conditional.contains(&field_name) {
+            quote! {
+                if Self::#field_name(self) {
+                    #binary_converter::write_into(&mut self.#field_name, &mut body)?;
+                }
+            }
+        } else {
+            quote! {
+                #binary_converter::write_into(&mut self.#field_name, &mut body)?;
+            }
+        }
+    });
+
     let output = quote! {
         impl #ident {
             pub fn from_binary(buffer: &[u8]) -> #result<(Self, String)> {
@@ -371,12 +387,7 @@ pub fn world_packet(input: TokenStream) -> TokenStream {
 
             fn _build_body(&mut self) -> #result<Vec<u8>> {
                 let mut body = Vec::new();
-                #(
-                    #binary_converter::write_into(
-                        &mut self.#field_names,
-                        &mut body
-                    )?;
-                )*
+                #(#writable_fields)*
 
                 Ok(body)
             }
@@ -536,6 +547,22 @@ pub fn segment(input: TokenStream) -> TokenStream {
             }
         });
 
+    let writable_fields = fields.iter().map(|f| {
+        let field_name = f.ident.clone();
+
+        if conditional.contains(&field_name) {
+            quote! {
+                if Self::#field_name(self) {
+                    #binary_converter::write_into(&mut self.#field_name, &mut body)?;
+                }
+            }
+        } else {
+            quote! {
+                #binary_converter::write_into(&mut self.#field_name, &mut body)?;
+            }
+        }
+    });
+
     let output = quote! {
         impl #ident {
             pub fn read_from<R: #buf_read>(mut reader: &mut R) -> #result<Self> {
@@ -552,12 +579,7 @@ pub fn segment(input: TokenStream) -> TokenStream {
 
             pub fn to_binary(&mut self) -> #result<Vec<u8>> {
                 let mut body = Vec::new();
-                #(
-                    #binary_converter::write_into(
-                        &mut self.#field_names,
-                        &mut body
-                    )?;
-                )*
+                #(#writable_fields)*
 
                 Ok(body)
             }

@@ -228,7 +228,7 @@ mod tests {
             ..Block::default()
         };
 
-        let blocks = vec![block];
+        let blocks = vec![block.clone(), block.clone(), block];
 
         let packet = UpdateDataIncoming {
             blocks_amount: blocks.len() as u32,
@@ -238,8 +238,14 @@ mod tests {
         let (UpdateDataIncoming { blocks, .. }, _) = UpdateDataIncoming::from_binary(&packet[4..])?;
 
         assert_eq!(blocks[0].block_type, block_type);
+        assert_eq!(blocks[1].block_type, block_type);
+        assert_eq!(blocks[2].block_type, block_type);
         assert_eq!(blocks[0].guid, GUID);
+        assert_eq!(blocks[1].guid, GUID);
+        assert_eq!(blocks[2].guid, GUID);
         assert_eq!(blocks[0].object_type_id, object_type_id);
+        assert_eq!(blocks[1].object_type_id, object_type_id);
+        assert_eq!(blocks[2].object_type_id, object_type_id);
 
         assert_eq!(blocks[0].movement.movement_speed.is_some(), true);
         if let Some(movement_speed) = blocks[0].clone().movement.movement_speed {
