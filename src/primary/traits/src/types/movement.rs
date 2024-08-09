@@ -585,7 +585,33 @@ pub struct SplineInfo {
 }
 
 impl BinaryConverter for SplineInfo {
-    fn write_into(&mut self, _: &mut Vec<u8>) -> AnyResult<()> {
+    fn write_into(&mut self, buffer: &mut Vec<u8>) -> AnyResult<()> {
+        self.spline_flags.bits().write_into(buffer)?;
+
+        if let Some(mut value) = self.facing_angle {
+            value.write_into(buffer)?;
+        }
+
+        if let Some(mut value) = self.facing_target_guid {
+            value.write_into(buffer)?;
+        }
+
+        if let Some(mut point) = self.facing_point {
+            point.write_into(buffer)?;
+        }
+
+        self.time_passed.write_into(buffer)?;
+        self.duration.write_into(buffer)?;
+        self.spline_id.write_into(buffer)?;
+        self.duration_mod.write_into(buffer)?;
+        self.duration_mod_next.write_into(buffer)?;
+        self.vertical_acceleration.write_into(buffer)?;
+        self.parabolic_start_time.write_into(buffer)?;
+        self.nodes_count.write_into(buffer)?;
+        self.path.write_into(buffer)?;
+        self.evaluation_mode.write_into(buffer)?;
+        self.final_destination.write_into(buffer)?;
+
         Ok(())
     }
 
