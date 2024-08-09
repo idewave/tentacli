@@ -1,6 +1,6 @@
 [package]
 name = "tentacli-packet"
-version = "6.0.0"
+version = "6.0.1"
 edition = "2021"
 authors = ["Sergio Ivanuzzo <sergio.ivanuzzo@gmail.com>"]
 description = "Macro for implementing packet structures"

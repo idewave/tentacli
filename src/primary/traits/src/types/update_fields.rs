@@ -2,8 +2,7 @@ use anyhow::{anyhow, Result as AnyResult};
 use std::collections::{BTreeMap};
 use std::ops::Range;
 use core::slice::Iter;
-use serde::{Serialize, Serializer};
-use serde::ser::{SerializeSeq, SerializeTuple};
+use serde::{Serialize};
 
 #[macro_export]
 macro_rules! fields {
@@ -450,7 +449,8 @@ fields! {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Debug, Clone, PartialEq)]
+#[serde(untagged)]
 pub enum FieldValue {
     Integer(i32),
     IntegerArray(Vec<i32>),
@@ -465,72 +465,4 @@ pub enum FieldValue {
     Custom(Vec<FieldValue>),
     CustomArray(Vec<Vec<FieldValue>>),
     None,
-}
-
-impl Serialize for FieldValue {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        match self {
-            FieldValue::Integer(value) => serializer.serialize_i32(*value),
-            FieldValue::IntegerArray(array) => {
-                let mut seq = serializer.serialize_seq(Some(array.len()))?;
-                for item in array {
-                    seq.serialize_element(&item)?;
-                }
-                seq.end()
-            }
-            FieldValue::Long(value) => serializer.serialize_u64(*value),
-            FieldValue::LongArray(array) => {
-                let mut seq = serializer.serialize_seq(Some(array.len()))?;
-                for item in array {
-                    seq.serialize_element(&item)?;
-                }
-                seq.end()
-            },
-            FieldValue::Float(value) => serializer.serialize_f32((value * 100.0).round() / 100.0),
-            FieldValue::FloatArray(array) => {
-                let mut seq = serializer.serialize_seq(Some(array.len()))?;
-                for item in array {
-                    let item = (item * 100.0).round() / 100.0;
-                    seq.serialize_element(&item)?;
-                }
-                seq.end()
-            },
-            FieldValue::Bytes(value) => serializer.serialize_u32(*value),
-            FieldValue::BytesArray(array) => {
-                let mut seq = serializer.serialize_seq(Some(array.len()))?;
-                for item in array {
-                    seq.serialize_element(&item)?;
-                }
-                seq.end()
-            },
-            FieldValue::TwoShorts((value1, value2)) => {
-                let mut tuple = serializer.serialize_tuple(2)?;
-                tuple.serialize_element(&value1)?;
-                tuple.serialize_element(&value2)?;
-                tuple.end()
-            },
-            FieldValue::TwoShortsArray(array) => {
-                let mut seq = serializer.serialize_seq(Some(array.len()))?;
-                for item in array {
-                    seq.serialize_element(&item)?;
-                }
-                seq.end()
-            },
-            FieldValue::Custom(array) => {
-                let mut seq = serializer.serialize_seq(Some(array.len()))?;
-                for item in array {
-                    seq.serialize_element(&item)?;
-                }
-                seq.end()
-            },
-            FieldValue::CustomArray(array) => {
-                let mut seq = serializer.serialize_seq(Some(array.len()))?;
-                for item in array {
-                    seq.serialize_element(item)?;
-                }
-                seq.end()
-            },
-            FieldValue::None => serializer.serialize_none(),
-        }
-    }
 }

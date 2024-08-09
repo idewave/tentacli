@@ -4,7 +4,6 @@ use structmeta::{Flag, StructMeta};
 
 pub struct Imports {
     pub async_buf_read: TokenStream2,
-    pub async_read: TokenStream2,
     pub binary_converter: TokenStream2,
     pub buf_read: TokenStream2,
     pub byteorder_be: TokenStream2,
@@ -22,7 +21,6 @@ impl Imports {
     pub fn get() -> Self {
         Self {
             async_buf_read: quote!(tokio::io::AsyncBufRead),
-            async_read: quote!(tokio::io::AsyncRead),
             binary_converter: quote!(tentacli_traits::BinaryConverter),
             buf_read: quote!(std::io::BufRead),
             byteorder_be: quote!(byteorder::BigEndian),
@@ -40,6 +38,5 @@ impl Imports {
 
 #[derive(StructMeta, Debug)]
 pub struct Attributes {
-    pub compressed: Flag,
     pub with_async: Flag,
 }
