@@ -7,7 +7,7 @@ Since tentacli is designed to be used as both a library and an application, you 
 
 ### How to start
 + Run `cargo run`
-+ After the first run, **tentacli** will create **Config.yml** and **.env** files in the location specified by `RunOptions { ..., config_path, dotenv_path }`.
++ After the first run, **tentacli** will create **Config.yml** and **.env** files in the location specified by `config_path` and `dotenv_path` in `RunOptions { ..., config_path, dotenv_path }`.
 + Edit **Config.yml** to set your account name, password, realm and character for auto-selection (or leave them empty to select manually). You can use regex for name and realm fields.
 + Edit **.env** to set your WoW server's IP address/hostname or keep `127.0.0.1` for a local server
 + Run `cargo run` again
