@@ -8,6 +8,20 @@ pub trait BinaryConverter {
     fn write_into(&mut self, buffer: &mut Vec<u8>) -> AnyResult<()>;
     fn read_from<R: BufRead>(reader: &mut R, dependencies: &mut Vec<u8>) -> AnyResult<Self>
         where Self: Sized;
+
+    // fn read_from_with_logging<R: BufRead>(reader: &mut R, dependencies: &mut Vec<u8>) -> AnyResult<Self>
+    // where Self: Sized + std::fmt::Debug
+    // {
+    //     println!("Calling read_from for type: {}", std::any::type_name::<Self>());
+    //     let result = Self::read_from(reader, dependencies);
+    //
+    //     match &result {
+    //         Ok(value) => println!("Successfully read value: {:?}", value),
+    //         Err(e) => println!("Failed to read value: {:?}", e),
+    //     }
+    //
+    //     result
+    // }
 }
 
 impl BinaryConverter for u8 {
@@ -134,11 +148,11 @@ impl BinaryConverter for String {
 
         let size = match dependencies.len() {
             1 => ReadBytesExt::read_u8(&mut cursor)
-                .map_err(|e| FieldError::CannotRead(e, format!("String u8 size")))? as usize,
+                .map_err(|e| FieldError::CannotRead(e, "String u8 size".to_string()))? as usize,
             2 => ReadBytesExt::read_u16::<LittleEndian>(&mut cursor)
-                .map_err(|e| FieldError::CannotRead(e, format!("String u16 size")))? as usize,
+                .map_err(|e| FieldError::CannotRead(e, "String u16 size".to_string()))? as usize,
             4 => ReadBytesExt::read_u32::<LittleEndian>(&mut cursor)
-                .map_err(|e| FieldError::CannotRead(e, format!("String u32 size")))? as usize,
+                .map_err(|e| FieldError::CannotRead(e, "String u32 size".to_string()))? as usize,
             _ => 0,
         };
 
@@ -185,11 +199,11 @@ impl<T: BinaryConverter + Clone> BinaryConverter for Vec<T> where T: Sized {
         let mut cursor = Cursor::new(dependencies.to_vec());
         let size = match dependencies.len() {
             1 => ReadBytesExt::read_u8(&mut cursor)
-                .map_err(|e| FieldError::CannotRead(e, format!("Vec<T> u8 size")))? as usize,
+                .map_err(|e| FieldError::CannotRead(e, "Vec<T> u8 size".to_string()))? as usize,
             2 => ReadBytesExt::read_u16::<LittleEndian>(&mut cursor)
-                .map_err(|e| FieldError::CannotRead(e, format!("Vec<T> u16 size")))? as usize,
+                .map_err(|e| FieldError::CannotRead(e, "Vec<T> u16 size".to_string()))? as usize,
             _ => ReadBytesExt::read_u32::<LittleEndian>(&mut cursor)
-                .map_err(|e| FieldError::CannotRead(e, format!("Vec<T> u32 size")))? as usize,
+                .map_err(|e| FieldError::CannotRead(e, "Vec<T> u32 size".to_string()))? as usize,
         };
         let mut buffer: Vec<T> = vec![];
 

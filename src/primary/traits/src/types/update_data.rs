@@ -133,7 +133,7 @@ impl BinaryConverter for UpdateData {
     }
 
     fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
-        let blocks_amount = reader.read_u8()?;
+        let blocks_amount = u8::read_from(reader, &mut vec![])?;
 
         if blocks_amount > 0 {
             let mut update_blocks: BTreeMap<u32, u32> = BTreeMap::new();

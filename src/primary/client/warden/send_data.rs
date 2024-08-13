@@ -5,12 +5,12 @@ use tentacli_traits::types::opcodes::{Opcode, WardenOpcode};
 use tentacli_traits::types::warden::WardenModuleInfo;
 
 #[derive(WorldPacket, Serialize, Debug, Default)]
-struct OpcodeIncome {
+struct OpcodeIncoming {
     opcode: u8,
 }
 
 #[derive(WorldPacket, Serialize, Debug, Default)]
-struct ModuleUseIncome {
+struct ModuleUseIncoming {
     #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
     module_md5: [u8; 16],
     #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
@@ -19,7 +19,7 @@ struct ModuleUseIncome {
 }
 
 #[derive(WorldPacket, Serialize, Debug, Default)]
-struct ModuleCacheIncome {
+struct ModuleCacheIncoming {
     partial_size: u16,
     #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
     #[depends_on(partial_size)]
@@ -27,7 +27,7 @@ struct ModuleCacheIncome {
 }
 
 #[derive(WorldPacket, Serialize, Debug, Default)]
-struct HashRequestIncome {
+struct HashRequestIncoming {
     #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
     seed: [u8; 16],
 }
@@ -46,7 +46,7 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let mut response = Vec::new();
 
-        let (OpcodeIncome { opcode }, json) = OpcodeIncome::from_binary(&input.data)?;
+        let (OpcodeIncoming { opcode }, json) = OpcodeIncoming::from_binary(&input.data)?;
         response.push(HandlerOutput::ResponseMessage(
             Opcode::get_opcode_name(input.opcode as u32)
                 .unwrap_or(format!("Unknown opcode: {}", input.opcode)),
@@ -55,11 +55,11 @@ impl PacketHandler for Handler {
 
         return match opcode {
             WardenOpcode::WARDEN_SMSG_MODULE_USE => {
-                let (ModuleUseIncome {
+                let (ModuleUseIncoming {
                     module_md5,
                     module_decrypt_key,
                     compressed_size
-                }, json) = ModuleUseIncome::from_binary(&input.data)?;
+                }, json) = ModuleUseIncoming::from_binary(&input.data)?;
 
                 response.push(HandlerOutput::ResponseMessage(
                     Opcode::get_opcode_name(input.opcode as u32)
@@ -82,10 +82,10 @@ impl PacketHandler for Handler {
                 ])
             },
             WardenOpcode::WARDEN_SMSG_MODULE_CACHE => {
-                let (ModuleCacheIncome {
+                let (ModuleCacheIncoming {
                     partial,
                     ..
-                }, json) = ModuleCacheIncome::from_binary(&input.data)?;
+                }, json) = ModuleCacheIncoming::from_binary(&input.data)?;
 
                 response.push(HandlerOutput::DebugMessage(
                     Opcode::get_opcode_name(input.opcode as u32)
@@ -113,9 +113,9 @@ impl PacketHandler for Handler {
             },
             WardenOpcode::WARDEN_SMSG_HASH_REQUEST => {
                 if let Some(module_info) = input.session.lock().await.warden_module_info.as_mut() {
-                    let (HashRequestIncome {
+                    let (HashRequestIncoming {
                         seed
-                    }, json) = HashRequestIncome::from_binary(&input.data)?;
+                    }, json) = HashRequestIncoming::from_binary(&input.data)?;
 
                     response.push(HandlerOutput::DebugMessage(
                         Opcode::get_opcode_name(input.opcode as u32)

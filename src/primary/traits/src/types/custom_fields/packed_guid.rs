@@ -53,7 +53,7 @@ impl BinaryConverter for PackedGuid {
     }
 
     fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
-        let mask = reader.read_u8().unwrap_or(0);
+        let mask = reader.read_u8()?;
 
         if mask == 0 {
             return Ok(PackedGuid(0));

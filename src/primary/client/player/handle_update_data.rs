@@ -7,7 +7,7 @@ use tentacli_traits::types::player::{Gender, Player};
 use tentacli_traits::types::update_data::{ObjectTypeMask};
 use tentacli_traits::types::update_fields::{FieldValue, ObjectField};
 
-use crate::primary::client::player::globals::NameQueryOutcome;
+use crate::primary::client::player::globals::NameQueryOutgoing;
 use crate::primary::client::player::packet::UpdateDataIncoming;
 
 pub struct Handler;
@@ -70,7 +70,7 @@ impl PacketHandler for Handler {
 
                                         return Ok(
                                             vec![HandlerOutput::Data(
-                                                NameQueryOutcome { guid }
+                                                NameQueryOutgoing { guid }
                                                     .unpack_with_client_opcode(
                                                         Opcode::CMSG_NAME_QUERY
                                                     )?
@@ -102,7 +102,7 @@ impl PacketHandler for Handler {
                             return Ok(
                                 vec![
                                     HandlerOutput::Data(
-                                        NameQueryOutcome { guid }
+                                        NameQueryOutgoing { guid }
                                             .unpack_with_client_opcode(Opcode::CMSG_NAME_QUERY)?
                                     )
                                 ]

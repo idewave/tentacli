@@ -9,7 +9,7 @@ use tentacli_utils::compress;
 const SEED_SIZE: usize = 4;
 
 #[derive(WorldPacket, Serialize, Debug)]
-struct Income {
+struct Incoming {
     skip: u32,
     server_seed: [u8; SEED_SIZE],
     #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
@@ -17,7 +17,7 @@ struct Income {
 }
 
 #[derive(WorldPacket, Serialize, Debug)]
-struct Outcome {
+struct Outgoing {
     build: u32,
     unknown: u32,
     account: String,
@@ -40,7 +40,7 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let mut response = Vec::new();
 
-        let (Income { server_seed, .. }, json) = Income::from_binary(&input.data)?;
+        let (Incoming { server_seed, .. }, json) = Incoming::from_binary(&input.data)?;
 
         response.push(HandlerOutput::ResponseMessage(
             Opcode::get_opcode_name(input.opcode as u32)
@@ -75,7 +75,7 @@ impl PacketHandler for Handler {
 
         let addon_info = AddonInfo::build_addon_info(addons)?;
 
-        response.push(HandlerOutput::Data(Outcome {
+        response.push(HandlerOutput::Data(Outgoing {
             build: 12340,
             unknown: 0,
             account: format!("{}\0", account),

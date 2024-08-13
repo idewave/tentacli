@@ -3,7 +3,7 @@ use tentacli_traits::PacketHandler;
 use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
 use tentacli_traits::types::opcodes::Opcode;
 
-use crate::primary::client::chat::globals::JoinChannelOutcome;
+use crate::primary::client::chat::globals::JoinChannelOutgoing;
 
 const COMMON_CHANNEL_ID: u32 = 1;
 const LFG_CHANNEL_ID: u32 = 26;
@@ -17,22 +17,22 @@ impl PacketHandler for Handler {
 
         let channel_labels = &input.session.lock().await.get_config().unwrap().channel_labels.clone();
 
-        response.push(HandlerOutput::Data(JoinChannelOutcome {
+        response.push(HandlerOutput::Data(JoinChannelOutgoing {
             channel_id: COMMON_CHANNEL_ID,
             channel_name: format!("{}\0", channel_labels.common.to_string()),
-            ..JoinChannelOutcome::default()
+            ..JoinChannelOutgoing::default()
         }.unpack_with_client_opcode(Opcode::CMSG_JOIN_CHANNEL)?));
 
-        response.push(HandlerOutput::Data(JoinChannelOutcome {
+        response.push(HandlerOutput::Data(JoinChannelOutgoing {
             channel_id: LFG_CHANNEL_ID,
             channel_name: format!("{}\0", channel_labels.lfg.to_string()),
-            ..JoinChannelOutcome::default()
+            ..JoinChannelOutgoing::default()
         }.unpack_with_client_opcode(Opcode::CMSG_JOIN_CHANNEL)?));
 
-        response.push(HandlerOutput::Data(JoinChannelOutcome {
+        response.push(HandlerOutput::Data(JoinChannelOutgoing {
             channel_id: TRADE_CHANNEL_ID,
             channel_name: format!("{}\0", channel_labels.trade.to_string()),
-            ..JoinChannelOutcome::default()
+            ..JoinChannelOutgoing::default()
         }.unpack_with_client_opcode(Opcode::CMSG_JOIN_CHANNEL)?));
 
         Ok(response)

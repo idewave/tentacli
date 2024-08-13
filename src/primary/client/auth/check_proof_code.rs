@@ -4,7 +4,7 @@ use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
 use tentacli_traits::types::auth::AuthLogonResult;
 
 #[derive(LoginPacket, Serialize, Debug)]
-struct Income {
+struct Incoming {
     unknown: u8,
     code: u8,
 }
@@ -15,7 +15,7 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let mut response = Vec::new();
 
-        let (Income { code, .. }, _) = Income::from_binary(&input.data)?;
+        let (Incoming { code, .. }, _) = Incoming::from_binary(&input.data)?;
 
         if code != AuthLogonResult::AUTH_LOGON_SUCCESS {
             let message = match code {

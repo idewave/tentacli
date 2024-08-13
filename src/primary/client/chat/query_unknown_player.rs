@@ -3,10 +3,10 @@ use tentacli_traits::PacketHandler;
 use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
 
 use crate::primary::client::Opcode;
-use crate::primary::client::player::globals::NameQueryOutcome;
+use crate::primary::client::player::globals::NameQueryOutgoing;
 
 #[derive(WorldPacket, Serialize, Debug)]
-struct Income {
+struct Incoming {
     skip: [u8; 5],
     sender_guid: u64,
 }
@@ -17,7 +17,7 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let mut response = Vec::new();
 
-        let (Income { sender_guid, .. }, json) = Income::from_binary(&input.data)?;
+        let (Incoming { sender_guid, .. }, json) = Incoming::from_binary(&input.data)?;
 
         response.push(HandlerOutput::ResponseMessage(
             Opcode::get_opcode_name(input.opcode as u32)
@@ -28,7 +28,7 @@ impl PacketHandler for Handler {
         let players_map = &mut input.data_storage.lock().unwrap().players_map;
         if players_map.get(&sender_guid).is_none() {
             response.push(HandlerOutput::Data(
-                NameQueryOutcome { guid: sender_guid }
+                NameQueryOutgoing { guid: sender_guid }
                     .unpack_with_client_opcode(Opcode::CMSG_NAME_QUERY)?
             ));
 

@@ -292,9 +292,7 @@ impl BinaryConverter for Movement {
         } else {
             if instance.object_update_flags.contains(ObjectUpdateFlags::POSITION) {
                 instance.position_info = Some(PositionInfo::read_from(reader, &mut vec![])?);
-            }
-
-            if instance.object_update_flags.contains(ObjectUpdateFlags::STATIONARY_POSITION) {
+            } else if instance.object_update_flags.contains(ObjectUpdateFlags::STATIONARY_POSITION) {
                 let stationary_position = Vector3D::read_from(reader, &mut vec![])?;
 
                 if instance.object_update_flags.contains(ObjectUpdateFlags::TRANSPORT) {
