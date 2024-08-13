@@ -11,6 +11,8 @@ mod realm_split;
 mod request_characters;
 mod set_in_world;
 mod logout;
+mod set_time_speed;
+mod weather;
 
 pub struct RealmProcessor;
 
@@ -57,14 +59,17 @@ impl Processor for RealmProcessor {
                 vec![Box::new(parse_motd::Handler)]
             },
             Opcode::SMSG_LOGIN_SETTIMESPEED => {
-                vec![]
+                vec![Box::new(set_time_speed::Handler)]
             },
             Opcode::SMSG_SET_FORCED_REACTIONS => {
                 vec![]
             },
             Opcode::SMSG_LOGOUT_COMPLETE => {
                 vec![Box::new(logout::Handler)]
-            }
+            },
+            Opcode::SMSG_WEATHER => {
+                vec![Box::new(weather::Handler)]
+            },
             _ => {
                 vec![]
             },

@@ -5,8 +5,9 @@ use tentacli_traits::types::opcodes::Opcode;
 
 #[derive(WorldPacket, Serialize, Debug)]
 struct Incoming {
-    skip: u32,
-    message: String,
+    uptime: u32,
+    game_speed: f32,
+    unknown: u32,
 }
 
 pub struct Handler;

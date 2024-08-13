@@ -6,12 +6,12 @@ use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
 use tentacli_traits::types::opcodes::Opcode;
 use tentacli_traits::types::player::Player;
 
-use crate::primary::client::player::globals::CharacterEnumOutcome;
+use crate::primary::client::player::globals::CharacterEnumOutgoing;
 use crate::primary::client::player::packet::CharCreateOutcome;
 use crate::primary::client::player::traits::CharacterCreateToolkit;
 
 #[derive(WorldPacket, Serialize, Debug)]
-struct Income {
+struct Incoming {
     characters_count: u8,
     #[depends_on(characters_count)]
     characters: Vec<Player>,
@@ -23,7 +23,7 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let mut response = Vec::new();
 
-        let (Income { characters, .. }, json) = Income::from_binary(&input.data)?;
+        let (Incoming { characters, .. }, json) = Incoming::from_binary(&input.data)?;
 
         response.push(HandlerOutput::ResponseMessage(
             Opcode::get_opcode_name(input.opcode as u32)
@@ -69,7 +69,7 @@ impl PacketHandler for Handler {
 
                 response.push(
                     HandlerOutput::Data(
-                        CharacterEnumOutcome::default()
+                        CharacterEnumOutgoing::default()
                             .unpack_with_client_opcode(Opcode::CMSG_CHAR_ENUM)?
                     )
                 );

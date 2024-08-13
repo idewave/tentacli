@@ -5,7 +5,7 @@ use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
 use tentacli_traits::types::opcodes::Opcode;
 
 #[derive(WorldPacket, Serialize, Debug)]
-struct Outcome {
+struct Outgoing {
     guid: u64,
 }
 
@@ -40,7 +40,7 @@ impl PacketHandler for Handler {
 
         response.push(
             HandlerOutput::Data(
-                Outcome { guid: my_guid }.unpack_with_client_opcode(Opcode::CMSG_PLAYER_LOGIN)?
+                Outgoing { guid: my_guid }.unpack_with_client_opcode(Opcode::CMSG_PLAYER_LOGIN)?
             )
         );
 

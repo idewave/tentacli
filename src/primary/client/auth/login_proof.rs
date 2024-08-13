@@ -8,7 +8,7 @@ use tentacli_utils::encode_hex;
 
 #[derive(LoginPacket, Serialize, Debug)]
 #[options(with_async)]
-pub struct LoginChallengeResponse {
+pub struct LoginChallengeIncoming {
     unknown: u8,
     code: u8,
     #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
@@ -26,7 +26,7 @@ pub struct LoginChallengeResponse {
 }
 
 #[derive(LoginPacket, Serialize, Debug)]
-struct Outcome {
+struct Outgoing {
     #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
     public_ephemeral: [u8; 32],
     #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
@@ -43,13 +43,13 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let mut response = Vec::new();
 
-        let (LoginChallengeResponse {
+        let (LoginChallengeIncoming {
             n,
             g,
             server_ephemeral,
             salt,
             ..
-        }, json) = LoginChallengeResponse::from_binary(&input.data)?;
+        }, json) = LoginChallengeIncoming::from_binary(&input.data)?;
 
         response.push(HandlerOutput::ResponseMessage(
             Opcode::get_opcode_name(input.opcode as u32)
@@ -78,7 +78,7 @@ impl PacketHandler for Handler {
             Some(encode_hex(&srp_client.session_key())),
         ));
 
-        response.push(HandlerOutput::Data(Outcome {
+        response.push(HandlerOutput::Data(Outgoing {
             public_ephemeral: srp_client.public_ephemeral(),
             client_proof,
             crc_hash,

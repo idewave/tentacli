@@ -8,7 +8,7 @@ use tentacli_traits::types::realm::Realm;
 
 #[derive(LoginPacket, Serialize, Debug, Default)]
 #[options(with_async)]
-pub struct RealmlistResponse {
+pub struct RealmlistIncoming {
     skip: [u8; 6],
     realms_count: u16,
     #[depends_on(realms_count)]
@@ -21,7 +21,7 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let mut response = Vec::new();
 
-        let (RealmlistResponse { realms, .. }, json) = RealmlistResponse::from_binary(&input.data)?;
+        let (RealmlistIncoming { realms, .. }, json) = RealmlistIncoming::from_binary(&input.data)?;
 
         response.push(HandlerOutput::ResponseMessage(
             Opcode::get_opcode_name(input.opcode as u32)
