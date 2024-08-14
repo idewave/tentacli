@@ -270,8 +270,9 @@ impl Serialize for Spell {
 }
 
 impl BinaryConverter for Spell {
-    fn write_into(&mut self, _: &mut Vec<u8>) -> AnyResult<()> {
-        todo!()
+    fn write_into(&mut self, buffer: &mut Vec<u8>) -> AnyResult<()> {
+        self.spell_id.write_into(buffer)?;
+        Ok(())
     }
 
     fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
@@ -312,8 +313,14 @@ impl Serialize for CooldownInfo {
 }
 
 impl BinaryConverter for CooldownInfo {
-    fn write_into(&mut self, _: &mut Vec<u8>) -> AnyResult<()> {
-        todo!()
+    fn write_into(&mut self, buffer: &mut Vec<u8>) -> AnyResult<()> {
+        self.spell_id.write_into(buffer)?;
+        self.item_id.write_into(buffer)?;
+        self.spell_category.write_into(buffer)?;
+        self.cooldown_duration.write_into(buffer)?;
+        self.cooldown_category.write_into(buffer)?;
+
+        Ok(())
     }
 
     fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
