@@ -4,6 +4,7 @@ use tentacli_traits::types::opcodes::Opcode;
 
 mod handle_initial_spells;
 mod handle_spell_go;
+mod aura_update_all;
 
 pub struct SpellProcessor;
 
@@ -17,6 +18,9 @@ impl Processor for SpellProcessor {
                 vec![
                     Box::new(handle_initial_spells::Handler),
                 ]
+            },
+            Opcode::SMSG_AURA_UPDATE_ALL => {
+                vec![Box::new(aura_update_all::Handler)]
             },
             _ => vec![]
         };

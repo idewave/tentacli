@@ -1,10 +1,11 @@
 use anyhow::{Result as AnyResult};
 use std::io::BufRead;
+use bitflags::bitflags;
 use byteorder::{LittleEndian, ReadBytesExt};
 use serde::{Serialize, Serializer};
 use serde::ser::SerializeStruct;
 
-use crate::BinaryConverter;
+use crate::{BinaryConverter, impl_serialize_for_flags};
 use crate::errors::FieldError;
 
 #[non_exhaustive]
@@ -340,5 +341,44 @@ impl BinaryConverter for CooldownInfo {
             cooldown_duration,
             cooldown_category,
         })
+    }
+}
+
+bitflags! {
+    #[derive(Copy, Clone, Debug, PartialEq)]
+    pub struct AuraFlags: u8 {
+        const NONE = 0x00;
+        const EFF_INDEX_0 = 0x01;
+        const EFF_INDEX_1 = 0x02;
+        const EFF_INDEX_2 = 0x04;
+        const NOT_CASTER = 0x08;
+        const POSITIVE = 0x10;
+        const DURATION = 0x20;
+        const UNK2 = 0x40;
+        const NEGATIVE = 0x80;
+    }
+}
+
+impl Default for AuraFlags {
+    fn default() -> Self {
+        Self::NONE
+    }
+}
+
+impl_serialize_for_flags!(AuraFlags);
+
+impl BinaryConverter for AuraFlags {
+    fn write_into(&mut self, buffer: &mut Vec<u8>) -> AnyResult<()> {
+        self.bits().write_into(buffer)?;
+
+        Ok(())
+    }
+
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self>
+    where
+        Self: Sized
+    {
+        let instance = Self::from_bits(reader.read_u8()?).unwrap();
+        Ok(instance)
     }
 }

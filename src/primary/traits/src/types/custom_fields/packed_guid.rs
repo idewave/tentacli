@@ -5,8 +5,14 @@ use serde::{Serialize, Serializer};
 
 use crate::{BinaryConverter, FieldError};
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct PackedGuid(pub u64);
+
+impl PackedGuid {
+    pub fn is_default(&self) -> bool {
+        *self == Self::default()
+    }
+}
 
 impl PartialEq<u64> for PackedGuid {
     fn eq(&self, other: &u64) -> bool {
