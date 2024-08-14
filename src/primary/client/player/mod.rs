@@ -9,6 +9,7 @@ pub mod get_characters_list;
 pub mod player_login;
 mod check_character_create_status;
 mod traits;
+mod init_world_states;
 
 pub struct PlayerProcessor;
 
@@ -43,6 +44,9 @@ impl Processor for PlayerProcessor {
             },
             Opcode::SMSG_ACHIEVEMENT_EARNED => {
                 vec![]
+            },
+            Opcode::SMSG_INIT_WORLD_STATES => {
+                vec![Box::new(init_world_states::Handler)]
             },
             Opcode::SMSG_CHAR_ENUM => {
                 vec![

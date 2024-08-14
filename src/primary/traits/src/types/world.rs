@@ -1,7 +1,9 @@
 use anyhow::{Result as AnyResult};
-use std::io::BufRead;
+use std::io::{BufRead};
+use byteorder::{LittleEndian, ReadBytesExt};
 use serde::{Serialize, Serializer};
-use crate::BinaryConverter;
+use serde::ser::SerializeStruct;
+use crate::{BinaryConverter, FieldError};
 
 #[non_exhaustive]
 #[derive(Debug, Default, Clone, PartialEq)]
@@ -56,5 +58,50 @@ impl Serialize for WeatherState {
         };
 
         serializer.serialize_str(field_name)
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct WorldState {
+    pub state: u32,
+    pub value: u32,
+}
+
+impl BinaryConverter for WorldState {
+    fn write_into(&mut self, buffer: &mut Vec<u8>) -> AnyResult<()> {
+        self.state.write_into(buffer)?;
+        self.value.write_into(buffer)?;
+
+        Ok(())
+    }
+
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self>
+    where
+        Self: Sized
+    {
+        let label = "WorldState+";
+
+        let state = reader.read_u32::<LittleEndian>()
+            .map_err(|e| FieldError::CannotRead(e, format!("state:u16 ({})", label)))?;
+        let value = reader.read_u32::<LittleEndian>()
+            .map_err(|e| FieldError::CannotRead(e, format!("value:u16 ({})", label)))?;
+
+        Ok(Self {
+            state,
+            value
+        })
+    }
+}
+
+impl Serialize for WorldState {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer
+    {
+        const FIELDS_AMOUNT: usize = 2;
+        let mut state = serializer.serialize_struct("WorldState", FIELDS_AMOUNT)?;
+        state.serialize_field("state", &self.state)?;
+        state.serialize_field("value", &self.value)?;
+        state.end()
     }
 }

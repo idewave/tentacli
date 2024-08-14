@@ -302,7 +302,7 @@ pub fn world_packet(input: TokenStream) -> TokenStream {
             } else {
                 quote! {
                     {
-                        let value: #field_type = #binary_converter::read_from(&mut reader, &mut vec![])?;
+                        let value: #field_type = #binary_converter::read_from(&mut reader, &mut vec![]).unwrap_or_default();
                         cache.#field_name = value.clone();
                         value
                     }
