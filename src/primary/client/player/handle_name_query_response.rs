@@ -65,7 +65,7 @@ impl PacketHandler for Handler {
                 p.race = race;
                 p.class = class;
                 p.gender = gender;
-            }).or_insert_with(|| Player::new(guid, name.to_string(), race, class, gender, 1));
+            }).or_insert_with(|| Player::new(guid, name.to_string(), race, class, gender));
         }
 
         Ok(response)

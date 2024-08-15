@@ -5,7 +5,7 @@ use tentacli_traits::types::opcodes::Opcode;
 
 #[derive(WorldPacket, Serialize, Debug)]
 struct Outgoing {
-    #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
+    #[serde(serialize_with = "crate::primary::serializers::serialize_array")]
     unknown: [u8; 4],
 }
 

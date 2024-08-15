@@ -1,13 +1,9 @@
 use async_trait::async_trait;
 use tentacli_traits::{PacketHandler};
 use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
-use tentacli_traits::types::custom_fields::PackedGuid;
 use tentacli_traits::types::opcodes::Opcode;
-use tentacli_traits::types::player::{Gender, Player};
-use tentacli_traits::types::update_data::{ObjectTypeMask};
-use tentacli_traits::types::update_fields::{FieldValue, ObjectField};
+use tentacli_traits::types::player::{Player};
 
-use crate::primary::client::player::globals::NameQueryOutgoing;
 use crate::primary::client::player::packet::UpdateDataIncoming;
 
 pub struct Handler;
@@ -32,107 +28,29 @@ impl PacketHandler for Handler {
             input.session.lock().await.me.as_ref().unwrap().guid
         };
 
-        let mut players_map = {
-            let guard = input.data_storage.lock().unwrap();
-            guard.players_map.clone()
-        };
-
         for block in blocks {
             if block.guid == 0 {
                 continue;
             }
 
-            let PackedGuid(guid) = block.guid;
+            if block.guid == my_guid {
+                let mut guard = input.session.lock().await;
+                let me = guard.me.as_mut().unwrap();
+                me.update_data = block.update_data;
 
-            if my_guid != guid {
-                match block.update_data.object_fields.get(&ObjectField::Type) {
-                    Some(type_mask) => {
-
-                        if let FieldValue::Integer(mask) = type_mask {
-                            match *mask {
-                                ObjectTypeMask::IS_PLAYER => {
-                                    if players_map.get(&guid).is_none() {
-                                        let mut player = Player {
-                                            guid,
-                                            .. Player::default()
-                                        };
-
-                                        if let Some(movement_info) = block.movement.movement_info {
-                                            player.location = Some(movement_info.location);
-                                        }
-
-                                        if let Some(movement_speed) = block.movement.movement_speed {
-                                            player.movement_speed = movement_speed;
-                                        }
-
-                                        input.data_storage.lock()
-                                            .unwrap().players_map.insert(guid, player);
-
-                                        return Ok(
-                                            vec![HandlerOutput::Data(
-                                                NameQueryOutgoing { guid }
-                                                    .unpack_with_client_opcode(
-                                                        Opcode::CMSG_NAME_QUERY
-                                                    )?
-                                            )]
-                                        );
-                                    }
-                                },
-                                ObjectTypeMask::IS_UNIT => {},
-                                _ => {},
-                            }
-                        }
-                    },
-                    None => {
-                        if players_map.get(&guid).is_none() {
-                            let mut player = Player::new(
-                                guid, String::new(), 0, 0, Gender::GENDER_NONE, 1
-                            );
-
-                            if let Some(movement_info) = block.movement.movement_info {
-                                player.location = Some(movement_info.location);
-                            }
-
-                            if let Some(movement_speed) = block.movement.movement_speed {
-                                player.movement_speed = movement_speed;
-                            }
-
-                            input.data_storage.lock().unwrap().players_map.insert(guid, player);
-
-                            return Ok(
-                                vec![
-                                    HandlerOutput::Data(
-                                        NameQueryOutgoing { guid }
-                                            .unpack_with_client_opcode(Opcode::CMSG_NAME_QUERY)?
-                                    )
-                                ]
-                            );
-                        } else {
-                            players_map.entry(guid).and_modify(|p| {
-                                if let Some(movement_info) = block.movement.movement_info {
-                                    p.location = Some(movement_info.location);
-                                }
-
-                                if let Some(movement_speed) = block.movement.movement_speed {
-                                    p.movement_speed = movement_speed;
-                                }
-                            });
-                        }
-                    },
+                if let Some(movement_info) = block.movement.movement_info {
+                    me.movement_info = movement_info;
                 }
             } else {
+                let mut player = Player::default();
+                player.update_data = block.update_data;
+
                 if let Some(movement_info) = block.movement.movement_info {
-                    input.session.lock().await
-                        .me.as_mut().unwrap().location = Some(movement_info.location);
+                    player.movement_info = movement_info;
                 }
 
-                if let Some(movement_speed) = block.movement.movement_speed {
-                    input.session.lock().await
-                        .me.as_mut().unwrap().movement_speed = movement_speed;
-                }
-
-                let me = input.session.lock().await.me.clone().unwrap();
-                response.push(HandlerOutput::UpdatePlayer(me));
+                let mut guard = input.data_storage.lock().unwrap();
+                guard.players_map.insert(block.guid.0, player);
             }
         }
 

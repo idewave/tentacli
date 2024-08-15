@@ -1,20 +1,17 @@
 use anyhow::{Result as AnyResult};
-use std::collections::BTreeMap;
-use std::fmt::{Debug, Formatter};
+use std::fmt::{Debug};
 use std::io::BufRead;
 use bitflags::bitflags;
 use byteorder::{LittleEndian, ReadBytesExt};
-use serde::{Serialize, Serializer};
-use serde::ser::{SerializeStruct};
+use serde::{Serialize};
 
 use crate::errors::FieldError;
 use crate::BinaryConverter;
+use crate::types::movement::MovementInfo;
 use crate::types::position::{Point3D, Vector3D};
-use crate::types::update_fields::FieldValue;
+use crate::types::update_data::UpdateData;
 
-pub type UpdateFields = BTreeMap<u32, FieldValue>;
-
-#[derive(Clone, Default)]
+#[derive(Serialize, Clone, Default, Debug)]
 pub struct Player {
     pub guid: u64,
     pub name: String,
@@ -22,56 +19,24 @@ pub struct Player {
     pub class: u8,
     pub gender: u8,
     pub level: u8,
-    pub fields: UpdateFields,
-    pub movement_speed: BTreeMap<u8, f32>,
+    #[serde(skip_serializing_if = "UpdateData::is_default")]
+    pub update_data: UpdateData,
+    #[serde(skip_serializing_if = "MovementInfo::is_default")]
+    pub movement_info: MovementInfo,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub location: Option<Vector3D>,
 }
 
 impl Player {
-    pub fn new(guid: u64, name: String, race: u8, class: u8, gender: u8, level: u8) -> Self {
+    pub fn new(guid: u64, name: String, race: u8, class: u8, gender: u8) -> Self {
         Self {
             guid,
             name,
             race,
             class,
             gender,
-            level,
-            fields: BTreeMap::new(),
-            movement_speed: BTreeMap::new(),
-            location: None,
+            ..Self::default()
         }
-    }
-}
-
-impl Debug for Player {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "guid: {:?}, name: {:?}, race: {:?}, class: {:?}\n \
-            position: {:?}\nFields: \n{:?}\nMovement speed:\n{:?}",
-            self.guid,
-            self.name,
-            self.race,
-            self.class,
-            self.location,
-            self.fields,
-            self.movement_speed,
-        )
-    }
-}
-
-impl Serialize for Player {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        const FIELDS_AMOUNT: usize = 7;
-        let mut state = serializer.serialize_struct("Character", FIELDS_AMOUNT)?;
-        state.serialize_field("guid", &self.guid)?;
-        state.serialize_field("name", &self.name)?;
-        state.serialize_field("race", &self.race)?;
-        state.serialize_field("class", &self.class)?;
-        state.serialize_field("gender", &self.gender)?;
-        state.serialize_field("level", &self.level)?;
-        state.serialize_field("location", &self.location)?;
-        state.end()
     }
 }
 
@@ -148,7 +113,8 @@ impl BinaryConverter for Player {
                 .map_err(|e| FieldError::CannotRead(e, format!("inventory:u32_2 ({})", label)))?;
         }
 
-        let player = Player::new(guid, name, race, class, gender, level);
+        let mut player = Player::new(guid, name, race, class, gender);
+        player.level = level;
 
         Ok(player)
     }

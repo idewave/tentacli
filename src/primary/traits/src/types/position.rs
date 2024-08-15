@@ -1,12 +1,11 @@
 use anyhow::{Result as AnyResult};
 use std::io::{BufRead};
 use byteorder::{LittleEndian, ReadBytesExt};
-use serde::{Serialize, Serializer};
-use serde::ser::SerializeStruct;
+use serde::{Serialize};
 
 use crate::{BinaryConverter};
 
-#[derive(Copy, Clone, Default, Debug, PartialEq)]
+#[derive(Serialize, Copy, Clone, Default, Debug, PartialEq)]
 pub struct Point3D {
     pub x: f32,
     pub y: f32,
@@ -37,18 +36,7 @@ impl BinaryConverter for Point3D {
     }
 }
 
-impl Serialize for Point3D {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        const FIELDS_AMOUNT: usize = 3;
-        let mut state = serializer.serialize_struct("Point3D", FIELDS_AMOUNT)?;
-        state.serialize_field("x", &self.x)?;
-        state.serialize_field("y", &self.y)?;
-        state.serialize_field("z", &self.z)?;
-        state.end()
-    }
-}
-
-#[derive(Copy, Clone, Default, Debug, PartialEq)]
+#[derive(Serialize,Copy, Clone, Default, Debug, PartialEq)]
 pub struct Vector3D {
     pub point: Point3D,
     pub direction: f32,
@@ -72,15 +60,5 @@ impl BinaryConverter for Vector3D {
         let point = Point3D::read_from(reader, &mut vec![])?;
         let direction = reader.read_f32::<LittleEndian>()?;
         Ok(Self { point, direction })
-    }
-}
-
-impl Serialize for Vector3D {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        const FIELDS_AMOUNT: usize = 2;
-        let mut state = serializer.serialize_struct("Vector3D", FIELDS_AMOUNT)?;
-        state.serialize_field("point", &self.point)?;
-        state.serialize_field("direction", &self.direction)?;
-        state.end()
     }
 }

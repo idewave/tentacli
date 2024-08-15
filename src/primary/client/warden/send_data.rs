@@ -11,9 +11,9 @@ struct OpcodeIncoming {
 
 #[derive(WorldPacket, Serialize, Debug, Default)]
 struct ModuleUseIncoming {
-    #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
+    #[serde(serialize_with = "crate::primary::serializers::serialize_array")]
     module_md5: [u8; 16],
-    #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
+    #[serde(serialize_with = "crate::primary::serializers::serialize_array")]
     module_decrypt_key: [u8; 16],
     compressed_size: u32,
 }
@@ -21,14 +21,14 @@ struct ModuleUseIncoming {
 #[derive(WorldPacket, Serialize, Debug, Default)]
 struct ModuleCacheIncoming {
     partial_size: u16,
-    #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
+    #[serde(serialize_with = "crate::primary::serializers::serialize_array")]
     #[depends_on(partial_size)]
     partial: Vec<u8>,
 }
 
 #[derive(WorldPacket, Serialize, Debug, Default)]
 struct HashRequestIncoming {
-    #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
+    #[serde(serialize_with = "crate::primary::serializers::serialize_array")]
     seed: [u8; 16],
 }
 

@@ -2,7 +2,6 @@ use anyhow::{Result as AnyResult};
 use std::io::{BufRead};
 use byteorder::{LittleEndian, ReadBytesExt};
 use serde::{Serialize, Serializer};
-use serde::ser::SerializeStruct;
 use crate::{BinaryConverter, FieldError};
 
 #[non_exhaustive]
@@ -61,7 +60,7 @@ impl Serialize for WeatherState {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Serialize, Debug, Clone, Default)]
 pub struct WorldState {
     pub state: u32,
     pub value: u32,
@@ -90,18 +89,5 @@ impl BinaryConverter for WorldState {
             state,
             value
         })
-    }
-}
-
-impl Serialize for WorldState {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer
-    {
-        const FIELDS_AMOUNT: usize = 2;
-        let mut state = serializer.serialize_struct("WorldState", FIELDS_AMOUNT)?;
-        state.serialize_field("state", &self.state)?;
-        state.serialize_field("value", &self.value)?;
-        state.end()
     }
 }

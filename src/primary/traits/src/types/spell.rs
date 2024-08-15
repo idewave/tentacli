@@ -3,7 +3,6 @@ use std::io::BufRead;
 use bitflags::bitflags;
 use byteorder::{LittleEndian, ReadBytesExt};
 use serde::{Serialize, Serializer};
-use serde::ser::SerializeStruct;
 
 use crate::{BinaryConverter, impl_serialize_for_flags};
 use crate::errors::FieldError;
@@ -255,18 +254,9 @@ impl CastResult {
     pub const SPELL_CAST_OK: u8 = 255;
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Serialize, Debug, Default, Clone)]
 pub struct Spell {
     pub spell_id: u32,
-}
-
-impl Serialize for Spell {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        const FIELDS_AMOUNT: usize = 1;
-        let mut state = serializer.serialize_struct("Spell", FIELDS_AMOUNT)?;
-        state.serialize_field("spell_id", &self.spell_id)?;
-        state.end()
-    }
 }
 
 impl BinaryConverter for Spell {
@@ -290,26 +280,13 @@ impl BinaryConverter for Spell {
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Serialize, Debug, Default, Clone)]
 pub struct CooldownInfo {
     pub spell_id: u32,
     pub item_id: u16,
     pub spell_category: u16,
     pub cooldown_duration: u32,
     pub cooldown_category: u32,
-}
-
-impl Serialize for CooldownInfo {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        const FIELDS_AMOUNT: usize = 5;
-        let mut state = serializer.serialize_struct("CooldownInfo", FIELDS_AMOUNT)?;
-        state.serialize_field("spell_id", &self.spell_id)?;
-        state.serialize_field("item_id", &self.item_id)?;
-        state.serialize_field("spell_category", &self.spell_category)?;
-        state.serialize_field("cooldown_duration", &self.cooldown_duration)?;
-        state.serialize_field("cooldown_category", &self.cooldown_category)?;
-        state.end()
-    }
 }
 
 impl BinaryConverter for CooldownInfo {
