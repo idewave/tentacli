@@ -11,7 +11,7 @@ use tentacli_utils::encode_hex;
 pub struct LoginChallengeIncoming {
     unknown: u8,
     code: u8,
-    #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
+    #[serde(serialize_with = "crate::primary::serializers::serialize_array")]
     server_ephemeral: [u8; 32],
     g_len: u8,
     #[depends_on(g_len)]
@@ -19,7 +19,7 @@ pub struct LoginChallengeIncoming {
     n_len: u8,
     #[depends_on(n_len)]
     n: Vec<u8>,
-    #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
+    #[serde(serialize_with = "crate::primary::serializers::serialize_array")]
     salt: [u8; 32],
     version_challenge: [u8; 16],
     unknown2: u8,
@@ -27,11 +27,11 @@ pub struct LoginChallengeIncoming {
 
 #[derive(LoginPacket, Serialize, Debug)]
 struct Outgoing {
-    #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
+    #[serde(serialize_with = "crate::primary::serializers::serialize_array")]
     public_ephemeral: [u8; 32],
-    #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
+    #[serde(serialize_with = "crate::primary::serializers::serialize_array")]
     client_proof: [u8; 20],
-    #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
+    #[serde(serialize_with = "crate::primary::serializers::serialize_array")]
     crc_hash: [u8; 20],
     keys_count: u8,
     security_flags: u8,

@@ -1,15 +1,15 @@
 use anyhow::{Result as AnyResult};
-use std::fmt::{Debug, Formatter};
+use std::fmt::{Debug};
 use std::io::{BufRead};
 use async_trait::async_trait;
 use byteorder::{LittleEndian, ReadBytesExt};
-use serde::{Serialize, Serializer, ser::SerializeStruct};
+use serde::{Serialize};
 use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncReadExt};
 
 use crate::{BinaryConverter, StreamReader};
 use crate::errors::FieldError;
 
-#[derive(Clone, Default)]
+#[derive(Serialize, Debug, Clone, Default)]
 pub struct Realm {
     pub icon: u8,
     pub lock: u8,
@@ -20,37 +20,6 @@ pub struct Realm {
     pub characters_amount: u8,
     pub timezone: u8,
     pub server_id: u8,
-}
-
-impl Debug for Realm {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "\nicon: {:?}, flags: {}, name: '{}' address: {:?}, server_id: {:?}\n",
-            self.icon,
-            self.flags,
-            self.name,
-            self.address,
-            self.server_id,
-        )
-    }
-}
-
-impl Serialize for Realm {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        const FIELDS_AMOUNT: usize = 8;
-        let mut state = serializer.serialize_struct("Realm", FIELDS_AMOUNT)?;
-        state.serialize_field("icon", &self.icon)?;
-        state.serialize_field("lock", &self.lock)?;
-        state.serialize_field("flags", &self.flags)?;
-        state.serialize_field("name", &self.name)?;
-        state.serialize_field("address", &self.address)?;
-        state.serialize_field("population", &self.population)?;
-        state.serialize_field("characters_amount", &self.characters_amount)?;
-        state.serialize_field("timezone", &self.timezone)?;
-        state.serialize_field("server_id", &self.server_id)?;
-        state.end()
-    }
 }
 
 impl BinaryConverter for Realm {

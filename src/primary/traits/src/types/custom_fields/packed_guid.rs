@@ -1,11 +1,11 @@
 use anyhow::{Result as AnyResult};
 use std::io::{BufRead, Write};
 use byteorder::ReadBytesExt;
-use serde::{Serialize, Serializer};
+use serde::{Serialize};
 
 use crate::{BinaryConverter, FieldError};
 
-#[derive(Debug, Default, Clone, Copy, PartialEq)]
+#[derive(Serialize, Debug, Default, Clone, Copy, PartialEq)]
 pub struct PackedGuid(pub u64);
 
 impl PackedGuid {
@@ -25,12 +25,6 @@ impl PartialEq<PackedGuid> for u64 {
     fn eq(&self, other: &PackedGuid) -> bool {
         let PackedGuid(guid) = other;
         guid == self
-    }
-}
-
-impl Serialize for PackedGuid {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        serializer.serialize_u64(self.0)
     }
 }
 

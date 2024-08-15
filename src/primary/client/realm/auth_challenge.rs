@@ -11,8 +11,9 @@ const SEED_SIZE: usize = 4;
 #[derive(WorldPacket, Serialize, Debug)]
 struct Incoming {
     skip: u32,
+    #[serde(serialize_with = "crate::primary::serializers::serialize_array")]
     server_seed: [u8; SEED_SIZE],
-    #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
+    #[serde(serialize_with = "crate::primary::serializers::serialize_array")]
     seed: [u8; 32],
 }
 
@@ -22,15 +23,15 @@ struct Outgoing {
     unknown: u32,
     account: String,
     unknown2: u32,
-    #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
+    #[serde(serialize_with = "crate::primary::serializers::serialize_array")]
     client_seed: [u8; SEED_SIZE],
     unknown3: u64,
     server_id: u32,
     unknown4: u64,
-    #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
+    #[serde(serialize_with = "crate::primary::serializers::serialize_array")]
     digest: [u8; 20],
     addons_count: u32,
-    #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
+    #[serde(serialize_with = "crate::primary::serializers::serialize_array")]
     addons: Vec<u8>,
 }
 

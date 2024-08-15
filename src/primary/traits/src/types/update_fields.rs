@@ -17,7 +17,7 @@ macro_rules! fields {
         }
     ) => {
         $(#[$enum_attr])*
-        #[derive(Ord, PartialOrd, Eq, PartialEq, Clone, Debug)]
+        #[derive(Serialize, Ord, PartialOrd, Eq, PartialEq, Clone, Debug)]
         #[allow(dead_code)]
         pub enum $enum_name {
             $(

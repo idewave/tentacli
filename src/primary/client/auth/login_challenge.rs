@@ -8,7 +8,7 @@ struct Outgoing {
     unknown: u8,
     packet_size: u16,
     game_name: String,
-    #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
+    #[serde(serialize_with = "crate::primary::serializers::serialize_array")]
     version: [u8; 3],
     build: u16,
     platform: String,
