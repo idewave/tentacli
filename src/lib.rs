@@ -10,10 +10,8 @@
 //! What this client can do:
 //! - it can parse basic packet set, such as SMSG_MESSAGECHAT or SMSG_UPDATE_OBJECT
 //! - it allows you to login on any server, but you can enter the world only on servers without Warden anti-cheat
-//! - you can use `autoselect` options in config file to set default Realm/Character and avoid the step of selecting
-//! this data manually
-//! - if installed with `ui` feature (installed by default), it allows scrolling the packets history using keyboard and
-//! seeing the details for each packet
+//! - you can use `autoselect` options in config file to set default Realm/Character and avoid the step of selecting this data manually
+//! - if installed with `ui` feature (installed by default), it allows scrolling the packets history using keyboard and seeing the details for each packet
 //! - if installed with `console` feature, it will display only minimal output
 //! - if installed without any feature, client will output nothing (but you still can provide own output feature)
 //!
