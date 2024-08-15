@@ -6,12 +6,11 @@ use tentacli_traits::types::opcodes::Opcode;
 
 #[derive(WorldPacket, Serialize)]
 #[allow(dead_code)]
-struct Income {
+struct Incoming {
     message_type: u8,
     language: u32,
     sender_guid: u64,
     skip: u32,
-    #[depends_on(message_type)]
     #[conditional]
     channel_name: String,
     target_guid: u64,
@@ -20,7 +19,7 @@ struct Income {
     message: String,
 }
 
-impl Income {
+impl Incoming {
     fn channel_name(instance: &mut Self) -> bool {
         instance.message_type == MessageType::CHANNEL
     }
@@ -32,7 +31,7 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let mut response = Vec::new();
 
-        let (Income {
+        let (Incoming {
             language,
             sender_guid,
             channel_name,
@@ -40,7 +39,7 @@ impl PacketHandler for Handler {
             message,
             message_type,
             ..
-        }, json) = Income::from_binary(&input.data)?;
+        }, json) = Incoming::from_binary(&input.data)?;
 
         response.push(HandlerOutput::ResponseMessage(
             Opcode::get_opcode_name(input.opcode as u32)

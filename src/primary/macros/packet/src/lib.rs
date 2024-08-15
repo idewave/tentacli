@@ -302,7 +302,7 @@ pub fn world_packet(input: TokenStream) -> TokenStream {
             } else {
                 quote! {
                     {
-                        let value: #field_type = #binary_converter::read_from(&mut reader, &mut vec![])?;
+                        let value: #field_type = #binary_converter::read_from(&mut reader, &mut vec![]).unwrap_or_default();
                         cache.#field_name = value.clone();
                         value
                     }
@@ -343,12 +343,12 @@ pub fn world_packet(input: TokenStream) -> TokenStream {
     let output = quote! {
         impl #ident {
             pub fn from_binary(buffer: &[u8]) -> #result<(Self, String)> {
-                Ok(Self::build_instance(buffer)?)
+                Self::build_instance(buffer)
             }
 
             pub fn from_compressed_binary(buffer: &[u8]) -> #result<(Self, String)> {
                 let mut buffer = #utils::deflate_decompress(&buffer[6..])?;
-                Ok(Self::build_instance(&buffer)?)
+                Self::build_instance(&buffer)
             }
 
             pub fn to_binary_with_server_opcode(

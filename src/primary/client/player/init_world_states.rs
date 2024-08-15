@@ -2,11 +2,16 @@ use async_trait::async_trait;
 use tentacli_traits::PacketHandler;
 use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
 use tentacli_traits::types::opcodes::Opcode;
+use tentacli_traits::types::world::WorldState;
 
 #[derive(WorldPacket, Serialize, Debug)]
 struct Incoming {
-    skip: u32,
-    message: String,
+    map_id: u32,
+    zone_id: u32,
+    area_id: u32,
+    blocks_amount: u16,
+    #[depends_on(blocks_amount)]
+    world_states: Vec<WorldState>,
 }
 
 pub struct Handler;

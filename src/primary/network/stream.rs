@@ -7,7 +7,7 @@ use tentacli_crypto::{Decryptor, Encryptor, WardenCrypt};
 use tentacli_traits::types::{IncomingPacket, OutgoingPacket};
 use tentacli_traits::types::opcodes::Opcode;
 // use tokio_util::io::InspectReader;
-use crate::primary::client::auth::{LoginChallengeResponse, LoginProofResponse, RealmlistResponse};
+use crate::primary::client::auth::{LoginChallengeIncoming, LoginProofResponse, RealmlistIncoming};
 
 pub const INCOME_WORLD_OPCODE_LENGTH: usize = 2;
 pub const OUTCOME_WORLD_PACKET_HEADER_LENGTH: usize = 6;
@@ -80,7 +80,7 @@ impl Reader {
             let opcode = self._stream.read_u8().await?;
             let body = match opcode {
                 Opcode::LOGIN_CHALLENGE => {
-                    LoginChallengeResponse::from_stream(&mut self._stream)
+                    LoginChallengeIncoming::from_stream(&mut self._stream)
                         .await
                         .map_err(|e| Error::new(std::io::ErrorKind::Other, e))?
                 },
@@ -90,7 +90,7 @@ impl Reader {
                         .map_err(|e| Error::new(std::io::ErrorKind::Other, e))?
                 },
                 Opcode::REALM_LIST => {
-                    RealmlistResponse::from_stream(&mut self._stream)
+                    RealmlistIncoming::from_stream(&mut self._stream)
                         .await
                         .map_err(|e| Error::new(std::io::ErrorKind::Other, e))?
                 },

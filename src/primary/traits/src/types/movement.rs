@@ -4,31 +4,47 @@ use std::io::{BufRead, Cursor};
 use bitflags::{bitflags};
 use byteorder::{LittleEndian, ReadBytesExt};
 use serde::{Serialize, Serializer};
-use serde::ser::SerializeStruct;
 
 use crate::{BinaryConverter, impl_serialize_for_flags};
 use crate::types::custom_fields::PackedGuid;
 use crate::types::position::{Point3D, Vector3D};
 
-#[derive(Clone, Default, Debug)]
+#[derive(Serialize, Clone, Default, Debug, PartialEq)]
 pub struct Movement {
     pub object_update_flags: ObjectUpdateFlags,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub movement_info: Option<MovementInfo>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub high_guid: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub low_guid: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub target_guid: Option<PackedGuid>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub transport_timer: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub vehicle_id: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub vehicle_orientation: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub game_object_rotation: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub movement_speed: Option<BTreeMap<u8, f32>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub spline_info: Option<SplineInfo>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub position_info: Option<PositionInfo>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub game_object_position: Option<Vector3D>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub world_object_position: Option<Vector3D>,
 }
 
 impl Movement {
+    pub fn is_default(&self) -> bool {
+        *self == Self::default()
+    }
+
     pub fn set_movement_info(&mut self, movement_info: MovementInfo) {
         self.object_update_flags.set(ObjectUpdateFlags::LIVING, true);
         self.movement_info = Some(movement_info);
@@ -81,20 +97,6 @@ impl Movement {
     pub fn set_game_object_rotation(&mut self, game_object_rotation: i64) {
         self.object_update_flags.set(ObjectUpdateFlags::ROTATION, true);
         self.game_object_rotation = Some(game_object_rotation);
-    }
-
-    pub fn is_empty(instance: &Self) -> bool {
-        return instance.movement_info.is_none()
-            && instance.high_guid.is_none()
-            && instance.low_guid.is_none()
-            && instance.transport_timer.is_none()
-            && instance.target_guid.is_none()
-            && instance.vehicle_id.is_none()
-            && instance.spline_info.is_none()
-            && instance.movement_speed.is_none()
-            && instance.position_info.is_none()
-            && instance.game_object_position.is_none()
-            && instance.world_object_position.is_none()
     }
 }
 
@@ -292,9 +294,7 @@ impl BinaryConverter for Movement {
         } else {
             if instance.object_update_flags.contains(ObjectUpdateFlags::POSITION) {
                 instance.position_info = Some(PositionInfo::read_from(reader, &mut vec![])?);
-            }
-
-            if instance.object_update_flags.contains(ObjectUpdateFlags::STATIONARY_POSITION) {
+            } else if instance.object_update_flags.contains(ObjectUpdateFlags::STATIONARY_POSITION) {
                 let stationary_position = Vector3D::read_from(reader, &mut vec![])?;
 
                 if instance.object_update_flags.contains(ObjectUpdateFlags::TRANSPORT) {
@@ -344,74 +344,25 @@ impl BinaryConverter for Movement {
     }
 }
 
-impl Serialize for Movement {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        let mut fields_amount = 3;
-
-        if self.movement_info.is_some() {
-            fields_amount += 1;
-        }
-
-        if self.target_guid.is_some() {
-            fields_amount += 1;
-        }
-
-        if self.movement_speed.is_some() {
-            fields_amount += 1;
-        }
-
-        if self.spline_info.is_some() {
-            fields_amount += 1;
-        }
-
-        if self.position_info.is_some() {
-            fields_amount += 1;
-        }
-
-        let mut state = serializer.serialize_struct("Movement", fields_amount)?;
-        state.serialize_field("object_update_flags", &self.object_update_flags)?;
-
-        if self.movement_info.is_some() {
-            state.serialize_field("movement_info", &self.movement_info)?;
-        }
-
-        if self.high_guid.is_some() {
-            state.serialize_field("high_guid", &self.high_guid)?;
-        }
-
-        if self.low_guid.is_some() {
-            state.serialize_field("low_guid", &self.low_guid)?;
-        }
-
-        if self.target_guid.is_some() {
-            state.serialize_field("target_guid", &self.target_guid)?;
-        }
-
-        if self.movement_speed.is_some() {
-            state.serialize_field("movement_speed", &self.movement_speed)?;
-        }
-
-        if self.spline_info.is_some() {
-            state.serialize_field("spline_info", &self.spline_info)?;
-        }
-
-        if self.position_info.is_some() {
-            state.serialize_field("position_info", &self.position_info)?;
-        }
-
-        state.end()
-    }
-}
-
-#[derive(Clone, Default, Debug, Copy)]
+#[derive(Serialize, Clone, Default, Debug, Copy, PartialEq)]
 pub struct MovementInfo {
+    #[serde(skip_serializing_if = "MovementFlags::is_empty")]
     pub movement_flags: MovementFlags,
+    #[serde(skip_serializing_if = "MovementExtraFlags::is_empty")]
     pub movement_extra_flags: MovementExtraFlags,
     pub time: u32,
     pub location: Vector3D,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub taxi_info: Option<TaxiInfo>,
     pub fall_time: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub jump_info: Option<JumpInfo>,
+}
+
+impl MovementInfo {
+    pub fn is_default(&self) -> bool {
+        *self == Self::default()
+    }
 }
 
 impl BinaryConverter for MovementInfo {
@@ -473,54 +424,7 @@ impl BinaryConverter for MovementInfo {
     }
 }
 
-impl Serialize for MovementInfo {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        let mut fields_amount = 3;
-
-        if !self.movement_flags.is_empty() {
-            fields_amount += 1;
-        }
-
-        if !self.movement_extra_flags.is_empty() {
-            fields_amount += 1;
-        }
-
-        if self.taxi_info.is_some() {
-            fields_amount += 1;
-        }
-
-        if self.jump_info.is_some() {
-            fields_amount += 1;
-        }
-
-        let mut state = serializer.serialize_struct("MovementInfo", fields_amount)?;
-
-        if !self.movement_flags.is_empty() {
-            state.serialize_field("movement_flags", &self.movement_flags)?;
-        }
-
-        if !self.movement_extra_flags.is_empty() {
-            state.serialize_field("movement_flags_extra", &self.movement_extra_flags)?;
-        }
-
-        state.serialize_field("time", &self.time)?;
-        state.serialize_field("location", &self.location)?;
-
-        if self.taxi_info.is_some() {
-            state.serialize_field("taxi_info", &self.taxi_info)?;
-        }
-
-        state.serialize_field("fall_time", &self.fall_time)?;
-
-        if self.jump_info.is_some() {
-            state.serialize_field("jump_info", &self.jump_info)?;
-        }
-
-        state.end()
-    }
-}
-
-#[derive(Clone, Default, Debug, Copy)]
+#[derive(Serialize, Clone, Default, Debug, Copy, PartialEq)]
 pub struct JumpInfo {
     pub vertical_speed: f32,
     pub sin_angle: f32,
@@ -553,19 +457,7 @@ impl BinaryConverter for JumpInfo {
     }
 }
 
-impl Serialize for JumpInfo {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        const FIELDS_AMOUNT: usize = 4;
-        let mut state = serializer.serialize_struct("JumpInfo", FIELDS_AMOUNT)?;
-        state.serialize_field("vertical_speed", &self.vertical_speed)?;
-        state.serialize_field("sin_angle", &self.sin_angle)?;
-        state.serialize_field("cos_angle", &self.cos_angle)?;
-        state.serialize_field("horizontal_speed", &self.horizontal_speed)?;
-        state.end()
-    }
-}
-
-#[derive(Clone, Default, Debug)]
+#[derive(Serialize, Clone, Default, Debug, PartialEq)]
 pub struct SplineInfo {
     pub spline_flags: SplineFlags,
     pub facing_angle: Option<f32>,
@@ -663,16 +555,7 @@ impl BinaryConverter for SplineInfo {
     }
 }
 
-impl Serialize for SplineInfo {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        const FIELDS_AMOUNT: usize = 1;
-        let mut state = serializer.serialize_struct("SplineInfo", FIELDS_AMOUNT)?;
-        state.serialize_field("spline_flags", &self.spline_flags)?;
-        state.end()
-    }
-}
-
-#[derive(Clone, Default, Debug, Copy)]
+#[derive(Serialize, Clone, Default, Debug, Copy, PartialEq)]
 pub struct TaxiInfo {
     pub guid: PackedGuid,
     pub location: Vector3D,
@@ -714,20 +597,7 @@ impl BinaryConverter for TaxiInfo {
     }
 }
 
-impl Serialize for TaxiInfo {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        const FIELDS_AMOUNT: usize = 5;
-        let mut state = serializer.serialize_struct("TaxiInfo", FIELDS_AMOUNT)?;
-        state.serialize_field("guid", &self.guid)?;
-        state.serialize_field("location", &self.location)?;
-        state.serialize_field("time", &self.time)?;
-        state.serialize_field("seat", &self.seat)?;
-        state.serialize_field("time2", &self.time2)?;
-        state.end()
-    }
-}
-
-#[derive(Clone, Default, Debug, Copy)]
+#[derive(Serialize, Clone, Default, Debug, Copy, PartialEq)]
 pub struct PositionInfo {
     pub transport_guid: PackedGuid,
     pub world_object_point: Point3D,
@@ -758,16 +628,6 @@ impl BinaryConverter for PositionInfo {
             location,
             corpse_direction,
         })
-    }
-}
-
-impl Serialize for PositionInfo {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        const FIELDS_AMOUNT: usize = 2;
-        let mut state = serializer.serialize_struct("PositionInfo", FIELDS_AMOUNT)?;
-        state.serialize_field("transport_guid", &self.transport_guid)?;
-        state.serialize_field("location", &self.location)?;
-        state.end()
     }
 }
 
@@ -863,7 +723,7 @@ impl Default for MovementExtraFlags {
 impl_serialize_for_flags!(MovementExtraFlags);
 
 bitflags! {
-    #[derive(Copy, Clone, Debug)]
+    #[derive(Copy, Clone, Debug, PartialEq)]
     pub struct SplineFlags: u32 {
         const NONE = 0x00000000;
         const DONE = 0x00000100;
@@ -902,7 +762,7 @@ impl Default for SplineFlags {
 impl_serialize_for_flags!(SplineFlags);
 
 bitflags! {
-    #[derive(Copy, Clone, Debug)]
+    #[derive(Copy, Clone, Debug, PartialEq)]
     pub struct ObjectUpdateFlags: u16 {
         const NONE = 0x0000;
         const SELF = 0x0001;

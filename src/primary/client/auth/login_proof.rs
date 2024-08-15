@@ -8,10 +8,10 @@ use tentacli_utils::encode_hex;
 
 #[derive(LoginPacket, Serialize, Debug)]
 #[options(with_async)]
-pub struct LoginChallengeResponse {
+pub struct LoginChallengeIncoming {
     unknown: u8,
     code: u8,
-    #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
+    #[serde(serialize_with = "crate::primary::serializers::serialize_array")]
     server_ephemeral: [u8; 32],
     g_len: u8,
     #[depends_on(g_len)]
@@ -19,19 +19,19 @@ pub struct LoginChallengeResponse {
     n_len: u8,
     #[depends_on(n_len)]
     n: Vec<u8>,
-    #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
+    #[serde(serialize_with = "crate::primary::serializers::serialize_array")]
     salt: [u8; 32],
     version_challenge: [u8; 16],
     unknown2: u8,
 }
 
 #[derive(LoginPacket, Serialize, Debug)]
-struct Outcome {
-    #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
+struct Outgoing {
+    #[serde(serialize_with = "crate::primary::serializers::serialize_array")]
     public_ephemeral: [u8; 32],
-    #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
+    #[serde(serialize_with = "crate::primary::serializers::serialize_array")]
     client_proof: [u8; 20],
-    #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
+    #[serde(serialize_with = "crate::primary::serializers::serialize_array")]
     crc_hash: [u8; 20],
     keys_count: u8,
     security_flags: u8,
@@ -43,13 +43,13 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let mut response = Vec::new();
 
-        let (LoginChallengeResponse {
+        let (LoginChallengeIncoming {
             n,
             g,
             server_ephemeral,
             salt,
             ..
-        }, json) = LoginChallengeResponse::from_binary(&input.data)?;
+        }, json) = LoginChallengeIncoming::from_binary(&input.data)?;
 
         response.push(HandlerOutput::ResponseMessage(
             Opcode::get_opcode_name(input.opcode as u32)
@@ -78,7 +78,7 @@ impl PacketHandler for Handler {
             Some(encode_hex(&srp_client.session_key())),
         ));
 
-        response.push(HandlerOutput::Data(Outcome {
+        response.push(HandlerOutput::Data(Outgoing {
             public_ephemeral: srp_client.public_ephemeral(),
             client_proof,
             crc_hash,

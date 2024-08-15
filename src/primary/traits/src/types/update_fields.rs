@@ -17,7 +17,7 @@ macro_rules! fields {
         }
     ) => {
         $(#[$enum_attr])*
-        #[derive(Ord, PartialOrd, Eq, PartialEq, Clone, Debug)]
+        #[derive(Serialize, Ord, PartialOrd, Eq, PartialEq, Clone, Debug)]
         #[allow(dead_code)]
         pub enum $enum_name {
             $(
@@ -434,14 +434,14 @@ fields! {
         Integer LifetimeHonorableKills = 1228,
         Integer FieldBytes2 = 1229,
         Integer WatchedFactionIndex = 1230,
-        Integer CombatRating1 = 1231,
-        Integer ArenaTeamInfo11 = 1256,
+        Integer[25] CombatRating = 1231,
+        Integer[21] ArenaTeamInfo1 = 1256,
         Integer HonorCurrency = 1277,
         Integer ArenaCurrency = 1278,
         Integer MaxLevel = 1279,
-        Integer DailyQuests1 = 1280,
+        Integer[25] DailyQuests = 1280,
         Float[4] RuneRegen = 1305,
-        Integer NoReagentCost1 = 1309,
+        Integer[3] NoReagentCost = 1309,
         Integer[6] GlyphSlots = 1312,
         Integer[6] Glyphs = 1318,
         Integer GlyphsEnabled = 1324,

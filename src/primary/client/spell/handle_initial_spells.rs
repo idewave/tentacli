@@ -5,7 +5,7 @@ use tentacli_traits::types::opcodes::Opcode;
 use tentacli_traits::types::spell::{CooldownInfo, Spell};
 
 #[derive(WorldPacket, Serialize, Debug, Default)]
-struct Income {
+struct Incoming {
     skip: u8,
     spell_count: u16,
     #[depends_on(spell_count)]
@@ -21,7 +21,7 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let mut response = Vec::new();
 
-        let (Income {spells, ..}, json) = Income::from_binary(&input.data)?;
+        let (Incoming {spells, ..}, json) = Incoming::from_binary(&input.data)?;
 
         response.push(HandlerOutput::ResponseMessage(
             Opcode::get_opcode_name(input.opcode as u32)

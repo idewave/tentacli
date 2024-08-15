@@ -3,23 +3,23 @@ use std::collections::{BTreeMap};
 use std::io::{BufRead};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use serde::{Serialize, Serializer};
-use serde::ser::{SerializeStruct};
 
 use crate::{BinaryConverter, FieldError};
 use crate::types::update_fields::{FieldValue, ObjectField, PlayerField, UnitField};
 
-#[derive(Clone, Default, Debug)]
+#[derive(Serialize, Clone, Default, Debug, PartialEq)]
 pub struct UpdateData {
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     pub object_fields:  BTreeMap<ObjectField, FieldValue>,
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     pub unit_fields:  BTreeMap<UnitField, FieldValue>,
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     pub player_fields:  BTreeMap<PlayerField, FieldValue>,
 }
 
 impl UpdateData {
-    pub fn is_empty(instance: &Self) -> bool {
-        instance.object_fields.is_empty()
-            && instance.unit_fields.is_empty()
-            && instance.player_fields.is_empty()
+    pub fn is_default(&self) -> bool {
+        *self == Self::default()
     }
 
     pub fn parse_value(option: &FieldValue) -> Vec<u32> {
@@ -133,7 +133,7 @@ impl BinaryConverter for UpdateData {
     }
 
     fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
-        let blocks_amount = reader.read_u8()?;
+        let blocks_amount = u8::read_from(reader, &mut vec![])?;
 
         if blocks_amount > 0 {
             let mut update_blocks: BTreeMap<u32, u32> = BTreeMap::new();
@@ -364,52 +364,6 @@ mod tests {
             result.player_fields.get(&PlayerField::KnownTitles),
             Some(&FieldValue::LongArray(known_titles))
         );
-    }
-}
-
-impl Serialize for UpdateData {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        let mut object_fields: BTreeMap<String, FieldValue> = BTreeMap::new();
-        let mut unit_fields: BTreeMap<String, FieldValue> = BTreeMap::new();
-        let mut player_fields: BTreeMap<String, FieldValue> = BTreeMap::new();
-
-        let mut fields_amount = 0;
-
-        for (k, v) in &self.object_fields {
-            object_fields.insert(k.get_field_name(), v.clone());
-        }
-
-        for (k, v) in &self.unit_fields {
-            unit_fields.insert(k.get_field_name(), v.clone());
-        }
-
-        for (k, v) in &self.player_fields {
-            player_fields.insert(k.get_field_name(), v.clone());
-        }
-
-        if !object_fields.is_empty() {
-            fields_amount += 1;
-        }
-
-        if !unit_fields.is_empty() {
-            fields_amount += 1;
-        }
-
-        if !player_fields.is_empty() {
-            fields_amount += 1;
-        }
-
-        let mut state = serializer.serialize_struct("UpdateData", fields_amount)?;
-        if !object_fields.is_empty() {
-            state.serialize_field("object_fields", &object_fields)?;
-        }
-        if !unit_fields.is_empty() {
-            state.serialize_field("unit_fields", &unit_fields)?;
-        }
-        if !player_fields.is_empty() {
-            state.serialize_field("player_fields", &player_fields)?;
-        }
-        state.end()
     }
 }
 

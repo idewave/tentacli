@@ -1,10 +1,10 @@
 use anyhow::{Result as AnyResult};
 use std::io::BufRead;
+use bitflags::bitflags;
 use byteorder::{LittleEndian, ReadBytesExt};
 use serde::{Serialize, Serializer};
-use serde::ser::SerializeStruct;
 
-use crate::BinaryConverter;
+use crate::{BinaryConverter, impl_serialize_for_flags};
 use crate::errors::FieldError;
 
 #[non_exhaustive]
@@ -254,23 +254,15 @@ impl CastResult {
     pub const SPELL_CAST_OK: u8 = 255;
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Serialize, Debug, Default, Clone)]
 pub struct Spell {
     pub spell_id: u32,
 }
 
-impl Serialize for Spell {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        const FIELDS_AMOUNT: usize = 1;
-        let mut state = serializer.serialize_struct("Spell", FIELDS_AMOUNT)?;
-        state.serialize_field("spell_id", &self.spell_id)?;
-        state.end()
-    }
-}
-
 impl BinaryConverter for Spell {
-    fn write_into(&mut self, _: &mut Vec<u8>) -> AnyResult<()> {
-        todo!()
+    fn write_into(&mut self, buffer: &mut Vec<u8>) -> AnyResult<()> {
+        self.spell_id.write_into(buffer)?;
+        Ok(())
     }
 
     fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
@@ -288,7 +280,7 @@ impl BinaryConverter for Spell {
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Serialize, Debug, Default, Clone)]
 pub struct CooldownInfo {
     pub spell_id: u32,
     pub item_id: u16,
@@ -297,22 +289,15 @@ pub struct CooldownInfo {
     pub cooldown_category: u32,
 }
 
-impl Serialize for CooldownInfo {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        const FIELDS_AMOUNT: usize = 5;
-        let mut state = serializer.serialize_struct("CooldownInfo", FIELDS_AMOUNT)?;
-        state.serialize_field("spell_id", &self.spell_id)?;
-        state.serialize_field("item_id", &self.item_id)?;
-        state.serialize_field("spell_category", &self.spell_category)?;
-        state.serialize_field("cooldown_duration", &self.cooldown_duration)?;
-        state.serialize_field("cooldown_category", &self.cooldown_category)?;
-        state.end()
-    }
-}
-
 impl BinaryConverter for CooldownInfo {
-    fn write_into(&mut self, _: &mut Vec<u8>) -> AnyResult<()> {
-        todo!()
+    fn write_into(&mut self, buffer: &mut Vec<u8>) -> AnyResult<()> {
+        self.spell_id.write_into(buffer)?;
+        self.item_id.write_into(buffer)?;
+        self.spell_category.write_into(buffer)?;
+        self.cooldown_duration.write_into(buffer)?;
+        self.cooldown_category.write_into(buffer)?;
+
+        Ok(())
     }
 
     fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
@@ -340,5 +325,44 @@ impl BinaryConverter for CooldownInfo {
             cooldown_duration,
             cooldown_category,
         })
+    }
+}
+
+bitflags! {
+    #[derive(Copy, Clone, Debug, PartialEq)]
+    pub struct AuraFlags: u8 {
+        const NONE = 0x00;
+        const EFF_INDEX_0 = 0x01;
+        const EFF_INDEX_1 = 0x02;
+        const EFF_INDEX_2 = 0x04;
+        const NOT_CASTER = 0x08;
+        const POSITIVE = 0x10;
+        const DURATION = 0x20;
+        const UNK2 = 0x40;
+        const NEGATIVE = 0x80;
+    }
+}
+
+impl Default for AuraFlags {
+    fn default() -> Self {
+        Self::NONE
+    }
+}
+
+impl_serialize_for_flags!(AuraFlags);
+
+impl BinaryConverter for AuraFlags {
+    fn write_into(&mut self, buffer: &mut Vec<u8>) -> AnyResult<()> {
+        self.bits().write_into(buffer)?;
+
+        Ok(())
+    }
+
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self>
+    where
+        Self: Sized
+    {
+        let instance = Self::from_bits(reader.read_u8()?).unwrap();
+        Ok(instance)
     }
 }

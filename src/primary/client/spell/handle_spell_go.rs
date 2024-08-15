@@ -6,7 +6,7 @@ use tentacli_traits::types::opcodes::Opcode;
 use tentacli_traits::types::shared::ActionFlags;
 
 #[derive(WorldPacket, Serialize, Debug)]
-struct Income {
+struct Incoming {
     cast_item_guid: PackedGuid,
     caster_guid: PackedGuid,
 }
@@ -17,7 +17,7 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let mut response = Vec::new();
 
-        let (Income { caster_guid, .. }, json) = Income::from_binary(&input.data)?;
+        let (Incoming { caster_guid, .. }, json) = Incoming::from_binary(&input.data)?;
 
         response.push(HandlerOutput::ResponseMessage(
             Opcode::get_opcode_name(input.opcode as u32)

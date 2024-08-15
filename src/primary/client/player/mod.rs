@@ -9,6 +9,7 @@ pub mod get_characters_list;
 pub mod player_login;
 mod check_character_create_status;
 mod traits;
+mod init_world_states;
 
 pub struct PlayerProcessor;
 
@@ -44,6 +45,9 @@ impl Processor for PlayerProcessor {
             Opcode::SMSG_ACHIEVEMENT_EARNED => {
                 vec![]
             },
+            Opcode::SMSG_INIT_WORLD_STATES => {
+                vec![Box::new(init_world_states::Handler)]
+            },
             Opcode::SMSG_CHAR_ENUM => {
                 vec![
                     Box::new(get_characters_list::Handler),
@@ -63,8 +67,7 @@ impl Processor for PlayerProcessor {
 }
 
 pub mod packet {
-    use serde::{Serialize, Serializer};
-    use serde::ser::SerializeStruct;
+    use serde::{Serialize};
     use tentacli_traits::types::custom_fields::PackedGuid;
     use tentacli_traits::types::movement::Movement;
     use tentacli_traits::types::update_data::{BlockType, ObjectTypeID, UpdateData};
@@ -93,21 +96,31 @@ pub mod packet {
         pub blocks: Vec<Block>,
     }
 
-    #[derive(Segment, Debug, Clone, Default)]
+    fn is_zero(&x: &u32) -> bool {
+        x == 0
+    }
+
+    #[derive(Serialize, Segment, Debug, Clone, Default)]
     pub struct Block {
         pub block_type: BlockType,
         #[conditional]
+        #[serde(skip_serializing_if = "PackedGuid::is_default")]
         pub guid: PackedGuid,
         #[conditional]
+        #[serde(skip_serializing_if = "ObjectTypeID::is_none")]
         pub object_type_id: ObjectTypeID,
         #[conditional]
+        #[serde(skip_serializing_if = "Movement::is_default")]
         pub movement: Movement,
         #[conditional]
+        #[serde(skip_serializing_if = "UpdateData::is_default")]
         pub update_data: UpdateData,
         #[conditional]
+        #[serde(skip_serializing_if = "is_zero")]
         pub guid_count: u32,
         #[depends_on(guid_count)]
         #[conditional]
+        #[serde(skip_serializing_if = "Vec::is_empty")]
         pub guids: Vec<PackedGuid>
     }
 
@@ -162,58 +175,6 @@ pub mod packet {
                 BlockType::NEAR_OBJECTS |
                 BlockType::OUT_OF_RANGE_OBJECTS
             )
-        }
-    }
-
-    impl Serialize for Block {
-        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-            let mut fields_amount = 1;
-
-            if self.guid.0 != 0  {
-                fields_amount += 1;
-            }
-
-            if !ObjectTypeID::is_none(&self.object_type_id) {
-                fields_amount += 1;
-            }
-
-            if !Movement::is_empty(&self.movement) {
-                fields_amount += 1;
-            }
-
-            if !UpdateData::is_empty(&self.update_data) {
-                fields_amount += 1;
-            }
-
-            if self.guid_count > 0 {
-                fields_amount += 2;
-            }
-
-            let mut state = serializer.serialize_struct("Block", fields_amount)?;
-            state.serialize_field("block_type", &self.block_type)?;
-
-            if self.guid.0 != 0  {
-                state.serialize_field("guid", &self.guid)?;
-            }
-
-            if !ObjectTypeID::is_none(&self.object_type_id) {
-                state.serialize_field("object_type_id", &self.object_type_id)?;
-            }
-
-            if !Movement::is_empty(&self.movement) {
-                state.serialize_field("movement", &self.movement)?;
-            }
-
-            if !UpdateData::is_empty(&self.update_data) {
-                state.serialize_field("update_data", &self.update_data)?;
-            }
-
-            if self.guid_count > 0 {
-                state.serialize_field("guid_count", &self.guid_count)?;
-                state.serialize_field("guids", &self.guids)?;
-            }
-
-            state.end()
         }
     }
 }

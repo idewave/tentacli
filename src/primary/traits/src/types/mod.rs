@@ -17,6 +17,7 @@ pub mod trade;
 pub mod update_data;
 pub mod update_fields;
 pub mod warden;
+pub mod world;
 
 use chat::{Message};
 use player::{Player};

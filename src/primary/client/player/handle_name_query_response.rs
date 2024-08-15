@@ -5,15 +5,14 @@ use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
 use tentacli_traits::types::opcodes::Opcode;
 use tentacli_traits::types::player::Player;
 
-
 #[derive(WorldPacket, Serialize, Debug)]
-struct CheckEmptyIncome {
+struct CheckEmptyIncoming {
     packed_guid: PackedGuid,
     unknown: u8,
 }
 
 #[derive(WorldPacket, Serialize, Debug)]
-struct Income {
+struct Incoming {
     packed_guid: PackedGuid,
     unknown: u8,
     name: String,
@@ -29,7 +28,7 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let mut response = Vec::new();
 
-        let (CheckEmptyIncome { unknown, .. }, _) = CheckEmptyIncome::from_binary(&input.data)?;
+        let (CheckEmptyIncoming { unknown, .. }, _) = CheckEmptyIncoming::from_binary(&input.data)?;
 
         if unknown == 1 {
             response.push(HandlerOutput::ErrorMessage("Player not exists".to_string(), None));
@@ -37,14 +36,14 @@ impl PacketHandler for Handler {
             return Ok(response);
         }
 
-        let (Income {
+        let (Incoming {
             packed_guid,
             name,
             race,
             class,
             gender,
             ..
-        }, json) = Income::from_binary(&input.data)?;
+        }, json) = Incoming::from_binary(&input.data)?;
 
         response.push(HandlerOutput::ResponseMessage(
             Opcode::get_opcode_name(input.opcode as u32)
@@ -66,7 +65,7 @@ impl PacketHandler for Handler {
                 p.race = race;
                 p.class = class;
                 p.gender = gender;
-            }).or_insert_with(|| Player::new(guid, name.to_string(), race, class, gender, 1));
+            }).or_insert_with(|| Player::new(guid, name.to_string(), race, class, gender));
         }
 
         Ok(response)

@@ -1,12 +1,18 @@
 use anyhow::{Result as AnyResult};
 use std::io::{BufRead, Write};
 use byteorder::ReadBytesExt;
-use serde::{Serialize, Serializer};
+use serde::{Serialize};
 
 use crate::{BinaryConverter, FieldError};
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Serialize, Debug, Default, Clone, Copy, PartialEq)]
 pub struct PackedGuid(pub u64);
+
+impl PackedGuid {
+    pub fn is_default(&self) -> bool {
+        *self == Self::default()
+    }
+}
 
 impl PartialEq<u64> for PackedGuid {
     fn eq(&self, other: &u64) -> bool {
@@ -19,12 +25,6 @@ impl PartialEq<PackedGuid> for u64 {
     fn eq(&self, other: &PackedGuid) -> bool {
         let PackedGuid(guid) = other;
         guid == self
-    }
-}
-
-impl Serialize for PackedGuid {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        serializer.serialize_u64(self.0)
     }
 }
 
@@ -53,7 +53,7 @@ impl BinaryConverter for PackedGuid {
     }
 
     fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
-        let mask = reader.read_u8().unwrap_or(0);
+        let mask = reader.read_u8()?;
 
         if mask == 0 {
             return Ok(PackedGuid(0));

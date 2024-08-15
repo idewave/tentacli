@@ -4,11 +4,11 @@ use tentacli_traits::types::opcodes::Opcode;
 use tentacli_traits::types::OutgoingPacket;
 
 #[derive(LoginPacket, Serialize, Debug)]
-struct Outcome {
+struct Outgoing {
     unknown: u8,
     packet_size: u16,
     game_name: String,
-    #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
+    #[serde(serialize_with = "crate::primary::serializers::serialize_array")]
     version: [u8; 3],
     build: u16,
     platform: String,
@@ -27,7 +27,7 @@ pub fn handler(account: &str) -> AnyResult<OutgoingPacket> {
     let account_length = account.chars().count() as u8;
     let packet_size = PACKET_LENGTH_WITHOUT_ACCOUNT + account_length as u16;
 
-    let (opcode, data, json_details) = Outcome {
+    let (opcode, data, json_details) = Outgoing {
         unknown: 0,
         packet_size,
         game_name: "WoW\0".to_string(),

@@ -9,28 +9,29 @@ use tentacli_utils::compress;
 const SEED_SIZE: usize = 4;
 
 #[derive(WorldPacket, Serialize, Debug)]
-struct Income {
+struct Incoming {
     skip: u32,
+    #[serde(serialize_with = "crate::primary::serializers::serialize_array")]
     server_seed: [u8; SEED_SIZE],
-    #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
+    #[serde(serialize_with = "crate::primary::serializers::serialize_array")]
     seed: [u8; 32],
 }
 
 #[derive(WorldPacket, Serialize, Debug)]
-struct Outcome {
+struct Outgoing {
     build: u32,
     unknown: u32,
     account: String,
     unknown2: u32,
-    #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
+    #[serde(serialize_with = "crate::primary::serializers::serialize_array")]
     client_seed: [u8; SEED_SIZE],
     unknown3: u64,
     server_id: u32,
     unknown4: u64,
-    #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
+    #[serde(serialize_with = "crate::primary::serializers::serialize_array")]
     digest: [u8; 20],
     addons_count: u32,
-    #[serde(serialize_with = "crate::primary::serializers::array_serializer::serialize_array")]
+    #[serde(serialize_with = "crate::primary::serializers::serialize_array")]
     addons: Vec<u8>,
 }
 
@@ -40,7 +41,7 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let mut response = Vec::new();
 
-        let (Income { server_seed, .. }, json) = Income::from_binary(&input.data)?;
+        let (Incoming { server_seed, .. }, json) = Incoming::from_binary(&input.data)?;
 
         response.push(HandlerOutput::ResponseMessage(
             Opcode::get_opcode_name(input.opcode as u32)
@@ -75,7 +76,7 @@ impl PacketHandler for Handler {
 
         let addon_info = AddonInfo::build_addon_info(addons)?;
 
-        response.push(HandlerOutput::Data(Outcome {
+        response.push(HandlerOutput::Data(Outgoing {
             build: 12340,
             unknown: 0,
             account: format!("{}\0", account),
