@@ -19,19 +19,19 @@ impl PacketHandler for Handler {
 
         response.push(HandlerOutput::Data(JoinChannelOutgoing {
             channel_id: COMMON_CHANNEL_ID,
-            channel_name: format!("{}\0", channel_labels.common.to_string()),
+            channel_name: format!("{}\0", channel_labels.common),
             ..JoinChannelOutgoing::default()
         }.unpack_with_client_opcode(Opcode::CMSG_JOIN_CHANNEL)?));
 
         response.push(HandlerOutput::Data(JoinChannelOutgoing {
             channel_id: LFG_CHANNEL_ID,
-            channel_name: format!("{}\0", channel_labels.lfg.to_string()),
+            channel_name: format!("{}\0", channel_labels.lfg),
             ..JoinChannelOutgoing::default()
         }.unpack_with_client_opcode(Opcode::CMSG_JOIN_CHANNEL)?));
 
         response.push(HandlerOutput::Data(JoinChannelOutgoing {
             channel_id: TRADE_CHANNEL_ID,
-            channel_name: format!("{}\0", channel_labels.trade.to_string()),
+            channel_name: format!("{}\0", channel_labels.trade),
             ..JoinChannelOutgoing::default()
         }.unpack_with_client_opcode(Opcode::CMSG_JOIN_CHANNEL)?));
 
