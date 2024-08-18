@@ -33,15 +33,15 @@ impl AuraInfo {
     }
 
     fn caster_guid(instance: &mut Self) -> bool {
-        return !instance.aura_flags.contains(AuraFlags::NOT_CASTER);
+        !instance.aura_flags.contains(AuraFlags::NOT_CASTER)
     }
 
     fn aura_max_duration(instance: &mut Self) -> bool {
-        return instance.aura_flags.contains(AuraFlags::DURATION);
+        instance.aura_flags.contains(AuraFlags::DURATION)
     }
 
     fn aura_duration(instance: &mut Self) -> bool {
-        return instance.aura_flags.contains(AuraFlags::DURATION);
+        instance.aura_flags.contains(AuraFlags::DURATION)
     }
 }
 

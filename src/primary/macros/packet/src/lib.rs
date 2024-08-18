@@ -214,7 +214,7 @@ pub fn login_packet(input: TokenStream) -> TokenStream {
                         #(#field_names: #async_initializers),*
                     };
 
-                    Ok(instance._build_body()?)
+                    instance._build_body()
                 }
             }
         }
