@@ -1,5 +1,6 @@
 #![allow(clippy::new_without_default)]
 
+use std::collections::BTreeMap;
 use std::io::{Error, ErrorKind};
 use std::sync::{Arc, Mutex as SyncMutex};
 use std::time::Duration;
@@ -134,7 +135,9 @@ impl Client {
                 match self.session.lock().await.set_config(&host, options.account, options.config_path) {
                     Ok(_) => {},
                     Err(err) => {
-                        query_sender.broadcast(HandlerOutput::ErrorMessage(err.to_string(), None)).await.unwrap();
+                        query_sender.broadcast(
+                            HandlerOutput::ErrorMessage(err.to_string(), None)
+                        ).await.unwrap();
                     }
                 }
 
@@ -148,7 +151,9 @@ impl Client {
                 Ok(())
             },
             Err(err) => {
-                query_sender.broadcast(HandlerOutput::ErrorMessage(format!("Cannot connect: {}", err), None)).await.unwrap();
+                query_sender.broadcast(
+                    HandlerOutput::ErrorMessage(format!("Cannot connect: {}", err), None)
+                ).await.unwrap();
 
                 Err(err)
             },
@@ -195,17 +200,12 @@ impl Client {
             self.handle_write(output_receiver, query_sender),
         ];
 
-        // let features_tasks: Vec<JoinHandle<()>> =
-        //     features.into_iter().flat_map(|mut feature| feature.get_tasks()?).collect();
-
         for mut feature in features.into_iter() {
             match feature.get_tasks() {
                 Ok(tasks) => all_tasks.extend(tasks),
                 Err(e) => eprintln!("Error on get_tasks: {:?}", e),
             }
         }
-
-        // all_tasks.extend(features_tasks);
 
         join_all(all_tasks).await;
 
@@ -220,30 +220,21 @@ impl Client {
     ) -> JoinHandle<()> {
         let reader = Arc::clone(&self._reader);
         let session = Arc::clone(&self.session);
-        let client_flags = Arc::clone(&self._flags);
         let data_storage = Arc::clone(&self.data_storage);
 
         tokio::spawn(async move {
+            let mut processors = Self::get_login_processors();
+            let mut handler_maps = Self::get_one_time_handler_maps();
+
             loop {
                 tokio::select! {
-                    _ = signal_receiver.recv() => {},
+                    _ = signal_receiver.recv() => {
+                        processors = Self::get_realm_processors();
+                    },
                     result = Self::read_packet(&reader) => {
                         match result {
                             Ok(packet) => {
-                                let processors = {
-                                    let connected_to_realm = {
-                                        client_flags.lock().unwrap().contains(
-                                            ClientFlags::IS_CONNECTED_TO_REALM
-                                        )
-                                    };
-
-                                    match connected_to_realm {
-                                        true => Self::get_realm_processors(),
-                                        false => Self::get_login_processors(),
-                                    }
-                                };
-
-                                let IncomingPacket { opcode, body: data, .. } = packet.clone();
+                                let IncomingPacket { opcode, body: data, .. } = packet;
 
                                 let mut input = HandlerInput {
                                     session: Arc::clone(&session),
@@ -252,19 +243,25 @@ impl Client {
                                     opcode,
                                 };
 
-                                let handler_list = processors
+                                let mut handler_list = processors
                                     .iter()
                                     .flat_map(|processor| processor(&mut input))
                                     .collect::<ProcessorResult>();
 
+                                for map in &mut handler_maps {
+                                    if let Some(handlers) = map.remove(&opcode) {
+                                        handler_list.extend(handlers)
+                                    }
+                                }
+
                                 if handler_list.is_empty() {
                                     let opcode_name = Opcode::get_opcode_name(
-                                        packet.opcode as u32
+                                        input.opcode as u32
                                     ).unwrap_or(format!("Unknown opcode: {}", input.opcode));
 
                                     query_sender.broadcast(HandlerOutput::ResponseMessage(
                                         opcode_name,
-                                        Some(encode_hex(&packet.body)),
+                                        Some(encode_hex(&input.data)),
                                     )).await.unwrap();
                                 }
 
@@ -292,7 +289,9 @@ impl Client {
                                 }
                             },
                             Err(err) => {
-                                query_sender.broadcast(HandlerOutput::ErrorMessage(err.to_string(), None)).await.unwrap();
+                                query_sender.broadcast(
+                                    HandlerOutput::ErrorMessage(err.to_string(), None)
+                                ).await.unwrap();
                                 sleep(Duration::from_secs(1)).await;
                             }
                         }
@@ -379,7 +378,8 @@ impl Client {
                                 if connected_to_realm {
                                     query_sender.broadcast(
                                         HandlerOutput::DebugMessage(
-                                            "Starting logout, please wait...".to_string(),
+                                            "Starting logout, please wait \
+                                            OR press Ctrl+C again for quick quit".to_string(),
                                             None
                                         )
                                     ).await.unwrap();
@@ -512,6 +512,12 @@ impl Client {
             Box::new(RealmProcessor::get_handlers),
             Box::new(SpellProcessor::get_handlers),
             Box::new(WardenProcessor::get_handlers),
+        ]
+    }
+
+    fn get_one_time_handler_maps() -> Vec<BTreeMap<u16, ProcessorResult>> {
+        vec![
+            RealmProcessor::get_one_time_handler_map()
         ]
     }
 }
