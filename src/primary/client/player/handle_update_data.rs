@@ -41,6 +41,8 @@ impl PacketHandler for Handler {
                 if let Some(movement_info) = block.movement.movement_info {
                     me.movement_info = movement_info;
                 }
+
+                response.push(HandlerOutput::UpdatePlayer(me.clone()));
             } else {
                 let mut player = Player::default();
                 player.update_data = block.update_data;
