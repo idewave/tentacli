@@ -191,21 +191,23 @@ impl Client {
             feature.set_broadcast_channel(query_sender.clone(), query_receiver.clone());
         }
 
-        let mut all_tasks = vec![
-            self.handle_read(signal_receiver, query_sender.clone(), notify.clone()),
-            self.handle_output(
-                signal_sender.clone(), output_sender.clone(), query_sender.clone(),
-                query_receiver, notify.clone(),
-            ),
-            self.handle_write(output_receiver, query_sender),
-        ];
+        let mut all_tasks = vec![];
 
-        for mut feature in features.into_iter() {
+        for feature in features.iter_mut() {
             match feature.get_tasks() {
                 Ok(tasks) => all_tasks.extend(tasks),
                 Err(e) => eprintln!("Error on get_tasks: {:?}", e),
             }
         }
+
+        all_tasks.extend(vec![
+            self.handle_read(signal_receiver, query_sender.clone(), notify.clone(), features),
+            self.handle_output(
+                signal_sender.clone(), output_sender.clone(), query_sender.clone(),
+                query_receiver, notify.clone(),
+            ),
+            self.handle_write(output_receiver, query_sender),
+        ]);
 
         join_all(all_tasks).await;
 
@@ -217,19 +219,32 @@ impl Client {
         mut signal_receiver: Receiver<Signal>,
         query_sender: BroadcastSender<HandlerOutput>,
         notify: Arc<Notify>,
+        features: Vec<Box<dyn Feature>>,
     ) -> JoinHandle<()> {
         let reader = Arc::clone(&self._reader);
         let session = Arc::clone(&self.session);
         let data_storage = Arc::clone(&self.data_storage);
 
         tokio::spawn(async move {
+            let mut realm_processors = Self::get_realm_processors();
             let mut processors = Self::get_login_processors();
-            let mut handler_maps = Self::get_one_time_handler_maps();
+            let mut one_time_handler_maps = Self::get_one_time_handler_maps();
+
+            for feature in features.into_iter() {
+                realm_processors.extend(feature.get_realm_processors());
+                processors.extend(feature.get_login_processors());
+                one_time_handler_maps.extend(feature.get_one_time_handler_maps());
+            }
+
+            let mut realm_processors = Some(realm_processors);
 
             loop {
                 tokio::select! {
                     _ = signal_receiver.recv() => {
-                        processors = Self::get_realm_processors();
+                        // realm_processors will be None on next iteration
+                        // so this approach ensures that realm_processors will be taken only once,
+                        // but it seems I still can use it in current iteration
+                        processors = realm_processors.take().unwrap();
                     },
                     result = Self::read_packet(&reader) => {
                         match result {
@@ -248,7 +263,7 @@ impl Client {
                                     .flat_map(|processor| processor(&mut input))
                                     .collect::<ProcessorResult>();
 
-                                for map in &mut handler_maps {
+                                for map in one_time_handler_maps.iter_mut() {
                                     if let Some(handlers) = map.remove(&opcode) {
                                         handler_list.extend(handlers)
                                     }
