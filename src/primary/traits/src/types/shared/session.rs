@@ -3,7 +3,7 @@ use std::fmt::{Debug};
 use bitflags::bitflags;
 use tentacli_crypto::Srp;
 
-use crate::errors::ConfigError;
+use crate::types::errors::ConfigError;
 use crate::types::config::{Config, ConfigParams};
 use crate::types::player::Player;
 use crate::types::realm::Realm;

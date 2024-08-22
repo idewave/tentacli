@@ -5,7 +5,7 @@ use bitflags::bitflags;
 use byteorder::{LittleEndian, ReadBytesExt};
 use serde::{Serialize};
 
-use crate::errors::FieldError;
+use crate::types::errors::FieldError;
 use crate::BinaryConverter;
 use crate::types::movement::MovementInfo;
 use crate::types::position::{Point3D, Vector3D};
