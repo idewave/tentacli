@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use byteorder::{LittleEndian, ReadBytesExt};
 use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncReadExt};
 
-use crate::errors::FieldError;
+use crate::types::errors::FieldError;
 
 #[async_trait]
 pub trait StreamReader {

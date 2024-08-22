@@ -18,6 +18,7 @@ pub mod update_data;
 pub mod update_fields;
 pub mod warden;
 pub mod world;
+pub mod errors;
 
 use chat::{Message};
 use player::{Player};
@@ -63,7 +64,6 @@ pub enum HandlerOutput {
     // commands
     ConnectionRequest(String, u16),
     Drop,
-    ExitConfirmed,
     ExitRequest,
     Freeze,
     SelectCharacter(Player),
@@ -81,7 +81,7 @@ pub type HandlerResult = AnyResult<Vec<HandlerOutput>>;
 
 pub type ProcessorResult = Vec<Box<dyn PacketHandler + Send>>;
 
-pub type ProcessorFunction = Box<dyn Fn(&mut HandlerInput) -> ProcessorResult + Send>;
+pub type ProcessorFunction = Box<dyn Fn(u16) -> ProcessorResult + Send>;
 
 #[derive(Default, Debug, Clone)]
 pub struct IncomingPacket {

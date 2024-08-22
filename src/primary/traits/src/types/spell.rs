@@ -5,7 +5,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use serde::{Serialize, Serializer};
 
 use crate::{BinaryConverter, impl_serialize_for_flags};
-use crate::errors::FieldError;
+use crate::types::errors::FieldError;
 
 #[non_exhaustive]
 pub struct SpellCastTargetType;

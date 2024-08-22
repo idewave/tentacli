@@ -2,7 +2,7 @@ use anyhow::{Result as AnyResult};
 use std::io::{BufRead, Cursor, Write};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use crate::errors::FieldError;
+use crate::types::errors::FieldError;
 
 pub trait BinaryConverter {
     fn write_into(&mut self, buffer: &mut Vec<u8>) -> AnyResult<()>;

@@ -100,3 +100,7 @@ pub use primary::client::{Client, RunOptions};
 pub mod async_broadcast {
     pub use async_broadcast::{broadcast, Sender as BroadcastSender, Receiver as BroadcastReceiver};
 }
+
+pub mod serializers {
+    pub use crate::primary::serializers::{serialize_array};
+}

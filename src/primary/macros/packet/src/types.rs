@@ -1,6 +1,5 @@
 use proc_macro2::{TokenStream as TokenStream2};
 use quote::{quote};
-use structmeta::{Flag, StructMeta};
 
 pub struct Imports {
     pub async_buf_read: TokenStream2,
@@ -34,9 +33,4 @@ impl Imports {
             utils: quote!(tentacli_utils),
         }
     }
-}
-
-#[derive(StructMeta, Debug)]
-pub struct Attributes {
-    pub with_async: Flag,
 }
