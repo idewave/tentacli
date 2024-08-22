@@ -8,7 +8,7 @@ use syn::punctuated::Punctuated;
 
 mod types;
 
-use types::{Attributes, Imports};
+use types::Imports;
 
 struct DependsOnAttribute {
     pub name: Ident,
@@ -24,15 +24,13 @@ impl Parse for DependsOnAttribute {
 
 /// LoginPacket is a part of tentacli-based projects.
 /// This proc-macro allows to send and receive packets from WoW Login server.
-/// It supports `#[options(with_async)]` option to include `from_stream` method, which allows
-/// to perform a partial read (since there's no guarantee the TCP packet will arrive all at once)
 /// `#[depends_on]` attribute indicates that the field depends on another fields. These fields will be
 /// converted into bytes and the byte-array will be used as dependency for `read_from` method of
 /// BinaryConverter
 
-#[proc_macro_derive(LoginPacket, attributes(options, depends_on))]
+#[proc_macro_derive(LoginPacket, attributes(depends_on))]
 pub fn login_packet(input: TokenStream) -> TokenStream {
-    let ItemStruct { ident, fields, attrs, .. } = parse_macro_input!(input);
+    let ItemStruct { ident, fields, .. } = parse_macro_input!(input);
     let Imports {
         async_buf_read,
         binary_converter,
@@ -44,16 +42,6 @@ pub fn login_packet(input: TokenStream) -> TokenStream {
         stream_reader,
         ..
     } = Imports::get();
-
-    let mut with_async = false;
-    if attrs.iter().any(|attr| attr.path().is_ident("options")) {
-        let attributes = attrs.iter().next().unwrap();
-        let attrs: Attributes = attributes.parse_args().unwrap();
-
-        if let Some(_span) = attrs.with_async.span {
-            with_async = true;
-        }
-    }
 
     let field_names = fields.iter().map(|f| {
         f.ident.clone()
@@ -168,57 +156,55 @@ pub fn login_packet(input: TokenStream) -> TokenStream {
         }
     };
 
-    if with_async {
-        let async_initializers = fields
-            .iter()
-            .map(|f| {
-                let field_name = f.ident.clone();
-                let field_type = f.ty.clone();
+    let async_initializers = fields
+        .iter()
+        .map(|f| {
+            let field_name = f.ident.clone();
+            let field_type = f.ty.clone();
 
-                if let Some(dep_fields) = depends_on.get(&field_name) {
-                    quote! {
-                        {
-                            let mut data: Vec<u8> = vec![];
-                            #(
-                                #binary_converter::write_into(
-                                    &mut cache.#dep_fields,
-                                    &mut data,
-                                )?;
-                            )*
-                            #stream_reader::read_from(&mut stream, &mut data).await?
-                        }
-                    }
-                } else {
-                    quote! {
-                        {
-                            let value: #field_type = #stream_reader::read_from(&mut stream, &mut vec![]).await?;
-                            cache.#field_name = value.clone();
-                            value
-                        }
+            if let Some(dep_fields) = depends_on.get(&field_name) {
+                quote! {
+                    {
+                        let mut data: Vec<u8> = vec![];
+                        #(
+                            #binary_converter::write_into(
+                                &mut cache.#dep_fields,
+                                &mut data,
+                            )?;
+                        )*
+                        #stream_reader::read_from(&mut stream, &mut data).await?
                     }
                 }
-            });
-
-        output = quote! {
-            #output
-
-            impl #ident {
-                pub async fn from_stream<R>(mut stream: &mut R) -> #result<Vec<u8>>
-                    where R: #async_buf_read + Unpin + Send
-                {
-                    let mut cache = Self {
-                        #(#field_names: Default::default()),*
-                    };
-
-                    let mut instance = Self {
-                        #(#field_names: #async_initializers),*
-                    };
-
-                    instance._build_body()
+            } else {
+                quote! {
+                    {
+                        let value: #field_type = #stream_reader::read_from(&mut stream, &mut vec![]).await?;
+                        cache.#field_name = value.clone();
+                        value
+                    }
                 }
             }
+        });
+
+    output = quote! {
+        #output
+
+        impl #ident {
+            pub async fn from_stream<R>(mut stream: &mut R) -> #result<Vec<u8>>
+                where R: #async_buf_read + Unpin + Send
+            {
+                let mut cache = Self {
+                    #(#field_names: Default::default()),*
+                };
+
+                let mut instance = Self {
+                    #(#field_names: #async_initializers),*
+                };
+
+                instance._build_body()
+            }
         }
-    }
+    };
 
     TokenStream::from(output)
 }
@@ -302,7 +288,10 @@ pub fn world_packet(input: TokenStream) -> TokenStream {
             } else {
                 quote! {
                     {
-                        let value: #field_type = #binary_converter::read_from(&mut reader, &mut vec![]).unwrap_or_default();
+                        let value: #field_type = #binary_converter::read_from(
+                            &mut reader, &mut vec![]
+                        ).unwrap_or_default();
+
                         cache.#field_name = value.clone();
                         value
                     }

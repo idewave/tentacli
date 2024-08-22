@@ -157,7 +157,17 @@ impl Feature for UI {
                                                 UIEventFlags::IS_EXIT_REQUESTED, true
                                             );
                                             sender.broadcast(
-                                                HandlerOutput::ExitRequest).await.unwrap();
+                                                HandlerOutput::DebugMessage(
+                                                    "Starting logout, please wait \
+                                                    OR press Ctrl+C again for quick quit"
+                                                    .to_string(),
+                                                    None
+                                                )
+                                            ).await.unwrap();
+
+                                            sender.broadcast(
+                                                HandlerOutput::ExitRequest
+                                            ).await.unwrap();
                                         }
                                     }
                                 } else if let Event::Resize(_, _) = event {
@@ -217,9 +227,6 @@ impl Feature for UI {
                                 );
                                 realm_modal.lock().unwrap().set_items(realms);
                             },
-                            HandlerOutput::ExitConfirmed => {
-                                Self::handle_exit();
-                            }
                             _ => {},
                         }
                     }

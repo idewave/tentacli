@@ -7,7 +7,7 @@ use serde::{Serialize};
 use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncReadExt};
 
 use crate::{BinaryConverter, StreamReader};
-use crate::errors::FieldError;
+use crate::types::errors::FieldError;
 
 #[derive(Serialize, Debug, Clone, Default)]
 pub struct Realm {

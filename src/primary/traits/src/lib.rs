@@ -2,7 +2,6 @@
 extern crate thiserror;
 
 mod binary_converter;
-mod errors;
 mod feature;
 mod packet_handler;
 mod processor;
@@ -10,7 +9,7 @@ mod stream_reader;
 pub mod types;
 
 pub use binary_converter::BinaryConverter;
-pub use errors::{
+pub use types::errors::{
     FieldError, ConfigError, CharacterListError, RealmListError, FeatureError, MutexError
 };
 pub use feature::Feature;

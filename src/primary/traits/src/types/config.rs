@@ -6,7 +6,7 @@ use std::fs::{File, read_to_string};
 use std::str::FromStr;
 use yaml_rust::{Yaml, YamlLoader};
 
-use crate::errors::ConfigError;
+use crate::types::errors::ConfigError;
 
 const CONFIG_CONTENT: &str = r##"common:
   auto_create_character_for_new_account: false
