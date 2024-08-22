@@ -21,6 +21,7 @@ Since tentacli is designed to be used as both a library and an application, you 
 + Supports multiple configurations (you can specify custom paths for **Config.yml** and **.env**)
 + Supports multiple accounts per host (configurable in **Config.yml**)
 + Automatically creates a character if the account is empty (configurable in **Config.yml**)
++ Packet processors are provided as a separate feature, allowing you to implement your own packet processors and handlers.
 
 ### You want to contribute
 It's always welcome. Just create pull request with your improvements, bugfix etc.
