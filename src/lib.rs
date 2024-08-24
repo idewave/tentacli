@@ -2,8 +2,6 @@
 //!
 //! You can use it directly by compiling with cargo build,
 //! or you can incorporate it as a library in your own application.
-//! TentaCLI accepts external broadcast channel (`async_broadcast` crate),
-//! so you can connect it with the rest of your application.
 //! Also you can implement own feature set and pass it to the `run()` method.
 //! See `Feature` trait and `RunOptions`.
 //!
@@ -14,17 +12,20 @@
 //! - if installed with `ui` feature (installed by default), it allows scrolling the packets history using keyboard and seeing the details for each packet
 //! - if installed with `console` feature, it will display only minimal output
 //! - if installed without any feature, client will output nothing (but you still can provide own output feature)
+//! - you can implement own packet processors and send them using custom features
+//! - you can pass external data storage to the tentacli using **CreateOptions**
 //!
 //! ## Examples
 //!
 //! ```rust
+//! use std::collections::BTreeMap;
 //! use anyhow::{Result as AnyResult};
 //! use tokio::task::JoinHandle;
 //!
 //! use tentacli::async_broadcast::{BroadcastSender, BroadcastReceiver};
-//! use tentacli::{Client, RunOptions};
+//! use tentacli::{Client, CreateOptions, RunOptions};
 //! use tentacli_traits::{Feature, FeatureError};
-//! use tentacli_traits::types::HandlerOutput;
+//! use tentacli_traits::types::{HandlerOutput, ProcessorFunction, ProcessorResult};
 //!
 //! #[tokio::main]
 //! async fn main() {
@@ -70,6 +71,22 @@
 //!
 //!             Ok(vec![handle_smth()])
 //!         }
+//!
+//!         fn get_login_processors(&self) -> Vec<ProcessorFunction> {
+//!             vec![]
+//!         }
+//!
+//!         fn get_realm_processors(&self) -> Vec<ProcessorFunction> {
+//!             vec![]
+//!         }
+//!
+//!         fn get_one_time_handler_maps(&self) -> Vec<BTreeMap<u16, ProcessorResult>> {
+//!             vec![]
+//!         }
+//!
+//!         fn get_initial_processors(&self) -> Vec<ProcessorFunction> {
+//!             vec![]
+//!         }
 //!     }
 //!
 //!     let options = RunOptions {
@@ -80,10 +97,11 @@
 //!     };
 //!
 //!     // ... pass options to the client
-//!     // Client::new().run(options).await.unwrap();
+//!     // Client::new(CreateOptions::default()).run(options).await.unwrap();
 //! }
 //! ```
 
+#[cfg(feature = "ui")]
 extern crate chrono;
 #[macro_use]
 extern crate tentacli_packet;
@@ -95,7 +113,7 @@ extern crate cfg_if;
 mod features;
 mod primary;
 
-pub use primary::client::{Client, RunOptions};
+pub use primary::client::{Client, CreateOptions, RunOptions};
 
 pub mod async_broadcast {
     pub use async_broadcast::{broadcast, Sender as BroadcastSender, Receiver as BroadcastReceiver};
