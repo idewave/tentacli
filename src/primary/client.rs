@@ -23,6 +23,11 @@ use tentacli_utils::encode_hex;
 
 use crate::primary::network::{Reader, Writer};
 
+#[derive(Default)]
+pub struct CreateOptions {
+    pub data_storage: Option<Arc<SyncMutex<DataStorage>>>
+}
+
 pub struct RunOptions<'a> {
     pub external_features: Vec<Box<dyn Feature>>,
     pub config_path: &'a str,
@@ -40,14 +45,15 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new() -> Self {
+    pub fn new(options: CreateOptions) -> Self {
         Self {
             _reader: Arc::new(Mutex::new(None)),
             _writer: Arc::new(Mutex::new(None)),
             _warden_crypt: Arc::new(SyncMutex::new(None)),
 
             session: Arc::new(Mutex::new(Session::new())),
-            data_storage: Arc::new(SyncMutex::new(DataStorage::new())),
+            data_storage: options.data_storage
+                .unwrap_or_else(|| Arc::new(SyncMutex::new(DataStorage::new()))),
         }
     }
 
@@ -220,8 +226,6 @@ impl Client {
             let mut processors = vec![];
             let mut one_time_handler_maps = vec![];
             let mut initial_processors = vec![];
-
-            println!("FEA: {}", features.len());
 
             for feature in features.into_iter() {
                 realm_processors.extend(feature.get_realm_processors());
@@ -519,7 +523,7 @@ mod tests {
     use tentacli_traits::types::{HandlerOutput, OutgoingPacket};
     use tentacli_traits::types::shared::{ActionFlags, StateFlags};
 
-    use crate::primary::client::{Client};
+    use crate::primary::client::{Client, CreateOptions};
 
     const HOST: &str = "127.0.0.1";
     // https://users.rust-lang.org/t/async-tests-sometimes-fails/78451
@@ -530,7 +534,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_client_create() {
-        let client = Client::new();
+        let client = Client::new(CreateOptions::default());
 
         let reader = &mut *client._reader.lock().await;
         assert!(reader.is_none());
@@ -559,7 +563,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_client_connect() {
-        let mut client = Client::new();
+        let mut client = Client::new(CreateOptions::default());
         if let Some(listener) = TcpListener::bind(format!("{}:{}", HOST, PORT)).await.ok() {
             let local_addr = listener.local_addr().unwrap();
             client.connect(HOST, local_addr.port()).await.ok();
@@ -574,7 +578,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_client_write_outcoming_data() {
-        let mut client = Client::new();
+        let mut client = Client::new(CreateOptions::default());
         if let Some(listener) = TcpListener::bind(format!("{}:{}", HOST, PORT)).await.ok() {
             let local_addr = listener.local_addr().unwrap();
             client.connect(HOST, local_addr.port()).await.ok();

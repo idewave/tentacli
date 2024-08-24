@@ -45,17 +45,13 @@ impl Feature for WotlkLogin {
             tokio::spawn(async move {
                 loop {
                     if let Ok(output) = receiver.recv().await {
-                        match output {
-                            HandlerOutput::ExitRequest => {
-                                sender.broadcast(
-                                    HandlerOutput::Data(
-                                        LogoutOutcoming::default()
-                                            .unpack_with_client_opcode(Opcode::CMSG_LOGOUT_REQUEST)
-                                            .unwrap()
-                                    )
-                                ).await.unwrap();
-                            },
-                            _ => {},
+                        if let HandlerOutput::ExitRequest = output {
+                            sender.broadcast(
+                                HandlerOutput::Data(LogoutOutcoming::default()
+                                    .unpack_with_client_opcode(Opcode::CMSG_LOGOUT_REQUEST)
+                                    .unwrap()
+                                )
+                            ).await.unwrap();
                         }
                     }
                 }
