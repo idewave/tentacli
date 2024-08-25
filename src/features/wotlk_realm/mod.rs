@@ -15,12 +15,9 @@ use realm::RealmProcessor;
 use spell::SpellProcessor;
 use warden::WardenProcessor;
 
+#[derive(Default)]
 pub struct WotlkRealm;
 impl Feature for WotlkRealm {
-    fn new() -> Self {
-        Self {}
-    }
-
     fn get_realm_processors(&self) -> Vec<ProcessorFunction> {
         vec![
             Box::new(ChatProcessor::get_handlers),

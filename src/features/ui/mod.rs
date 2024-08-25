@@ -47,6 +47,7 @@ use crate::features::ui::types::{LoggerOutput, UIEventFlags};
 
 pub const MARGIN: u16 = 1;
 
+#[derive(Default)]
 pub struct UI {
     _receiver: Option<BroadcastReceiver<HandlerOutput>>,
     _sender: Option<BroadcastSender<HandlerOutput>>,
@@ -61,13 +62,6 @@ impl UI {
 }
 
 impl Feature for UI {
-    fn new() -> Self where Self: Sized {
-        Self {
-            _receiver: None,
-            _sender: None,
-        }
-    }
-
     fn set_broadcast_channel(
         &mut self,
         sender: BroadcastSender<HandlerOutput>,

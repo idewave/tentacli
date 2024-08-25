@@ -15,19 +15,13 @@ use auth::AuthProcessor;
 use crate::features::wotlk_login::realm::packet::LogoutOutcoming;
 use crate::features::wotlk_login::realm::RealmProcessor;
 
+#[derive(Default)]
 pub struct WotlkLogin {
     _receiver: Option<BroadcastReceiver<HandlerOutput>>,
     _sender: Option<BroadcastSender<HandlerOutput>>,
 }
 
 impl Feature for WotlkLogin {
-    fn new() -> Self where Self: Sized {
-        Self {
-            _receiver: None,
-            _sender: None,
-        }
-    }
-
     fn set_broadcast_channel(
         &mut self,
         sender: BroadcastSender<HandlerOutput>,
@@ -44,15 +38,13 @@ impl Feature for WotlkLogin {
         let handle_exit = || {
             tokio::spawn(async move {
                 loop {
-                    if let Ok(output) = receiver.recv().await {
-                        if let HandlerOutput::ExitRequest = output {
-                            sender.broadcast(
-                                HandlerOutput::Data(LogoutOutcoming::default()
-                                    .unpack_with_client_opcode(Opcode::CMSG_LOGOUT_REQUEST)
-                                    .unwrap()
-                                )
-                            ).await.unwrap();
-                        }
+                    if let Ok(HandlerOutput::ExitRequest) = receiver.recv().await {
+                        sender.broadcast(
+                            HandlerOutput::Data(LogoutOutcoming::default()
+                                .unpack_with_client_opcode(Opcode::CMSG_LOGOUT_REQUEST)
+                                .unwrap()
+                            )
+                        ).await.unwrap();
                     }
                 }
             })
