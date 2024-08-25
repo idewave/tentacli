@@ -5,19 +5,13 @@ use colored::*;
 use tentacli_traits::{Feature, FeatureError};
 use tentacli_traits::types::HandlerOutput;
 
+#[derive(Default)]
 pub struct Console {
     _receiver: Option<BroadcastReceiver<HandlerOutput>>,
     _sender: Option<BroadcastSender<HandlerOutput>>,
 }
 
 impl Feature for Console {
-    fn new() -> Self where Self: Sized {
-        Self {
-            _receiver: None,
-            _sender: None,
-        }
-    }
-
     fn set_broadcast_channel(
         &mut self,
         sender: BroadcastSender<HandlerOutput>,

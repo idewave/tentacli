@@ -29,19 +29,13 @@
 //!
 //! #[tokio::main]
 //! async fn main() {
+//!     #[derive(Default)]
 //!     pub struct MyFeature {
 //!         _receiver: Option<BroadcastReceiver<HandlerOutput>>,
 //!         _sender: Option<BroadcastSender<HandlerOutput>>,
 //!     }
 //!
 //!     impl Feature for MyFeature {
-//!         fn new() -> Self where Self: Sized {
-//!             Self {
-//!                 _receiver: None,
-//!                 _sender: None,
-//!             }
-//!         }
-//!
 //!         fn set_broadcast_channel(
 //!             &mut self,
 //!             sender: BroadcastSender<HandlerOutput>,
@@ -90,7 +84,7 @@
 //!     }
 //!
 //!     let options = RunOptions {
-//!         external_features: vec![Box::new(MyFeature::new())],
+//!         external_features: vec![Box::new(MyFeature::default())],
 //!         account: "account_name",
 //!         config_path: "./dir/another_dir/ConfigFileName.yml",
 //!         dotenv_path: "./path/to/.env"

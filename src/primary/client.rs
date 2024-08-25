@@ -161,25 +161,25 @@ impl Client {
             if #[cfg(feature = "ui")] {
                 use crate::features::ui::UI;
 
-                features.push(Box::new(UI::new()));
+                features.push(Box::new(UI::default()));
             } else if #[cfg(feature = "console")] {
                 use crate::features::console::Console;
 
-                features.push(Box::new(Console::new()));
+                features.push(Box::new(Console::default()));
             }
         }
 
         cfg_if! {
             if #[cfg(feature = "wotlk_login")] {
                 use crate::features::wotlk_login::WotlkLogin;
-                features.push(Box::new(WotlkLogin::new()));
+                features.push(Box::new(WotlkLogin::default()));
             }
         }
 
         cfg_if! {
             if #[cfg(feature = "wotlk_realm")] {
                 use crate::features::wotlk_realm::WotlkRealm;
-                features.push(Box::new(WotlkRealm::new()));
+                features.push(Box::new(WotlkRealm::default()));
             }
         }
 

@@ -6,15 +6,16 @@ use async_broadcast::{Receiver as BroadcastReceiver, Sender as BroadcastSender};
 use crate::types::{HandlerOutput, ProcessorFunction, ProcessorResult};
 
 pub trait Feature: Send {
-    fn new() -> Self where Self: Sized;
     fn set_broadcast_channel(
         &mut self,
         _sender: BroadcastSender<HandlerOutput>,
         _receiver: BroadcastReceiver<HandlerOutput>,
     ) {}
+
     fn get_tasks(&mut self) -> AnyResult<Vec<JoinHandle<()>>> {
         Ok(vec![])
     }
+
     fn get_login_processors(&self) -> Vec<ProcessorFunction> {
         vec![]
     }
