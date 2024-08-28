@@ -6,9 +6,9 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use serde::{Serialize};
 
 use crate::types::errors::FieldError;
-use crate::BinaryConverter;
-use crate::types::movement::MovementInfo;
-use crate::types::position::{Point3D, Vector3D};
+use crate::{BinaryConverter};
+use crate::types::movement::{Movement};
+use crate::types::position::Point3D;
 use crate::types::update_data::UpdateData;
 
 #[derive(Serialize, Clone, Default, Debug)]
@@ -17,27 +17,13 @@ pub struct Player {
     pub name: String,
     pub race: u8,
     pub class: u8,
-    pub gender: u8,
     pub level: u8,
+    #[serde(skip_serializing_if = "Movement::is_default")]
+    pub movement: Movement,
     #[serde(skip_serializing_if = "UpdateData::is_default")]
     pub update_data: UpdateData,
-    #[serde(skip_serializing_if = "MovementInfo::is_default")]
-    pub movement_info: MovementInfo,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub location: Option<Vector3D>,
-}
-
-impl Player {
-    pub fn new(guid: u64, name: String, race: u8, class: u8, gender: u8) -> Self {
-        Self {
-            guid,
-            name,
-            race,
-            class,
-            gender,
-            ..Self::default()
-        }
-    }
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub inventory: Vec<u64>,
 }
 
 impl BinaryConverter for Player {
@@ -62,7 +48,7 @@ impl BinaryConverter for Player {
             .map_err(|e| FieldError::CannotRead(e, format!("race:u8 ({})", label)))?;
         let class = reader.read_u8()
             .map_err(|e| FieldError::CannotRead(e, format!("class:u8 ({})", label)))?;
-        let gender = reader.read_u8()
+        let _gender = reader.read_u8()
             .map_err(|e| FieldError::CannotRead(e, format!("gender:u8 ({})", label)))?;
 
         let _skin = reader.read_u8()
@@ -113,10 +99,14 @@ impl BinaryConverter for Player {
                 .map_err(|e| FieldError::CannotRead(e, format!("inventory:u32_2 ({})", label)))?;
         }
 
-        let mut player = Player::new(guid, name, race, class, gender);
-        player.level = level;
-
-        Ok(player)
+        Ok(Player {
+            guid,
+            name,
+            race,
+            class,
+            level,
+            ..Player::default()
+        })
     }
 }
 

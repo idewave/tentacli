@@ -19,6 +19,7 @@ pub mod update_fields;
 pub mod warden;
 pub mod world;
 pub mod errors;
+pub mod object;
 
 use chat::{Message};
 use player::{Player};
@@ -44,7 +45,6 @@ pub struct HandlerInput {
 /// `HandlerOutput::ChatMessage` notifies about messages received in chat
 /// `HandlerOutput::Data` is used to send some packet to server, contains of opcode, packet body and extra string details.
 /// `TransferCharactersList` or `TransferRealmsList` notifies about parsed Characters/Realms list
-/// `UpdatePlayer(Player)` is used to notify third-party apps about current player updates
 /// (triggered by `SMSG_UPDATE_OBJECT`/`SMSG_COMPRESSED_UPDATE_OBJECT` packets)
 /// `HandlerOutput::ConnectionRequest` is used to set connection (each call will **replace** current connection)
 /// `HandlerOutput::Freeze` is mostly used to stop packet handling (to wait for user actions etc)
@@ -59,7 +59,6 @@ pub enum HandlerOutput {
     Data((u32, Vec<u8>, String)),
     TransferCharactersList(Vec<Player>),
     TransferRealmsList(Vec<Realm>),
-    UpdatePlayer(Player),
 
     // commands
     ConnectionRequest(String, u16),
