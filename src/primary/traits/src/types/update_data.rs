@@ -206,98 +206,96 @@ impl BinaryConverter for UpdateData {
             let mut container_fields: BTreeMap<ContainerField, FieldValue> = BTreeMap::default();
             let mut corpse_fields: BTreeMap<CorpseField, FieldValue> = BTreeMap::default();
 
-            if let Some(object_type) = object_fields.get(&ObjectField::Type) {
-                if let FieldValue::Integer(mask) = object_type {
-                    if mask & ObjectTypeMask::PLAYER != 0 {
-                        let blocks = Self::build_blocks(
-                            &update_blocks,
-                            UnitField::get_limit() + 1,
-                            PlayerField::get_limit()
-                        );
+            if let Some(FieldValue::Integer(mask)) = object_fields.get(&ObjectField::Type) {
+                if mask & ObjectTypeMask::PLAYER != 0 {
+                    let blocks = Self::build_blocks(
+                        &update_blocks,
+                        UnitField::get_limit() + 1,
+                        PlayerField::get_limit()
+                    );
 
-                        player_fields = PlayerField::read_from(
-                            blocks.values().copied().collect::<Vec<u32>>(),
-                            &mut update_mask
-                        )?;
-                    }
+                    player_fields = PlayerField::read_from(
+                        blocks.values().copied().collect::<Vec<u32>>(),
+                        &mut update_mask
+                    )?;
+                }
 
-                    if mask & ObjectTypeMask::UNIT != 0 {
-                        let blocks = Self::build_blocks(
-                            &update_blocks,
-                            ObjectField::get_limit() + 1,
-                            UnitField::get_limit()
-                        );
+                if mask & ObjectTypeMask::UNIT != 0 {
+                    let blocks = Self::build_blocks(
+                        &update_blocks,
+                        ObjectField::get_limit() + 1,
+                        UnitField::get_limit()
+                    );
 
-                        unit_fields = UnitField::read_from(
-                            blocks.values().copied().collect::<Vec<u32>>(),
-                            &mut update_mask
-                        )?;
-                    }
+                    unit_fields = UnitField::read_from(
+                        blocks.values().copied().collect::<Vec<u32>>(),
+                        &mut update_mask
+                    )?;
+                }
 
-                    if mask & ObjectTypeMask::GAMEOBJECT != 0 {
-                        let blocks = Self::build_blocks(
-                            &update_blocks,
-                            ObjectField::get_limit() + 1,
-                            GameObjectField::get_limit()
-                        );
+                if mask & ObjectTypeMask::GAMEOBJECT != 0 {
+                    let blocks = Self::build_blocks(
+                        &update_blocks,
+                        ObjectField::get_limit() + 1,
+                        GameObjectField::get_limit()
+                    );
 
-                        game_object_fields = GameObjectField::read_from(
-                            blocks.values().copied().collect::<Vec<u32>>(),
-                            &mut update_mask
-                        )?;
-                    }
+                    game_object_fields = GameObjectField::read_from(
+                        blocks.values().copied().collect::<Vec<u32>>(),
+                        &mut update_mask
+                    )?;
+                }
 
-                    if mask & ObjectTypeMask::DYNAMICOBJECT != 0 {
-                        let blocks = Self::build_blocks(
-                            &update_blocks,
-                            ObjectField::get_limit() + 1,
-                            DynamicObjectField::get_limit()
-                        );
+                if mask & ObjectTypeMask::DYNAMICOBJECT != 0 {
+                    let blocks = Self::build_blocks(
+                        &update_blocks,
+                        ObjectField::get_limit() + 1,
+                        DynamicObjectField::get_limit()
+                    );
 
-                        dynamic_object_fields = DynamicObjectField::read_from(
-                            blocks.values().copied().collect::<Vec<u32>>(),
-                            &mut update_mask
-                        )?;
-                    }
+                    dynamic_object_fields = DynamicObjectField::read_from(
+                        blocks.values().copied().collect::<Vec<u32>>(),
+                        &mut update_mask
+                    )?;
+                }
 
-                    if mask & ObjectTypeMask::ITEM != 0 {
-                        let blocks = Self::build_blocks(
-                            &update_blocks,
-                            ObjectField::get_limit() + 1,
-                            ItemField::get_limit()
-                        );
+                if mask & ObjectTypeMask::ITEM != 0 {
+                    let blocks = Self::build_blocks(
+                        &update_blocks,
+                        ObjectField::get_limit() + 1,
+                        ItemField::get_limit()
+                    );
 
-                        item_fields = ItemField::read_from(
-                            blocks.values().copied().collect::<Vec<u32>>(),
-                            &mut update_mask
-                        )?;
-                    }
+                    item_fields = ItemField::read_from(
+                        blocks.values().copied().collect::<Vec<u32>>(),
+                        &mut update_mask
+                    )?;
+                }
 
-                    if mask & ObjectTypeMask::CONTAINER != 0 {
-                        let blocks = Self::build_blocks(
-                            &update_blocks,
-                            ItemField::get_limit() + 1,
-                            ContainerField::get_limit()
-                        );
+                if mask & ObjectTypeMask::CONTAINER != 0 {
+                    let blocks = Self::build_blocks(
+                        &update_blocks,
+                        ItemField::get_limit() + 1,
+                        ContainerField::get_limit()
+                    );
 
-                        container_fields = ContainerField::read_from(
-                            blocks.values().copied().collect::<Vec<u32>>(),
-                            &mut update_mask
-                        )?;
-                    }
+                    container_fields = ContainerField::read_from(
+                        blocks.values().copied().collect::<Vec<u32>>(),
+                        &mut update_mask
+                    )?;
+                }
 
-                    if mask & ObjectTypeMask::CORPSE != 0 {
-                        let blocks = Self::build_blocks(
-                            &update_blocks,
-                            ObjectField::get_limit() + 1,
-                            CorpseField::get_limit()
-                        );
+                if mask & ObjectTypeMask::CORPSE != 0 {
+                    let blocks = Self::build_blocks(
+                        &update_blocks,
+                        ObjectField::get_limit() + 1,
+                        CorpseField::get_limit()
+                    );
 
-                        corpse_fields = CorpseField::read_from(
-                            blocks.values().copied().collect::<Vec<u32>>(),
-                            &mut update_mask
-                        )?;
-                    }
+                    corpse_fields = CorpseField::read_from(
+                        blocks.values().copied().collect::<Vec<u32>>(),
+                        &mut update_mask
+                    )?;
                 }
             }
 
