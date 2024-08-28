@@ -179,7 +179,7 @@ impl Client {
         cfg_if! {
             if #[cfg(feature = "wotlk_realm")] {
                 use crate::features::wotlk_realm::WotlkRealm;
-                features.push(Box::new(WotlkRealm::default()));
+                features.push(Box::new(WotlkRealm));
             }
         }
 
