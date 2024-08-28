@@ -5,7 +5,7 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use serde::{Serialize, Serializer};
 
 use crate::{BinaryConverter, FieldError};
-use crate::types::update_fields::{FieldValue, ObjectField, PlayerField, UnitField};
+use crate::types::update_fields::{ContainerField, CorpseField, DynamicObjectField, FieldValue, GameObjectField, ItemField, ObjectField, PlayerField, UnitField};
 
 #[derive(Serialize, Clone, Default, Debug, PartialEq)]
 pub struct UpdateData {
@@ -15,6 +15,16 @@ pub struct UpdateData {
     pub unit_fields:  BTreeMap<UnitField, FieldValue>,
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     pub player_fields:  BTreeMap<PlayerField, FieldValue>,
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub item_fields:  BTreeMap<ItemField, FieldValue>,
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub container_fields:  BTreeMap<ContainerField, FieldValue>,
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub game_object_fields:  BTreeMap<GameObjectField, FieldValue>,
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub dynamic_object_fields:  BTreeMap<DynamicObjectField, FieldValue>,
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub corpse_fields:  BTreeMap<CorpseField, FieldValue>,
 }
 
 impl UpdateData {
@@ -60,6 +70,14 @@ impl UpdateData {
             },
             _ => {vec![]}
         }
+    }
+
+    fn build_blocks(
+        update_blocks: &BTreeMap<u32, u32>,
+        start: u32,
+        end: u32
+    ) -> BTreeMap<u32, u32> {
+        update_blocks.range(start..=end).map(|(&key, &value)| (key, value)).collect()
     }
 }
 
@@ -170,22 +188,128 @@ impl BinaryConverter for UpdateData {
                 update_blocks.insert(index, value);
             }
 
-            let mut unit_blocks = update_blocks.split_off(&ObjectField::get_limit());
-            let player_blocks = unit_blocks.split_off(&UnitField::get_limit());
-            let object_blocks = update_blocks.clone();
+            let object_blocks: BTreeMap<u32, u32> = update_blocks
+                .range(0..=ObjectField::get_limit())
+                .map(|(&key, &value)| (key, value))
+                .collect();
 
-            let object_values = object_blocks.values().copied().collect::<Vec<u32>>();
-            let unit_values = unit_blocks.values().copied().collect::<Vec<u32>>();
-            let player_values = player_blocks.values().copied().collect::<Vec<u32>>();
+            let object_fields = ObjectField::read_from(
+                object_blocks.values().copied().collect::<Vec<u32>>(),
+                &mut update_mask
+            )?;
 
-            let object_fields = ObjectField::read_from(object_values, &mut update_mask)?;
-            let unit_fields = UnitField::read_from(unit_values, &mut update_mask)?;
-            let player_fields = PlayerField::read_from(player_values, &mut update_mask)?;
+            let mut unit_fields: BTreeMap<UnitField, FieldValue> = BTreeMap::default();
+            let mut player_fields: BTreeMap<PlayerField, FieldValue> = BTreeMap::default();
+            let mut item_fields: BTreeMap<ItemField, FieldValue> = BTreeMap::default();
+            let mut game_object_fields: BTreeMap<GameObjectField, FieldValue> = BTreeMap::default();
+            let mut dynamic_object_fields: BTreeMap<DynamicObjectField, FieldValue> = BTreeMap::default();
+            let mut container_fields: BTreeMap<ContainerField, FieldValue> = BTreeMap::default();
+            let mut corpse_fields: BTreeMap<CorpseField, FieldValue> = BTreeMap::default();
+
+            if let Some(object_type) = object_fields.get(&ObjectField::Type) {
+                if let FieldValue::Integer(mask) = object_type {
+                    if mask & ObjectTypeMask::PLAYER != 0 {
+                        let blocks = Self::build_blocks(
+                            &update_blocks,
+                            UnitField::get_limit() + 1,
+                            PlayerField::get_limit()
+                        );
+
+                        player_fields = PlayerField::read_from(
+                            blocks.values().copied().collect::<Vec<u32>>(),
+                            &mut update_mask
+                        )?;
+                    }
+
+                    if mask & ObjectTypeMask::UNIT != 0 {
+                        let blocks = Self::build_blocks(
+                            &update_blocks,
+                            ObjectField::get_limit() + 1,
+                            UnitField::get_limit()
+                        );
+
+                        unit_fields = UnitField::read_from(
+                            blocks.values().copied().collect::<Vec<u32>>(),
+                            &mut update_mask
+                        )?;
+                    }
+
+                    if mask & ObjectTypeMask::GAMEOBJECT != 0 {
+                        let blocks = Self::build_blocks(
+                            &update_blocks,
+                            ObjectField::get_limit() + 1,
+                            GameObjectField::get_limit()
+                        );
+
+                        game_object_fields = GameObjectField::read_from(
+                            blocks.values().copied().collect::<Vec<u32>>(),
+                            &mut update_mask
+                        )?;
+                    }
+
+                    if mask & ObjectTypeMask::DYNAMICOBJECT != 0 {
+                        let blocks = Self::build_blocks(
+                            &update_blocks,
+                            ObjectField::get_limit() + 1,
+                            DynamicObjectField::get_limit()
+                        );
+
+                        dynamic_object_fields = DynamicObjectField::read_from(
+                            blocks.values().copied().collect::<Vec<u32>>(),
+                            &mut update_mask
+                        )?;
+                    }
+
+                    if mask & ObjectTypeMask::ITEM != 0 {
+                        let blocks = Self::build_blocks(
+                            &update_blocks,
+                            ObjectField::get_limit() + 1,
+                            ItemField::get_limit()
+                        );
+
+                        item_fields = ItemField::read_from(
+                            blocks.values().copied().collect::<Vec<u32>>(),
+                            &mut update_mask
+                        )?;
+                    }
+
+                    if mask & ObjectTypeMask::CONTAINER != 0 {
+                        let blocks = Self::build_blocks(
+                            &update_blocks,
+                            ItemField::get_limit() + 1,
+                            ContainerField::get_limit()
+                        );
+
+                        container_fields = ContainerField::read_from(
+                            blocks.values().copied().collect::<Vec<u32>>(),
+                            &mut update_mask
+                        )?;
+                    }
+
+                    if mask & ObjectTypeMask::CORPSE != 0 {
+                        let blocks = Self::build_blocks(
+                            &update_blocks,
+                            ObjectField::get_limit() + 1,
+                            CorpseField::get_limit()
+                        );
+
+                        corpse_fields = CorpseField::read_from(
+                            blocks.values().copied().collect::<Vec<u32>>(),
+                            &mut update_mask
+                        )?;
+                    }
+                }
+            }
 
             Ok(Self {
                 object_fields,
                 unit_fields,
-                player_fields
+                player_fields,
+                item_fields,
+                container_fields,
+                game_object_fields,
+                dynamic_object_fields,
+                corpse_fields,
             })
         } else {
             Ok(Self::default())
@@ -379,9 +503,6 @@ impl ObjectTypeMask {
     pub const GAMEOBJECT: i32 = 0x0020;
     pub const DYNAMICOBJECT: i32 = 0x0040;
     pub const CORPSE: i32 = 0x0080;
-
-    pub const IS_UNIT: i32 = ObjectTypeMask::OBJECT | ObjectTypeMask::UNIT;
-    pub const IS_PLAYER: i32 = ObjectTypeMask::IS_UNIT | ObjectTypeMask::PLAYER;
 }
 
 #[non_exhaustive]
