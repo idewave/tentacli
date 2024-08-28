@@ -41,7 +41,6 @@ impl PacketHandler for Handler {
             name,
             race,
             class,
-            gender,
             ..
         }, json) = Incoming::from_binary(&input.data)?;
 
@@ -64,8 +63,15 @@ impl PacketHandler for Handler {
                 p.name = name.to_string();
                 p.race = race;
                 p.class = class;
-                p.gender = gender;
-            }).or_insert_with(|| Player::new(guid, name.to_string(), race, class, gender));
+            }).or_insert_with(|| {
+                Player {
+                    guid,
+                    name,
+                    race,
+                    class,
+                    ..Player::default()
+                }
+            });
         }
 
         Ok(response)

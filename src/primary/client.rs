@@ -53,7 +53,7 @@ impl Client {
 
             session: Arc::new(Mutex::new(Session::new())),
             data_storage: options.data_storage
-                .unwrap_or_else(|| Arc::new(SyncMutex::new(DataStorage::new()))),
+                .unwrap_or_else(|| Arc::new(SyncMutex::new(DataStorage::default()))),
         }
     }
 
@@ -179,7 +179,7 @@ impl Client {
         cfg_if! {
             if #[cfg(feature = "wotlk_realm")] {
                 use crate::features::wotlk_realm::WotlkRealm;
-                features.push(Box::new(WotlkRealm::default()));
+                features.push(Box::new(WotlkRealm));
             }
         }
 

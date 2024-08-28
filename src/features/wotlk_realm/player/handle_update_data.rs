@@ -3,9 +3,11 @@ use tentacli_traits::{PacketHandler};
 use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
 use tentacli_traits::types::custom_fields::PackedGuid;
 use tentacli_traits::types::movement::Movement;
+use tentacli_traits::types::object::{Container, Corpse, DynamicObject, GameObject, Item, Unit};
 use tentacli_traits::types::opcodes::Opcode;
 use tentacli_traits::types::player::{Player};
-use tentacli_traits::types::update_data::{BlockType, ObjectTypeID, UpdateData};
+use tentacli_traits::types::update_data::{BlockType, ObjectTypeID, ObjectTypeMask, UpdateData};
+use tentacli_traits::types::update_fields::{FieldValue, ItemField, ObjectField};
 
 #[derive(WorldPacket, Serialize, Debug)]
 pub struct UpdateDataIncoming {
@@ -114,6 +116,14 @@ impl PacketHandler for Handler {
             Some(json),
         ));
 
+        if input.session.lock().await.me.is_none() {
+            response.push(HandlerOutput::ErrorMessage(
+                "Session player was not initialized ?!!".to_string(),
+                None,
+            ));
+            return Ok(response);
+        }
+
         let my_guid = {
             input.session.lock().await.me.as_ref().unwrap().guid
         };
@@ -123,28 +133,124 @@ impl PacketHandler for Handler {
                 continue;
             }
 
-            if block.guid == my_guid {
-                let mut guard = input.session.lock().await;
-                let me = guard.me.as_mut().unwrap();
-                me.update_data = block.update_data;
+            let PackedGuid(guid) = block.guid;
 
-                if let Some(movement_info) = block.movement.movement_info {
-                    me.movement_info = movement_info;
+            if let Some(object_type) = block.update_data.object_fields.get(&ObjectField::Type) {
+                if let FieldValue::Integer(mask) = object_type {
+                    match mask {
+                        m if m & ObjectTypeMask::PLAYER != 0 => {
+                            let mut object = Player {
+                                update_data: block.update_data,
+                                guid,
+                                ..Player::default()
+                            };
+
+                            object.movement = block.movement;
+
+                            if guid == my_guid {
+                                let mut guard = input.session.lock().await;
+                                let me = guard.me.as_mut().unwrap();
+                                *me = object.clone();
+                            }
+
+                            let mut guard = input.data_storage.lock().unwrap();
+                            guard.players_map.insert(guid, object);
+                        },
+                        m if m & ObjectTypeMask::UNIT != 0 => {
+                            let mut object = Unit {
+                                update_data: block.update_data,
+                                guid,
+                                ..Unit::default()
+                            };
+
+                            object.movement = block.movement;
+
+                            let mut guard = input.data_storage.lock().unwrap();
+                            guard.units_map.insert(guid, object);
+                        },
+                        m if m & ObjectTypeMask::GAMEOBJECT != 0 => {
+                            let mut object = GameObject {
+                                update_data: block.update_data,
+                                guid,
+                                ..GameObject::default()
+                            };
+
+                            object.movement = block.movement;
+
+                            let mut guard = input.data_storage.lock().unwrap();
+                            guard.game_objects_map.insert(guid, object);
+                        },
+                        m if m & ObjectTypeMask::DYNAMICOBJECT != 0 => {
+                            let mut object = DynamicObject {
+                                update_data: block.update_data,
+                                guid,
+                                ..DynamicObject::default()
+                            };
+
+                            object.movement = block.movement;
+
+                            let mut guard = input.data_storage.lock().unwrap();
+                            guard.dynamic_objects_map.insert(guid, object);
+                        },
+                        m if m & ObjectTypeMask::ITEM != 0 => {
+                            if let Some(owner) = block.update_data.item_fields.get(&ItemField::Owner) {
+                                if let FieldValue::Long(guid) = owner {
+                                    if my_guid == *guid {
+                                        let mut guard = input.session.lock().await;
+                                        let me = guard.me.as_mut().unwrap();
+                                        me.inventory.push(*guid);
+                                    }
+                                }
+                            }
+
+                            let mut object = Item {
+                                update_data: block.update_data,
+                                guid,
+                                ..Item::default()
+                            };
+
+                            object.movement = block.movement;
+
+                            let mut guard = input.data_storage.lock().unwrap();
+                            guard.items_map.insert(guid, object);
+                        },
+                        m if m & ObjectTypeMask::CONTAINER != 0 => {
+                            if let Some(owner) = block.update_data.item_fields.get(&ItemField::Owner) {
+                                if let FieldValue::Long(guid) = owner {
+                                    if my_guid == *guid {
+                                        let mut guard = input.session.lock().await;
+                                        let me = guard.me.as_mut().unwrap();
+                                        me.inventory.push(*guid);
+                                    }
+                                }
+                            }
+
+                            let mut object = Container {
+                                update_data: block.update_data,
+                                guid,
+                                ..Container::default()
+                            };
+
+                            object.movement = block.movement;
+
+                            let mut guard = input.data_storage.lock().unwrap();
+                            guard.containers_map.insert(guid, object);
+                        },
+                        m if m & ObjectTypeMask::CORPSE != 0 => {
+                            let mut object = Corpse {
+                                update_data: block.update_data,
+                                guid,
+                                ..Corpse::default()
+                            };
+
+                            object.movement = block.movement;
+
+                            let mut guard = input.data_storage.lock().unwrap();
+                            guard.corpses_map.insert(guid, object);
+                        }
+                        _ => {},
+                    }
                 }
-
-                response.push(HandlerOutput::UpdatePlayer(me.clone()));
-            } else {
-                let mut player = Player {
-                    update_data: block.update_data,
-                    ..Player::default()
-                };
-
-                if let Some(movement_info) = block.movement.movement_info {
-                    player.movement_info = movement_info;
-                }
-
-                let mut guard = input.data_storage.lock().unwrap();
-                guard.players_map.insert(block.guid.0, player);
             }
         }
 
@@ -157,15 +263,18 @@ mod tests {
     use anyhow::{Result as AnyResult};
     use std::collections::BTreeMap;
     use tentacli_traits::types::custom_fields::PackedGuid;
-    use tentacli_traits::types::movement::{Movement, MovementExtraFlags, MovementFlags, MovementInfo, ObjectUpdateFlags, UnitMoveType};
+    use tentacli_traits::types::movement::{
+        Movement, MovementExtraFlags, MovementFlags, MovementInfo, ObjectUpdateFlags, UnitMoveType
+    };
     use tentacli_traits::types::opcodes::Opcode;
-    use tentacli_traits::types::update_data::{BlockType, ObjectTypeID, UpdateData};
+    use tentacli_traits::types::update_data::{BlockType, ObjectTypeID, ObjectTypeMask, UpdateData};
     use tentacli_traits::types::update_fields::{FieldValue, ObjectField, PlayerField, UnitField};
     use crate::features::wotlk_realm::player::handle_update_data::{Block, UpdateDataIncoming};
 
     #[test]
     fn test_packet_building() -> AnyResult<()> {
         const GUID: u64 = 123;
+        const TYPE: i32 = ObjectTypeMask::PLAYER | ObjectTypeMask::UNIT | ObjectTypeMask::OBJECT;
         const SCALE_X: f32 = 3.;
         const AURA_STATE: i32 = 35;
         const HEALTH: i32 = 52;
@@ -218,6 +327,7 @@ mod tests {
                 object_fields: {
                     let mut map: BTreeMap<ObjectField, FieldValue> = BTreeMap::new();
                     map.insert(ObjectField::Guid, FieldValue::Long(GUID));
+                    map.insert(ObjectField::Type, FieldValue::Integer(TYPE));
                     map.insert(ObjectField::ScaleX, FieldValue::Float(SCALE_X));
 
                     map
@@ -235,7 +345,8 @@ mod tests {
                     map.insert(PlayerField::Xp, FieldValue::Integer(XP));
 
                     map
-                }
+                },
+                ..UpdateData::default()
             },
             ..Block::default()
         };

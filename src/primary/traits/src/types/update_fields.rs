@@ -4,6 +4,8 @@ use std::ops::Range;
 use core::slice::Iter;
 use serde::{Serialize};
 
+macro_rules! ignore {( $($ignored:expr)? ) => ( "" )}
+
 #[macro_export]
 macro_rules! fields {
     (
@@ -22,6 +24,14 @@ macro_rules! fields {
         pub enum $enum_name {
             $(
                 $(#[$variant_attr])*
+                // ignore! macro is a workaround to allow include "Array" string if $len param exists
+                #[doc = concat!(
+                    stringify!(FieldValue::$field_type ),
+                    $(
+                        ignore!($len),
+                        "Array",
+                    )?
+                )]
                 $variant,
             )*
         }
@@ -446,6 +456,70 @@ fields! {
         Integer[6] Glyphs = 1318,
         Integer GlyphsEnabled = 1324,
         Integer PetSpellPower = 1325,
+    }
+}
+
+fields! {
+    pub enum ItemField {
+        Long Owner = 6,
+        Long Contained = 8,
+        Long Creator = 10,
+        Long Giftcreator = 12,
+        Integer StackCount = 14,
+        Integer Duration = 15,
+        Integer[5] SpellCharges = 16,
+        Integer Flags = 21,
+        Custom (Integer, Integer, TwoShorts)[12] Enchantment = 22,
+        Integer PropertySeed = 58,
+        Integer RandomPropertiesId = 59,
+        Integer Durability = 60,
+        Integer MaxDurability = 61,
+        Integer CreatePlayedTime = 62,
+    }
+}
+
+fields! {
+    pub enum ContainerField {
+        Integer NumSlots = 64,
+        Bytes AlignPad = 65,
+        Long[36] Slot = 66,
+    }
+}
+
+fields! {
+    pub enum GameObjectField {
+        Long CreatedBy = 6,
+        Integer DisplayId = 8,
+        Integer Flags = 9,
+        Float[4] ParentRotation = 10,
+        TwoShorts Dynamic = 14,
+        Integer Faction = 15,
+        Integer Level = 16,
+        Bytes Bytes1 = 17,
+    }
+}
+
+fields! {
+    pub enum DynamicObjectField {
+        Long Caster = 6,
+        Bytes Bytes = 8,
+        Integer SpellId = 9,
+        Float Radius = 10,
+        Integer CastTime = 11,
+    }
+}
+
+fields! {
+    pub enum CorpseField {
+        Long Owner = 6,
+        Long Party = 8,
+        Integer DisplayId = 10,
+        Integer[19] Item = 11,
+        Bytes Bytes1 = 36,
+        Bytes Bytes2 = 37,
+        Integer Guild = 38,
+        Integer Flags = 39,
+        Integer DynamicFlags = 40,
     }
 }
 
