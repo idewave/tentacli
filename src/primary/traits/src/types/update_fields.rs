@@ -4,8 +4,6 @@ use std::ops::Range;
 use core::slice::Iter;
 use serde::{Serialize};
 
-macro_rules! ignore {( $($ignored:expr)? ) => ( "" )}
-
 #[macro_export]
 macro_rules! fields {
     (
@@ -24,12 +22,10 @@ macro_rules! fields {
         pub enum $enum_name {
             $(
                 $(#[$variant_attr])*
-                // ignore! macro is a workaround to allow include "Array" string if $len param exists
                 #[doc = concat!(
                     stringify!(FieldValue::$field_type ),
                     $(
-                        ignore!($len),
-                        "Array",
+                        "Array(", stringify!($len), ")"
                     )?
                 )]
                 $variant,
