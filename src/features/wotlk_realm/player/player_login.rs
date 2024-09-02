@@ -44,6 +44,8 @@ impl PacketHandler for Handler {
             )
         );
 
+        response.push(HandlerOutput::IdentifyMe(my_guid));
+
         Ok(response)
     }
 }
