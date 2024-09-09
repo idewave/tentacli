@@ -32,6 +32,56 @@ impl UpdateData {
         *self == Self::default()
     }
 
+    pub fn extend_or_clear_source(&mut self, source: &mut UpdateData) {
+        if !self.player_fields.is_empty() {
+            self.player_fields.extend(source.player_fields.clone());
+        } else {
+            source.player_fields.clear();
+        }
+
+        if !self.unit_fields.is_empty() {
+            self.unit_fields.extend(source.unit_fields.clone());
+        } else {
+            source.unit_fields.clear();
+        }
+
+        if !self.object_fields.is_empty() {
+            self.object_fields.extend(source.object_fields.clone());
+        } else {
+            source.object_fields.clear();
+        }
+
+        if !self.item_fields.is_empty() {
+            self.item_fields.extend(source.item_fields.clone());
+        } else {
+            source.item_fields.clear();
+        }
+
+        if !self.game_object_fields.is_empty() {
+            self.game_object_fields.extend(source.game_object_fields.clone());
+        } else {
+            source.game_object_fields.clear();
+        }
+
+        if !self.dynamic_object_fields.is_empty() {
+            self.dynamic_object_fields.extend(source.dynamic_object_fields.clone());
+        } else {
+            source.dynamic_object_fields.clear();
+        }
+
+        if !self.container_fields.is_empty() {
+            self.container_fields.extend(source.container_fields.clone());
+        } else {
+            source.container_fields.clear();
+        }
+
+        if !self.corpse_fields.is_empty() {
+            self.corpse_fields.extend(source.corpse_fields.clone());
+        } else {
+            source.corpse_fields.clear();
+        }
+    }
+
     pub fn parse_value(option: &FieldValue) -> Vec<u32> {
         match option {
             FieldValue::Long(value) => {
@@ -188,116 +238,144 @@ impl BinaryConverter for UpdateData {
                 update_blocks.insert(index, value);
             }
 
-            let object_blocks: BTreeMap<u32, u32> = update_blocks
-                .range(0..=ObjectField::get_limit())
-                .map(|(&key, &value)| (key, value))
-                .collect();
+            let object_fields: BTreeMap<ObjectField, FieldValue> = {
+                let blocks: BTreeMap<u32, u32> = update_blocks
+                    .range(0..=ObjectField::get_limit())
+                    .map(|(&key, &value)| (key, value))
+                    .collect();
 
-            let object_fields = ObjectField::read_from(
-                object_blocks.values().copied().collect::<Vec<u32>>(),
-                &mut update_mask
-            )?;
+                ObjectField::read_from(
+                    blocks.values().copied().collect::<Vec<u32>>(),
+                    &mut update_mask
+                ).unwrap_or_default()
+            };
 
-            let mut unit_fields: BTreeMap<UnitField, FieldValue> = BTreeMap::default();
-            let mut player_fields: BTreeMap<PlayerField, FieldValue> = BTreeMap::default();
-            let mut item_fields: BTreeMap<ItemField, FieldValue> = BTreeMap::default();
-            let mut game_object_fields: BTreeMap<GameObjectField, FieldValue> = BTreeMap::default();
-            let mut dynamic_object_fields: BTreeMap<DynamicObjectField, FieldValue> = BTreeMap::default();
-            let mut container_fields: BTreeMap<ContainerField, FieldValue> = BTreeMap::default();
-            let mut corpse_fields: BTreeMap<CorpseField, FieldValue> = BTreeMap::default();
+            let mask = object_fields.get(&ObjectField::Type).and_then(|field| {
+                if let FieldValue::Integer(mask) = field {
+                    Some(*mask)
+                } else {
+                    None
+                }
+            }).unwrap_or_default();
 
-            if let Some(FieldValue::Integer(mask)) = object_fields.get(&ObjectField::Type) {
-                if mask & ObjectTypeMask::PLAYER != 0 {
-                    let blocks = Self::build_blocks(
-                        &update_blocks,
-                        UnitField::get_limit() + 1,
-                        PlayerField::get_limit()
-                    );
+            let unit_fields: BTreeMap<UnitField, FieldValue> = {
+                let blocks = Self::build_blocks(
+                    &update_blocks,
+                    ObjectField::get_limit() + 1,
+                    UnitField::get_limit()
+                );
 
-                    player_fields = PlayerField::read_from(
+                if mask == 0 || mask & ObjectTypeMask::UNIT != 0 {
+                    UnitField::read_from(
                         blocks.values().copied().collect::<Vec<u32>>(),
                         &mut update_mask
-                    )?;
+                    ).unwrap_or_default()
+                } else {
+                    BTreeMap::default()
                 }
+            };
 
-                if mask & ObjectTypeMask::UNIT != 0 {
-                    let blocks = Self::build_blocks(
-                        &update_blocks,
-                        ObjectField::get_limit() + 1,
-                        UnitField::get_limit()
-                    );
+            let player_fields: BTreeMap<PlayerField, FieldValue> = {
+                let blocks = Self::build_blocks(
+                    &update_blocks,
+                    UnitField::get_limit() + 1,
+                    PlayerField::get_limit()
+                );
 
-                    unit_fields = UnitField::read_from(
+                if mask == 0 || mask & ObjectTypeMask::PLAYER != 0 {
+                    PlayerField::read_from(
                         blocks.values().copied().collect::<Vec<u32>>(),
                         &mut update_mask
-                    )?;
+                    ).unwrap_or_default()
+                } else {
+                    BTreeMap::default()
                 }
+            };
 
-                if mask & ObjectTypeMask::GAMEOBJECT != 0 {
-                    let blocks = Self::build_blocks(
-                        &update_blocks,
-                        ObjectField::get_limit() + 1,
-                        GameObjectField::get_limit()
-                    );
+            let item_fields: BTreeMap<ItemField, FieldValue> = {
+                let blocks = Self::build_blocks(
+                    &update_blocks,
+                    ObjectField::get_limit() + 1,
+                    ItemField::get_limit()
+                );
 
-                    game_object_fields = GameObjectField::read_from(
+                if mask == 0 || mask & ObjectTypeMask::ITEM != 0 {
+                    ItemField::read_from(
                         blocks.values().copied().collect::<Vec<u32>>(),
                         &mut update_mask
-                    )?;
+                    ).unwrap_or_default()
+                } else {
+                    BTreeMap::default()
                 }
+            };
 
-                if mask & ObjectTypeMask::DYNAMICOBJECT != 0 {
-                    let blocks = Self::build_blocks(
-                        &update_blocks,
-                        ObjectField::get_limit() + 1,
-                        DynamicObjectField::get_limit()
-                    );
+            let game_object_fields: BTreeMap<GameObjectField, FieldValue> = {
+                let blocks = Self::build_blocks(
+                    &update_blocks,
+                    ObjectField::get_limit() + 1,
+                    GameObjectField::get_limit()
+                );
 
-                    dynamic_object_fields = DynamicObjectField::read_from(
+                if mask == 0 || mask & ObjectTypeMask::GAMEOBJECT != 0 {
+                    GameObjectField::read_from(
                         blocks.values().copied().collect::<Vec<u32>>(),
                         &mut update_mask
-                    )?;
+                    ).unwrap_or_default()
+                } else {
+                    BTreeMap::default()
                 }
+            };
 
-                if mask & ObjectTypeMask::ITEM != 0 {
-                    let blocks = Self::build_blocks(
-                        &update_blocks,
-                        ObjectField::get_limit() + 1,
-                        ItemField::get_limit()
-                    );
+            let dynamic_object_fields: BTreeMap<DynamicObjectField, FieldValue> = {
+                let blocks = Self::build_blocks(
+                    &update_blocks,
+                    ObjectField::get_limit() + 1,
+                    DynamicObjectField::get_limit()
+                );
 
-                    item_fields = ItemField::read_from(
+                if mask == 0 || mask & ObjectTypeMask::DYNAMICOBJECT != 0 {
+                    DynamicObjectField::read_from(
                         blocks.values().copied().collect::<Vec<u32>>(),
                         &mut update_mask
-                    )?;
+                    ).unwrap_or_default()
+                } else {
+                    BTreeMap::default()
                 }
+            };
 
-                if mask & ObjectTypeMask::CONTAINER != 0 {
-                    let blocks = Self::build_blocks(
-                        &update_blocks,
-                        ItemField::get_limit() + 1,
-                        ContainerField::get_limit()
-                    );
+            let container_fields: BTreeMap<ContainerField, FieldValue> = {
+                let blocks = Self::build_blocks(
+                    &update_blocks,
+                    ItemField::get_limit() + 1,
+                    ContainerField::get_limit()
+                );
 
-                    container_fields = ContainerField::read_from(
+                if mask == 0 || mask & ObjectTypeMask::CONTAINER != 0 {
+                    ContainerField::read_from(
                         blocks.values().copied().collect::<Vec<u32>>(),
                         &mut update_mask
-                    )?;
+                    ).unwrap_or_default()
+                } else {
+                    BTreeMap::default()
                 }
+            };
 
-                if mask & ObjectTypeMask::CORPSE != 0 {
-                    let blocks = Self::build_blocks(
-                        &update_blocks,
-                        ObjectField::get_limit() + 1,
-                        CorpseField::get_limit()
-                    );
+            let corpse_fields: BTreeMap<CorpseField, FieldValue> = {
+                let blocks = Self::build_blocks(
+                    &update_blocks,
+                    ObjectField::get_limit() + 1,
+                    CorpseField::get_limit()
+                );
 
-                    corpse_fields = CorpseField::read_from(
+                if mask == 0 || mask & ObjectTypeMask::CORPSE != 0 {
+                    CorpseField::read_from(
                         blocks.values().copied().collect::<Vec<u32>>(),
                         &mut update_mask
-                    )?;
+                    ).unwrap_or_default()
+                } else {
+                    BTreeMap::default()
                 }
-            }
+            };
 
             Ok(Self {
                 object_fields,
