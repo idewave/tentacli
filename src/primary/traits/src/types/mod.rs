@@ -59,7 +59,7 @@ pub enum HandlerOutput {
     Data((u32, Vec<u8>, String)),
     TransferCharactersList(Vec<Player>),
     TransferRealmsList(Vec<Realm>),
-    IdentifyMe(u64),
+    UpdatePlayer(Player),
 
     // commands
     ConnectionRequest(String, u16),

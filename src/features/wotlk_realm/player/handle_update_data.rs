@@ -104,17 +104,13 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let mut response = Vec::new();
 
-        let (UpdateDataIncoming { blocks, .. }, json) = if input.opcode == Opcode::SMSG_UPDATE_OBJECT {
-            UpdateDataIncoming::from_binary(&input.data)?
-        } else {
-            UpdateDataIncoming::from_compressed_binary(&input.data)?
+        let (UpdateDataIncoming { blocks, blocks_amount }, _) = {
+            if input.opcode == Opcode::SMSG_UPDATE_OBJECT {
+                UpdateDataIncoming::from_binary(&input.data)?
+            } else {
+                UpdateDataIncoming::from_compressed_binary(&input.data)?
+            }
         };
-
-        response.push(HandlerOutput::ResponseMessage(
-            Opcode::get_opcode_name(input.opcode as u32)
-                .unwrap_or(format!("Unknown opcode: {}", input.opcode)),
-            Some(json),
-        ));
 
         if input.session.lock().await.me.is_none() {
             response.push(HandlerOutput::ErrorMessage(
@@ -128,10 +124,11 @@ impl PacketHandler for Handler {
             input.session.lock().await.me.as_ref().unwrap().guid
         };
 
-        for block in blocks {
-            if block.guid == 0 {
-                continue;
-            }
+        let mut refined_blocks: Vec<Block> = vec![];
+
+        for mut block in blocks {
+            let mut update_data = UpdateData::default();
+            let cloned_block = block.clone();
 
             let PackedGuid(guid) = block.guid;
 
@@ -140,6 +137,7 @@ impl PacketHandler for Handler {
             {
                 match mask {
                     m if m & ObjectTypeMask::PLAYER != 0 => {
+                        update_data = block.update_data.clone();
                         let mut object = Player {
                             update_data: block.update_data,
                             guid,
@@ -152,12 +150,14 @@ impl PacketHandler for Handler {
                             let mut guard = input.session.lock().await;
                             let me = guard.me.as_mut().unwrap();
                             *me = object.clone();
+                            response.push(HandlerOutput::UpdatePlayer(object.clone()));
                         }
 
                         let mut guard = input.data_storage.lock().unwrap();
                         guard.players_map.insert(guid, object);
                     },
                     m if m & ObjectTypeMask::UNIT != 0 => {
+                        update_data = block.update_data.clone();
                         let mut object = Unit {
                             update_data: block.update_data,
                             guid,
@@ -170,6 +170,7 @@ impl PacketHandler for Handler {
                         guard.units_map.insert(guid, object);
                     },
                     m if m & ObjectTypeMask::GAMEOBJECT != 0 => {
+                        update_data = block.update_data.clone();
                         let mut object = GameObject {
                             update_data: block.update_data,
                             guid,
@@ -182,6 +183,7 @@ impl PacketHandler for Handler {
                         guard.game_objects_map.insert(guid, object);
                     },
                     m if m & ObjectTypeMask::DYNAMICOBJECT != 0 => {
+                        update_data = block.update_data.clone();
                         let mut object = DynamicObject {
                             update_data: block.update_data,
                             guid,
@@ -194,6 +196,7 @@ impl PacketHandler for Handler {
                         guard.dynamic_objects_map.insert(guid, object);
                     },
                     m if m & ObjectTypeMask::ITEM != 0 => {
+                        update_data = block.update_data.clone();
                         if let Some(FieldValue::Long(guid)) =
                             block.update_data.item_fields.get(&ItemField::Owner)
                         {
@@ -216,6 +219,7 @@ impl PacketHandler for Handler {
                         guard.items_map.insert(guid, object);
                     },
                     m if m & ObjectTypeMask::CONTAINER != 0 => {
+                        update_data = block.update_data.clone();
                         if let Some(FieldValue::Long(guid)) =
                             block.update_data.item_fields.get(&ItemField::Owner)
                         {
@@ -238,6 +242,7 @@ impl PacketHandler for Handler {
                         guard.containers_map.insert(guid, object);
                     },
                     m if m & ObjectTypeMask::CORPSE != 0 => {
+                        update_data = block.update_data.clone();
                         let mut object = Corpse {
                             update_data: block.update_data,
                             guid,
@@ -251,8 +256,75 @@ impl PacketHandler for Handler {
                     }
                     _ => {},
                 }
+            } else {
+                let mut guard = input.data_storage.lock().unwrap();
+
+                match guid {
+                    g if guard.players_map.contains_key(&g) => {
+                        guard.players_map.entry(guid).and_modify(|o| {
+                            o.update_data.extend_or_clear_source(&mut block.update_data);
+                            update_data = block.update_data.clone();
+                            if o.guid == my_guid {
+                                response.push(HandlerOutput::UpdatePlayer(o.clone()));
+                            }
+                        });
+                    },
+                    g if guard.units_map.contains_key(&g) => {
+                        guard.units_map.entry(guid).and_modify(|o| {
+                            o.update_data.extend_or_clear_source(&mut block.update_data);
+                            update_data = block.update_data.clone();
+                        });
+                    },
+                    g if guard.game_objects_map.contains_key(&g) => {
+                        guard.game_objects_map.entry(guid).and_modify(|o| {
+                            o.update_data.extend_or_clear_source(&mut block.update_data);
+                            update_data = block.update_data.clone();
+                        });
+                    },
+                    g if guard.dynamic_objects_map.contains_key(&g) => {
+                        guard.dynamic_objects_map.entry(guid).and_modify(|o| {
+                            o.update_data.extend_or_clear_source(&mut block.update_data);
+                            update_data = block.update_data.clone();
+                        });
+                    },
+                    g if guard.items_map.contains_key(&g) => {
+                        guard.items_map.entry(guid).and_modify(|o| {
+                            o.update_data.extend_or_clear_source(&mut block.update_data);
+                            update_data = block.update_data.clone();
+                        });
+                    },
+                    g if guard.containers_map.contains_key(&g) => {
+                        guard.containers_map.entry(guid).and_modify(|o| {
+                            o.update_data.extend_or_clear_source(&mut block.update_data);
+                            update_data = block.update_data.clone();
+                        });
+                    },
+                    g if guard.corpses_map.contains_key(&g) => {
+                        guard.corpses_map.entry(guid).and_modify(|o| {
+                            o.update_data.extend_or_clear_source(&mut block.update_data);
+                            update_data = block.update_data.clone();
+                        });
+                    },
+                    _ => {},
+                }
             }
+
+            refined_blocks.push(Block {
+                update_data,
+                ..cloned_block
+            });
         }
+
+        let json = UpdateDataIncoming {
+            blocks_amount,
+            blocks: refined_blocks,
+        }.get_json_details()?;
+
+        response.push(HandlerOutput::ResponseMessage(
+            Opcode::get_opcode_name(input.opcode as u32)
+                .unwrap_or(format!("Unknown opcode: {}", input.opcode)),
+            Some(json),
+        ));
 
         Ok(response)
     }
