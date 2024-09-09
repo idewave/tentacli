@@ -150,6 +150,7 @@ impl PacketHandler for Handler {
                             let mut guard = input.session.lock().await;
                             let me = guard.me.as_mut().unwrap();
                             *me = object.clone();
+                            response.push(HandlerOutput::UpdatePlayer(object.clone()));
                         }
 
                         let mut guard = input.data_storage.lock().unwrap();
@@ -263,6 +264,9 @@ impl PacketHandler for Handler {
                         guard.players_map.entry(guid).and_modify(|o| {
                             o.update_data.extend_or_clear_source(&mut block.update_data);
                             update_data = block.update_data.clone();
+                            if o.guid == my_guid {
+                                response.push(HandlerOutput::UpdatePlayer(o.clone()));
+                            }
                         });
                     },
                     g if guard.units_map.contains_key(&g) => {
