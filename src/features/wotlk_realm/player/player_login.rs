@@ -25,7 +25,7 @@ impl PacketHandler for Handler {
             let config = guard.get_config()?;
             config.common.auto_create_character_for_new_account
         };
-        
+
         if !me_exists {
             if auto_create_character_for_new_account {
                 return Ok(response);
@@ -43,6 +43,8 @@ impl PacketHandler for Handler {
                 Outgoing { guid: my_guid }.unpack_with_client_opcode(Opcode::CMSG_PLAYER_LOGIN)?
             )
         );
+
+        response.push(HandlerOutput::IdentifyMe(my_guid));
 
         Ok(response)
     }

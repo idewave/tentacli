@@ -10,7 +10,7 @@ use tentacli_traits::types::update_data::{BlockType, ObjectTypeID, ObjectTypeMas
 use tentacli_traits::types::update_fields::{FieldValue, ItemField, ObjectField};
 
 #[derive(WorldPacket, Serialize, Debug)]
-pub struct UpdateDataIncoming {
+pub struct Incoming {
     pub blocks_amount: u32,
     #[depends_on(blocks_amount)]
     pub blocks: Vec<Block>,
@@ -104,11 +104,11 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let mut response = Vec::new();
 
-        let (UpdateDataIncoming { blocks, blocks_amount }, _) = {
+        let (Incoming { blocks, blocks_amount }, _) = {
             if input.opcode == Opcode::SMSG_UPDATE_OBJECT {
-                UpdateDataIncoming::from_binary(&input.data)?
+                Incoming::from_binary(&input.data)?
             } else {
-                UpdateDataIncoming::from_compressed_binary(&input.data)?
+                Incoming::from_compressed_binary(&input.data)?
             }
         };
 
@@ -150,8 +150,9 @@ impl PacketHandler for Handler {
                             let mut guard = input.session.lock().await;
                             let me = guard.me.as_mut().unwrap();
                             *me = object.clone();
-                            response.push(HandlerOutput::UpdatePlayer(object.clone()));
                         }
+
+                        response.push(HandlerOutput::UpdatePlayer(guid));
 
                         let mut guard = input.data_storage.lock().unwrap();
                         guard.players_map.insert(guid, object);
@@ -165,6 +166,7 @@ impl PacketHandler for Handler {
                         };
 
                         object.movement = block.movement;
+                        response.push(HandlerOutput::UpdateNPC(guid));
 
                         let mut guard = input.data_storage.lock().unwrap();
                         guard.units_map.insert(guid, object);
@@ -178,6 +180,7 @@ impl PacketHandler for Handler {
                         };
 
                         object.movement = block.movement;
+                        response.push(HandlerOutput::UpdateGameObject(guid));
 
                         let mut guard = input.data_storage.lock().unwrap();
                         guard.game_objects_map.insert(guid, object);
@@ -191,6 +194,7 @@ impl PacketHandler for Handler {
                         };
 
                         object.movement = block.movement;
+                        response.push(HandlerOutput::UpdateDynamicObject(guid));
 
                         let mut guard = input.data_storage.lock().unwrap();
                         guard.dynamic_objects_map.insert(guid, object);
@@ -214,6 +218,7 @@ impl PacketHandler for Handler {
                         };
 
                         object.movement = block.movement;
+                        response.push(HandlerOutput::UpdateItem(guid));
 
                         let mut guard = input.data_storage.lock().unwrap();
                         guard.items_map.insert(guid, object);
@@ -237,6 +242,7 @@ impl PacketHandler for Handler {
                         };
 
                         object.movement = block.movement;
+                        response.push(HandlerOutput::UpdateContainer(guid));
 
                         let mut guard = input.data_storage.lock().unwrap();
                         guard.containers_map.insert(guid, object);
@@ -250,6 +256,7 @@ impl PacketHandler for Handler {
                         };
 
                         object.movement = block.movement;
+                        response.push(HandlerOutput::UpdateCorpse(guid));
 
                         let mut guard = input.data_storage.lock().unwrap();
                         guard.corpses_map.insert(guid, object);
@@ -264,46 +271,57 @@ impl PacketHandler for Handler {
                         guard.players_map.entry(guid).and_modify(|o| {
                             o.update_data.extend_or_clear_source(&mut block.update_data);
                             update_data = block.update_data.clone();
-                            if o.guid == my_guid {
-                                response.push(HandlerOutput::UpdatePlayer(o.clone()));
-                            }
                         });
+
+                        response.push(HandlerOutput::UpdatePlayer(guid));
                     },
                     g if guard.units_map.contains_key(&g) => {
                         guard.units_map.entry(guid).and_modify(|o| {
                             o.update_data.extend_or_clear_source(&mut block.update_data);
                             update_data = block.update_data.clone();
                         });
+
+                        response.push(HandlerOutput::UpdateNPC(guid));
                     },
                     g if guard.game_objects_map.contains_key(&g) => {
                         guard.game_objects_map.entry(guid).and_modify(|o| {
                             o.update_data.extend_or_clear_source(&mut block.update_data);
                             update_data = block.update_data.clone();
                         });
+
+                        response.push(HandlerOutput::UpdateGameObject(guid));
                     },
                     g if guard.dynamic_objects_map.contains_key(&g) => {
                         guard.dynamic_objects_map.entry(guid).and_modify(|o| {
                             o.update_data.extend_or_clear_source(&mut block.update_data);
                             update_data = block.update_data.clone();
                         });
+
+                        response.push(HandlerOutput::UpdateDynamicObject(guid));
                     },
                     g if guard.items_map.contains_key(&g) => {
                         guard.items_map.entry(guid).and_modify(|o| {
                             o.update_data.extend_or_clear_source(&mut block.update_data);
                             update_data = block.update_data.clone();
                         });
+
+                        response.push(HandlerOutput::UpdateItem(guid));
                     },
                     g if guard.containers_map.contains_key(&g) => {
                         guard.containers_map.entry(guid).and_modify(|o| {
                             o.update_data.extend_or_clear_source(&mut block.update_data);
                             update_data = block.update_data.clone();
                         });
+
+                        response.push(HandlerOutput::UpdateContainer(guid));
                     },
                     g if guard.corpses_map.contains_key(&g) => {
                         guard.corpses_map.entry(guid).and_modify(|o| {
                             o.update_data.extend_or_clear_source(&mut block.update_data);
                             update_data = block.update_data.clone();
                         });
+
+                        response.push(HandlerOutput::UpdateCorpse(guid));
                     },
                     _ => {},
                 }
@@ -315,7 +333,7 @@ impl PacketHandler for Handler {
             });
         }
 
-        let json = UpdateDataIncoming {
+        let json = Incoming {
             blocks_amount,
             blocks: refined_blocks,
         }.get_json_details()?;
@@ -341,7 +359,7 @@ mod tests {
     use tentacli_traits::types::opcodes::Opcode;
     use tentacli_traits::types::update_data::{BlockType, ObjectTypeID, ObjectTypeMask, UpdateData};
     use tentacli_traits::types::update_fields::{FieldValue, ObjectField, PlayerField, UnitField};
-    use crate::features::wotlk_realm::player::handle_update_data::{Block, UpdateDataIncoming};
+    use crate::features::wotlk_realm::object::update_object::{Block, Incoming};
 
     #[test]
     fn test_packet_building() -> AnyResult<()> {
@@ -425,12 +443,12 @@ mod tests {
 
         let blocks = vec![block.clone(), block.clone(), block];
 
-        let packet = UpdateDataIncoming {
+        let packet = Incoming {
             blocks_amount: blocks.len() as u32,
             blocks,
         }.to_binary_with_server_opcode(Opcode::SMSG_UPDATE_OBJECT).unwrap();
 
-        let (UpdateDataIncoming { blocks, .. }, _) = UpdateDataIncoming::from_binary(&packet[4..])?;
+        let (Incoming { blocks, .. }, _) = Incoming::from_binary(&packet[4..])?;
 
         assert_eq!(blocks[0].block_type, block_type);
         assert_eq!(blocks[1].block_type, block_type);

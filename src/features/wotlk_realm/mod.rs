@@ -8,12 +8,14 @@ mod realm;
 mod spell;
 mod warden;
 mod globals;
+mod object;
 
 use chat::ChatProcessor;
 use player::PlayerProcessor;
 use realm::RealmProcessor;
 use spell::SpellProcessor;
 use warden::WardenProcessor;
+use object::ObjectProcessor;
 
 #[derive(Default)]
 pub struct WotlkRealm;
@@ -21,6 +23,7 @@ impl Feature for WotlkRealm {
     fn get_realm_processors(&self) -> Vec<ProcessorFunction> {
         vec![
             Box::new(ChatProcessor::get_handlers),
+            Box::new(ObjectProcessor::get_handlers),
             Box::new(PlayerProcessor::get_handlers),
             Box::new(RealmProcessor::get_handlers),
             Box::new(SpellProcessor::get_handlers),

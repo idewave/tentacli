@@ -7,7 +7,7 @@ use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tentacli_crypto::{Decryptor, Encryptor, WardenCrypt};
 use tentacli_traits::types::{IncomingPacket, OutgoingPacket};
 use tentacli_traits::types::opcodes::Opcode;
-// use tokio_util::io::InspectReader;
+
 cfg_if! {
     if #[cfg(feature = "wotlk_login")] {
         use crate::features::wotlk_login::{
@@ -22,7 +22,6 @@ pub const INCOME_WORLD_OPCODE_LENGTH: usize = 2;
 pub const OUTCOME_WORLD_PACKET_HEADER_LENGTH: usize = 6;
 
 pub struct Reader {
-    // _stream: BufReader<InspectReader<OwnedReadHalf, fn(&[u8])>>,
     _stream: BufReader<OwnedReadHalf>,
     _decryptor: Option<Decryptor>,
     _warden_crypt: Arc<SyncMutex<Option<WardenCrypt>>>,
@@ -36,8 +35,6 @@ impl Reader {
         need_sync: bool,
         decryptor: Option<Decryptor>
     ) -> Self {
-        // let inspect_fn: fn(&[u8]) = |bytes| println!("READ: {bytes:?}");
-        // let inspect_reader = InspectReader::new(reader, inspect_fn);
         let buf_reader = BufReader::new(reader);
 
         Self {
