@@ -1,6 +1,6 @@
 [package]
 name = "tentacli"
-version = "14.1.0"
+version = "14.2.0"
 edition = "2021"
 authors = ["Sergio Ivanuzzo <sergio.ivanuzzo@gmail.com>"]
 description = "Console wow-client, it can be used either as a standalone application or integrated into your own project."
