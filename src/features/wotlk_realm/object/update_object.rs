@@ -10,7 +10,7 @@ use tentacli_traits::types::update_data::{BlockType, ObjectTypeID, ObjectTypeMas
 use tentacli_traits::types::update_fields::{FieldValue, ItemField, ObjectField};
 
 #[derive(WorldPacket, Serialize, Debug)]
-pub struct UpdateDataIncoming {
+pub struct Incoming {
     pub blocks_amount: u32,
     #[depends_on(blocks_amount)]
     pub blocks: Vec<Block>,
@@ -104,11 +104,11 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let mut response = Vec::new();
 
-        let (UpdateDataIncoming { blocks, blocks_amount }, _) = {
+        let (Incoming { blocks, blocks_amount }, _) = {
             if input.opcode == Opcode::SMSG_UPDATE_OBJECT {
-                UpdateDataIncoming::from_binary(&input.data)?
+                Incoming::from_binary(&input.data)?
             } else {
-                UpdateDataIncoming::from_compressed_binary(&input.data)?
+                Incoming::from_compressed_binary(&input.data)?
             }
         };
 
@@ -333,7 +333,7 @@ impl PacketHandler for Handler {
             });
         }
 
-        let json = UpdateDataIncoming {
+        let json = Incoming {
             blocks_amount,
             blocks: refined_blocks,
         }.get_json_details()?;
@@ -359,7 +359,7 @@ mod tests {
     use tentacli_traits::types::opcodes::Opcode;
     use tentacli_traits::types::update_data::{BlockType, ObjectTypeID, ObjectTypeMask, UpdateData};
     use tentacli_traits::types::update_fields::{FieldValue, ObjectField, PlayerField, UnitField};
-    use crate::features::wotlk_realm::player::handle_update_data::{Block, UpdateDataIncoming};
+    use crate::features::wotlk_realm::object::update_object::{Block, Incoming};
 
     #[test]
     fn test_packet_building() -> AnyResult<()> {
@@ -443,12 +443,12 @@ mod tests {
 
         let blocks = vec![block.clone(), block.clone(), block];
 
-        let packet = UpdateDataIncoming {
+        let packet = Incoming {
             blocks_amount: blocks.len() as u32,
             blocks,
         }.to_binary_with_server_opcode(Opcode::SMSG_UPDATE_OBJECT).unwrap();
 
-        let (UpdateDataIncoming { blocks, .. }, _) = UpdateDataIncoming::from_binary(&packet[4..])?;
+        let (Incoming { blocks, .. }, _) = Incoming::from_binary(&packet[4..])?;
 
         assert_eq!(blocks[0].block_type, block_type);
         assert_eq!(blocks[1].block_type, block_type);
