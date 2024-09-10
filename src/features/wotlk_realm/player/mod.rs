@@ -3,9 +3,8 @@ use tentacli_traits::types::{ProcessorResult};
 use tentacli_traits::types::opcodes::Opcode;
 
 mod handle_name_query_response;
-mod handle_update_data;
-pub mod get_characters_list;
-pub mod player_login;
+mod get_characters_list;
+mod player_login;
 mod check_character_create_status;
 mod traits;
 mod init_world_states;
@@ -15,12 +14,6 @@ pub struct PlayerProcessor;
 impl Processor for PlayerProcessor {
     fn get_handlers(opcode: u16) -> ProcessorResult {
         let handlers: ProcessorResult = match opcode {
-            Opcode::SMSG_COMPRESSED_UPDATE_OBJECT |
-            Opcode::SMSG_UPDATE_OBJECT => {
-                vec![
-                    Box::new(handle_update_data::Handler),
-                ]
-            },
             Opcode::SMSG_GROUP_INVITE => {
                 vec![]
             },
