@@ -150,8 +150,9 @@ impl PacketHandler for Handler {
                             let mut guard = input.session.lock().await;
                             let me = guard.me.as_mut().unwrap();
                             *me = object.clone();
-                            response.push(HandlerOutput::UpdatePlayer(object.clone()));
                         }
+
+                        response.push(HandlerOutput::UpdatePlayer(guid));
 
                         let mut guard = input.data_storage.lock().unwrap();
                         guard.players_map.insert(guid, object);
@@ -165,6 +166,7 @@ impl PacketHandler for Handler {
                         };
 
                         object.movement = block.movement;
+                        response.push(HandlerOutput::UpdateNPC(guid));
 
                         let mut guard = input.data_storage.lock().unwrap();
                         guard.units_map.insert(guid, object);
@@ -178,6 +180,7 @@ impl PacketHandler for Handler {
                         };
 
                         object.movement = block.movement;
+                        response.push(HandlerOutput::UpdateGameObject(guid));
 
                         let mut guard = input.data_storage.lock().unwrap();
                         guard.game_objects_map.insert(guid, object);
@@ -191,6 +194,7 @@ impl PacketHandler for Handler {
                         };
 
                         object.movement = block.movement;
+                        response.push(HandlerOutput::UpdateDynamicObject(guid));
 
                         let mut guard = input.data_storage.lock().unwrap();
                         guard.dynamic_objects_map.insert(guid, object);
@@ -214,6 +218,7 @@ impl PacketHandler for Handler {
                         };
 
                         object.movement = block.movement;
+                        response.push(HandlerOutput::UpdateItem(guid));
 
                         let mut guard = input.data_storage.lock().unwrap();
                         guard.items_map.insert(guid, object);
@@ -237,6 +242,7 @@ impl PacketHandler for Handler {
                         };
 
                         object.movement = block.movement;
+                        response.push(HandlerOutput::UpdateContainer(guid));
 
                         let mut guard = input.data_storage.lock().unwrap();
                         guard.containers_map.insert(guid, object);
@@ -250,6 +256,7 @@ impl PacketHandler for Handler {
                         };
 
                         object.movement = block.movement;
+                        response.push(HandlerOutput::UpdateCorpse(guid));
 
                         let mut guard = input.data_storage.lock().unwrap();
                         guard.corpses_map.insert(guid, object);
@@ -264,46 +271,57 @@ impl PacketHandler for Handler {
                         guard.players_map.entry(guid).and_modify(|o| {
                             o.update_data.extend_or_clear_source(&mut block.update_data);
                             update_data = block.update_data.clone();
-                            if o.guid == my_guid {
-                                response.push(HandlerOutput::UpdatePlayer(o.clone()));
-                            }
                         });
+
+                        response.push(HandlerOutput::UpdatePlayer(guid));
                     },
                     g if guard.units_map.contains_key(&g) => {
                         guard.units_map.entry(guid).and_modify(|o| {
                             o.update_data.extend_or_clear_source(&mut block.update_data);
                             update_data = block.update_data.clone();
                         });
+
+                        response.push(HandlerOutput::UpdateNPC(guid));
                     },
                     g if guard.game_objects_map.contains_key(&g) => {
                         guard.game_objects_map.entry(guid).and_modify(|o| {
                             o.update_data.extend_or_clear_source(&mut block.update_data);
                             update_data = block.update_data.clone();
                         });
+
+                        response.push(HandlerOutput::UpdateGameObject(guid));
                     },
                     g if guard.dynamic_objects_map.contains_key(&g) => {
                         guard.dynamic_objects_map.entry(guid).and_modify(|o| {
                             o.update_data.extend_or_clear_source(&mut block.update_data);
                             update_data = block.update_data.clone();
                         });
+
+                        response.push(HandlerOutput::UpdateDynamicObject(guid));
                     },
                     g if guard.items_map.contains_key(&g) => {
                         guard.items_map.entry(guid).and_modify(|o| {
                             o.update_data.extend_or_clear_source(&mut block.update_data);
                             update_data = block.update_data.clone();
                         });
+
+                        response.push(HandlerOutput::UpdateItem(guid));
                     },
                     g if guard.containers_map.contains_key(&g) => {
                         guard.containers_map.entry(guid).and_modify(|o| {
                             o.update_data.extend_or_clear_source(&mut block.update_data);
                             update_data = block.update_data.clone();
                         });
+
+                        response.push(HandlerOutput::UpdateContainer(guid));
                     },
                     g if guard.corpses_map.contains_key(&g) => {
                         guard.corpses_map.entry(guid).and_modify(|o| {
                             o.update_data.extend_or_clear_source(&mut block.update_data);
                             update_data = block.update_data.clone();
                         });
+
+                        response.push(HandlerOutput::UpdateCorpse(guid));
                     },
                     _ => {},
                 }
