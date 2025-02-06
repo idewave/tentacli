@@ -220,18 +220,6 @@ impl BinaryConverter for Movement {
             movement_info.write_into(buffer)?;
         }
 
-        if let Some(mut high_guid) = self.high_guid {
-            high_guid.write_into(buffer)?;
-        }
-
-        if let Some(mut low_guid) = self.low_guid {
-            low_guid.write_into(buffer)?;
-        }
-
-        if let Some(mut target_guid) = self.target_guid {
-            target_guid.write_into(buffer)?;
-        }
-
         if let Some(movement_speed) = self.movement_speed.clone() {
             let mut speed_info: Vec<f32> = movement_speed.values().copied().collect();
             speed_info.write_into(buffer)?;
@@ -249,6 +237,18 @@ impl BinaryConverter for Movement {
             position.write_into(buffer)?;
         } else if let Some(mut position) = self.world_object_position {
             position.write_into(buffer)?;
+        }
+
+        if let Some(mut low_guid) = self.low_guid {
+            low_guid.write_into(buffer)?;
+        }
+
+        if let Some(mut high_guid) = self.high_guid {
+            high_guid.write_into(buffer)?;
+        }
+
+        if let Some(mut target_guid) = self.target_guid {
+            target_guid.write_into(buffer)?;
         }
 
         Ok(())
