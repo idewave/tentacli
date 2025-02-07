@@ -105,7 +105,7 @@ impl Client {
         }
     }
 
-    pub async fn run<'a>(&mut self, options: RunOptions<'a>) -> AnyResult<()> {
+    pub async fn run(&mut self, options: RunOptions<'_>) -> AnyResult<()> {
         let EnvConfig { host, port } = EnvConfig::new(
             EnvConfigParams { dotenv_path: options.dotenv_path }
         )?;

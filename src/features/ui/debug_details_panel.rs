@@ -39,7 +39,7 @@ impl DebugDetailsPanel {
             KeyCode::Down if key_modifiers.contains(KeyModifiers::CONTROL) => {
                 let mut text_height = 0;
                 for line in text.lines.iter() {
-                    text_height += (line.width() + self.panel_width - 1) / self.panel_width;
+                    text_height += line.width().div_ceil(self.panel_width);
                 }
 
                 if text_height > self.panel_height &&
