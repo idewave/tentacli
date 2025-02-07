@@ -1,9 +1,9 @@
 [package]
 name = "tentacli"
-version = "14.2.0"
+version = "14.2.1"
 edition = "2021"
 authors = ["Sergio Ivanuzzo <sergio.ivanuzzo@gmail.com>"]
-description = "Console wow-client, it can be used either as a standalone application or integrated into your own project."
+description = "Multipurpose console wow-client, it can be used either as a standalone application or integrated into your own project as a crate."
 readme = "README.md"
 keywords = [
     "idewave", "wow-client",
@@ -32,7 +32,7 @@ sha-1 = { version = "0.9.8", optional = true }
 tentacli-crypto = "0.1.0"
 tentacli-formatters = "0.1.0"
 tentacli-packet = "7.0.0"
-tentacli-traits = "9.2.0"
+tentacli-traits = "9.2.1"
 tentacli-utils = "2.1.0"
 tokio = { version = "1", features = ["sync", "net", "io-util", "macros", "time", "rt-multi-thread"] }
 tui = { version = "0", features = ["crossterm"], optional = true }

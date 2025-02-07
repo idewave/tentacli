@@ -1,13 +1,22 @@
 # TentaCLI
-TentaCLI is embeddable extendable console client for WoW 3.3.5a server.
+Tentacli is a headless (like a tentacle) console client for World of Warcraft server (supported version: 3.3.5a).
+By default, it serves as a tool for displaying real-time TCP traffic in human-readable format (JSON).
+It is adapted for scenarios where you need to run multiple clients simultaneously 
+and supports data sharing between instances, making it suitable for stress testing your server.
 
-You can use the CLI to debug TCP packets from/to World of Warcraft Server. Or implement some handlers to send your packet to the server.
-To extend existing functionality you can implement own features (see `Feature` trait and `src/features` for examples).
-Since tentacli is designed to be used as both a library and an application, you can include it as a library in your own app.
+You can extend its functionality by creating your own plugins (features), 
+allowing it to act as a bot or anything else you need. Additionally, it can be integrated into your own app as a crate.
+
+Here are some examples of how the default UI looks:
+![Image](https://github.com/user-attachments/assets/f803139a-eaf7-47d7-acf0-8d783f6f4da6)
+
+![Image](https://github.com/user-attachments/assets/45c81ff7-832b-43aa-92d1-2a25b4a3bdf4)
+
+However, you are not required to use this UI (or any UI at all), as it is possible to implement your own plugin (feature) to replace it.
 
 ### How to start
-+ Run `cargo run`
-+ After the first run, **tentacli** will create **Config.yml** and **.env** files in the location specified by `config_path` and `dotenv_path` in `RunOptions { ..., config_path, dotenv_path }`.
+
++ Run `cargo run`, so **Config.yml** and **.env** files will be created in the location specified by `config_path` and `dotenv_path` in `RunOptions { ..., config_path, dotenv_path }`.
 + Edit **Config.yml** to set your account name, password, realm and character for auto-selection (or leave them empty to select manually). You can use regex for name and realm fields.
 + Edit **.env** to set your WoW server's IP address/hostname or keep `127.0.0.1` for a local server
 + Run `cargo run` again
@@ -26,11 +35,8 @@ Since tentacli is designed to be used as both a library and an application, you 
 ### You want to contribute
 It's always welcome. Just create pull request with your improvements, bugfix etc.
 
-### Want to discuss ?
-Join us on Discord: https://discord.gg/2qa6dS3Aj6 !
-
 ### If you want to support...
-...you could buy me a [ko-fi](https://ko-fi.com/idewave)
+...you can buy me a [ko-fi](https://ko-fi.com/idewave)
 
 ### Documentation
-I do my best to keep it up-to-date. Check our [Wiki](https://github.com/idewave/tentacli/wiki)
+I do my best to keep it up-to-date. Have a look at the project's [Wiki](https://github.com/idewave/tentacli/wiki)
