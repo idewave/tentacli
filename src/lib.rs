@@ -24,12 +24,11 @@
 //! use tentacli::async_broadcast::{BroadcastSender, BroadcastReceiver};
 //! use tentacli::{Client, CreateOptions, RunOptions};
 //! use tentacli_traits::{Feature, FeatureError};
-//! use tentacli_traits::types::{HandlerOutput, ProcessorFunction, ProcessorResult};
+//! use tentacli_traits::types::{HandlerOutput, ProcessorFunction, ProcessorResult, Task};
 //!
 //! #[tokio::main]
 //! async fn main() {
-//!     use tentacli_traits::types::Task;
-//! #[derive(Default)]
+//!     #[derive(Default)]
 //!     pub struct MyFeature {
 //!         _receiver: Option<BroadcastReceiver<HandlerOutput>>,
 //!         _sender: Option<BroadcastSender<HandlerOutput>>,
