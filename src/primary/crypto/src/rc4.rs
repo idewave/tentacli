@@ -1,4 +1,5 @@
 use std::fmt::{Debug, Formatter};
+
 use hmacsha::HmacSha;
 use sha1::Sha1;
 
@@ -16,21 +17,21 @@ pub struct Encryptor {
 
 impl Encryptor {
     pub fn new(secret: &[u8]) -> Self {
-        let sync = vec![0; 1024];
+        let mut sync = vec![0u8; 1024];
 
         let mut encryptor = RC4::new(
             HmacSha::new(&ENCRYPTION_KEY, secret, Sha1::default()).compute_digest().to_vec()
         );
 
-        let _ = &encryptor.encrypt(&sync);
+        encryptor.encrypt(&mut sync);
 
         Self {
             instance: encryptor,
         }
     }
 
-    pub fn encrypt(&mut self, data: &[u8]) -> Vec<u8> {
-        self.instance.encrypt(data)
+    pub fn encrypt(&mut self, data: &mut [u8]) {
+        self.instance.encrypt(data);
     }
 }
 
@@ -46,21 +47,21 @@ pub struct Decryptor {
 
 impl Decryptor {
     pub fn new(secret: &[u8]) -> Self {
-        let sync = vec![0; 1024];
+        let mut sync = vec![0; 1024];
 
         let mut decryptor = RC4::new(
             HmacSha::new(&DECRYPTION_KEY, secret, Sha1::default()).compute_digest().to_vec()
         );
 
-        let _ = &decryptor.encrypt(&sync);
+        decryptor.encrypt(&mut sync);
 
         Self {
             instance: decryptor,
         }
     }
 
-    pub fn decrypt(&mut self, data: &[u8]) -> Vec<u8> {
-        self.instance.encrypt(data)
+    pub fn decrypt(&mut self, data: &mut [u8]) {
+        self.instance.encrypt(data);
     }
 }
 
@@ -107,12 +108,9 @@ impl RC4 {
         self.state[(self.state[self.i as usize].wrapping_add(self.state[self.j as usize])) as usize]
     }
 
-    pub fn encrypt(&mut self, data: &[u8]) -> Vec<u8> {
-        let mut encrypted = Vec::new();
-        for x in data.iter() {
-            encrypted.push(x ^ self.next());
+    pub fn encrypt(&mut self, data: &mut [u8]) {
+        for x in data.iter_mut() {
+            *x ^= self.next();
         }
-
-        encrypted
     }
 }

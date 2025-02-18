@@ -1,4 +1,3 @@
-use anyhow::{Result as AnyResult};
 use std::io::{BufRead, Write};
 use byteorder::ReadBytesExt;
 use serde::{Serialize};
@@ -29,7 +28,7 @@ impl PartialEq<PackedGuid> for u64 {
 }
 
 impl BinaryConverter for PackedGuid {
-    fn write_into(&mut self, buffer: &mut Vec<u8>) -> AnyResult<()> {
+    fn write_into(&mut self, buffer: &mut Vec<u8>) -> anyhow::Result<()> {
         let PackedGuid(mut guid) = self;
         let mut packed_guid = [0u8; 9];
         let mut size = 1;
@@ -52,7 +51,7 @@ impl BinaryConverter for PackedGuid {
         Ok(())
     }
 
-    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> anyhow::Result<Self> {
         let mask = reader.read_u8()?;
 
         if mask == 0 {

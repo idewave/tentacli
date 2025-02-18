@@ -1,7 +1,8 @@
 use std::collections::BTreeMap;
-use tentacli_traits::{Processor};
-use tentacli_traits::types::{ProcessorResult};
+
+use tentacli_traits::Processor;
 use tentacli_traits::types::opcodes::Opcode;
+use tentacli_traits::types::ProcessorResult;
 
 mod join_channels;
 mod parse_motd;
@@ -20,37 +21,37 @@ impl Processor for RealmProcessor {
         let handlers: ProcessorResult = match opcode {
             Opcode::SMSG_ADDON_INFO => {
                 vec![]
-            },
+            }
             Opcode::SMSG_CLIENTCACHE_VERSION => {
                 vec![]
-            },
+            }
             Opcode::SMSG_TUTORIAL_FLAGS => {
                 vec![]
-            },
+            }
             Opcode::SMSG_CHAR_ENUM => {
                 vec![]
-            },
+            }
             Opcode::SMSG_ACCOUNT_DATA_TIMES => {
                 vec![]
-            },
+            }
             Opcode::SMSG_REALM_SPLIT => {
                 vec![]
-            },
+            }
             Opcode::SMSG_LOGIN_SETTIMESPEED => {
                 vec![Box::new(set_time_speed::Handler)]
-            },
+            }
             Opcode::SMSG_SET_FORCED_REACTIONS => {
                 vec![]
-            },
+            }
             Opcode::SMSG_LOGOUT_COMPLETE => {
                 vec![]
-            },
+            }
             Opcode::SMSG_WEATHER => {
                 vec![Box::new(weather::Handler)]
-            },
+            }
             _ => {
                 vec![]
-            },
+            }
         };
 
         handlers
@@ -59,9 +60,6 @@ impl Processor for RealmProcessor {
     fn get_one_time_handler_map() -> BTreeMap<u16, ProcessorResult> {
         let mut handlers_map: BTreeMap<u16, ProcessorResult> = BTreeMap::new();
 
-        // handlers_map.insert(Opcode::SMSG_AUTH_CHALLENGE, vec![
-        //     Box::new(auth_challenge::Handler),
-        // ]);
         handlers_map.insert(Opcode::SMSG_AUTH_RESPONSE, vec![
             Box::new(ready_for_account_data_times::Handler),
             Box::new(request_characters::Handler),

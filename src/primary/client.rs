@@ -1,31 +1,32 @@
 #![allow(clippy::new_without_default)]
-use std::io::{Error, ErrorKind};
+
+use std::io::Error;
 use std::sync::{Arc, Mutex as SyncMutex};
 use std::time::Duration;
-use tokio::sync::{Mutex, Notify};
-use async_broadcast::{broadcast, Sender as BroadcastSender, Receiver as BroadcastReceiver};
-use tokio::sync::mpsc::{self, Receiver, Sender};
-use tokio::net::TcpStream;
-use tokio::task::{JoinHandle};
-use futures::future::{join_all};
-use tokio::time::sleep;
-use anyhow::{Result as AnyResult};
+
+use async_broadcast::{broadcast, Receiver as BroadcastReceiver, Sender as BroadcastSender};
+use futures::future::join_all;
 use tentacli_crypto::{Decryptor, Encryptor, WardenCrypt};
-use tentacli_traits::{Feature};
+use tentacli_traits::Feature;
+use tentacli_traits::types::{HandlerInput, HandlerOutput, IncomingPacket, OutgoingPacket, ProcessorResult, Signal, Task};
 use tentacli_traits::types::config::{EnvConfig, EnvConfigParams};
 use tentacli_traits::types::opcodes::Opcode;
 use tentacli_traits::types::shared::{DataStorage, Session};
-use tentacli_traits::types::{
-    HandlerInput, HandlerOutput, IncomingPacket,
-    OutgoingPacket, ProcessorResult, Signal
-};
 use tentacli_utils::encode_hex;
+#[cfg(feature = "relay")]
+use tokio::io::AsyncWriteExt;
+use tokio::net::TcpStream;
+use tokio::sync::{Mutex, Notify};
+use tokio::sync::mpsc::{self, Receiver, Sender};
+use tokio::time::sleep;
 
 use crate::primary::network::{Reader, Writer};
 
+const BUFFER_SIZE: usize = 100;
+
 #[derive(Default)]
 pub struct CreateOptions {
-    pub data_storage: Option<Arc<SyncMutex<DataStorage>>>
+    pub data_storage: Option<Arc<SyncMutex<DataStorage>>>,
 }
 
 pub struct RunOptions<'a> {
@@ -74,48 +75,51 @@ impl Client {
     ) {
         let (rx, tx) = stream.into_split();
 
-        if session_key.is_none() {
-            *reader.lock().await = Some(
-                Reader::new(rx, Arc::new(SyncMutex::new(None)), false, None)
-            );
-            *writer.lock().await = Some(
-                Writer::new(tx, Arc::new(SyncMutex::new(None)), false, None)
-            );
-        } else {
-            let session_key = session_key.unwrap();
-            *warden_crypt.lock().unwrap() = Some(WardenCrypt::new(&session_key));
+        match session_key {
+            Some(session_key) => {
+                *warden_crypt.lock().unwrap() = Some(WardenCrypt::new(&session_key));
 
-            *reader.lock().await = Some(
-                Reader::new(
-                    rx,
-                    Arc::clone(&warden_crypt),
-                    true,
-                    Some(Decryptor::new(&session_key))
-                )
-            );
+                *reader.lock().await = Some(
+                    Reader::new(
+                        rx,
+                        Arc::clone(&warden_crypt),
+                        true,
+                        Some(Decryptor::new(&session_key)),
+                    )
+                );
 
-            *writer.lock().await = Some(
-                Writer::new(
-                    tx,
-                    Arc::clone(&warden_crypt),
-                    true,
-                    Some(Encryptor::new(&session_key))
-                )
-            );
+                *writer.lock().await = Some(
+                    Writer::new(
+                        tx,
+                        Arc::clone(&warden_crypt),
+                        true,
+                        Some(Encryptor::new(&session_key)),
+                    )
+                );
+            }
+            None => {
+                *reader.lock().await = Some(
+                    Reader::new(rx, Arc::new(SyncMutex::new(None)), false, None)
+                );
+                *writer.lock().await = Some(
+                    Writer::new(tx, Arc::new(SyncMutex::new(None)), false, None)
+                );
+            }
         }
     }
 
-    pub async fn run(&mut self, options: RunOptions<'_>) -> AnyResult<()> {
+    pub async fn run(&mut self, options: RunOptions<'_>) -> anyhow::Result<()> {
+        let RunOptions { account, config_path, dotenv_path, external_features } = options;
         let EnvConfig { host, port } = EnvConfig::new(
-            EnvConfigParams { dotenv_path: options.dotenv_path }
+            EnvConfigParams { dotenv_path }
         )?;
-
-        const BUFFER_SIZE: usize = 50;
 
         let notify = Arc::new(Notify::new());
 
-        let (signal_sender, signal_receiver) = mpsc::channel::<Signal>(1);
+        let (signal_sender, signal_receiver) = broadcast::<Signal>(1);
         let (output_sender, output_receiver) = mpsc::channel::<OutgoingPacket>(BUFFER_SIZE);
+        #[cfg(feature = "relay")]
+        let (incoming_sender, incoming_receiver) = mpsc::channel::<IncomingPacket>(BUFFER_SIZE);
         let (query_sender, query_receiver) = broadcast::<HandlerOutput>(BUFFER_SIZE);
 
         match Self::connect_inner(&host, port).await {
@@ -128,35 +132,28 @@ impl Client {
                     Arc::clone(&self._warden_crypt),
                 ).await;
 
-                match self.session.lock().await.set_config(&host, options.account, options.config_path) {
-                    Ok(_) => {},
-                    Err(err) => {
-                        query_sender.broadcast(
-                            HandlerOutput::ErrorMessage(err.to_string(), None)
-                        ).await.unwrap();
-                    }
-                }
+                self.session.lock().await.set_config(&host, account, config_path)?;
 
                 query_sender.broadcast(
                     HandlerOutput::SuccessMessage(
                         format!("Connected to {}:{}", host, port),
-                        None
+                        None,
                     )
-                ).await.unwrap();
+                ).await?;
 
                 Ok(())
-            },
+            }
             Err(err) => {
                 query_sender.broadcast(
                     HandlerOutput::ErrorMessage(format!("Cannot connect: {}", err), None)
-                ).await.unwrap();
+                ).await?;
 
                 Err(err)
-            },
+            }
         }?;
 
         #[allow(unused_mut)]
-        let mut features: Vec<Box<dyn Feature>> = options.external_features;
+        let mut features: Vec<Box<dyn Feature>> = external_features;
         cfg_if! {
             if #[cfg(feature = "ui")] {
                 use crate::features::ui::UI;
@@ -190,20 +187,41 @@ impl Client {
         let mut all_tasks = vec![];
 
         for feature in features.iter_mut() {
-            match feature.get_tasks() {
-                Ok(tasks) => all_tasks.extend(tasks),
-                Err(e) => eprintln!("Error on get_tasks: {:?}", e),
-            }
+            all_tasks.extend(feature.get_tasks()?);
         }
 
         all_tasks.extend(vec![
-            self.handle_read(signal_receiver, query_sender.clone(), notify.clone(), features),
-            self.handle_output(
-                signal_sender.clone(), output_sender.clone(), query_sender.clone(),
-                query_receiver, notify.clone(),
+            self.handle_read(
+                signal_receiver.clone(),
+                query_sender.clone(),
+                #[cfg(feature = "relay")]
+                incoming_sender.clone(),
+                notify.clone(),
+                features,
             ),
-            self.handle_write(output_receiver, query_sender),
+            self.handle_output(
+                signal_sender.clone(),
+                output_sender.clone(),
+                query_sender.clone(),
+                query_receiver,
+                notify.clone(),
+            ),
+            self.handle_write(
+                output_receiver,
+                query_sender,
+            ),
         ]);
+
+        cfg_if! {
+            if #[cfg(feature = "relay")] {
+                all_tasks.push(
+                    self.handle_external_write(
+                        incoming_receiver,
+                        signal_receiver,
+                    )
+                );
+            }
+        }
 
         join_all(all_tasks).await;
 
@@ -212,11 +230,13 @@ impl Client {
 
     fn handle_read(
         &mut self,
-        mut signal_receiver: Receiver<Signal>,
+        mut signal_receiver: BroadcastReceiver<Signal>,
         query_sender: BroadcastSender<HandlerOutput>,
+        #[cfg(feature = "relay")]
+        incoming_sender: Sender<IncomingPacket>,
         notify: Arc<Notify>,
         features: Vec<Box<dyn Feature>>,
-    ) -> JoinHandle<()> {
+    ) -> Task {
         let reader = Arc::clone(&self._reader);
         let session = Arc::clone(&self.session);
         let data_storage = Arc::clone(&self.data_storage);
@@ -247,8 +267,8 @@ impl Client {
                     data: vec![],
                     data_storage: Arc::clone(&data_storage),
                     opcode: Opcode::LOGIN_CHALLENGE as u16,
-                }
-            ).await;
+                },
+            ).await?;
 
             loop {
                 tokio::select! {
@@ -257,15 +277,16 @@ impl Client {
                         // so this approach ensures that realm_processors will be taken only once,
                         // but it seems I still can use it in current iteration
                         processors = realm_processors.take().unwrap();
+                        tokio::time::sleep(Duration::from_millis(1)).await;
                     },
-                    result = Self::read_packet(&reader) => {
+                    result = Self::read_packet(reader.clone()) => {
                         match result {
                             Ok(packet) => {
-                                let IncomingPacket { opcode, body: data, .. } = packet;
+                                let IncomingPacket { opcode, body, .. } = packet.clone();
 
                                 let input = HandlerInput {
                                     session: Arc::clone(&session),
-                                    data,
+                                    data: body,
                                     data_storage: Arc::clone(&data_storage),
                                     opcode,
                                 };
@@ -281,6 +302,8 @@ impl Client {
                                     }
                                 }
 
+                                // if true then there no handlers defined for the current opcode
+                                // in this case we just show the raw packet (hex)
                                 if handler_list.is_empty() {
                                     let opcode_name = Opcode::get_opcode_name(
                                         input.opcode as u32
@@ -289,17 +312,20 @@ impl Client {
                                     query_sender.broadcast(HandlerOutput::ResponseMessage(
                                         opcode_name,
                                         Some(encode_hex(&input.data)),
-                                    )).await.unwrap();
+                                    )).await?;
                                 }
 
                                 Self::call_handlers(
                                     handler_list, &query_sender, &notify, input
-                                ).await;
+                                ).await?;
+
+                                #[cfg(feature = "relay")]
+                                incoming_sender.send(packet).await?;
                             },
                             Err(err) => {
                                 query_sender.broadcast(
                                     HandlerOutput::ErrorMessage(err.to_string(), None)
-                                ).await.unwrap();
+                                ).await?;
                                 sleep(Duration::from_secs(1)).await;
                             }
                         }
@@ -313,8 +339,8 @@ impl Client {
         handler_list: ProcessorResult,
         query_sender: &BroadcastSender<HandlerOutput>,
         notify: &Arc<Notify>,
-        mut input: HandlerInput
-    ) {
+        mut input: HandlerInput,
+    ) -> anyhow::Result<()> {
         for mut handler in handler_list {
             let response = handler.handle(&mut input).await;
             match response {
@@ -323,30 +349,32 @@ impl Client {
                         match output {
                             HandlerOutput::Freeze => {
                                 notify.notified().await;
-                            },
+                            }
                             _ => {
-                                query_sender.broadcast(output).await.unwrap();
-                            },
+                                query_sender.broadcast(output).await?;
+                            }
                         }
                     }
-                },
+                }
                 Err(err) => {
                     query_sender.broadcast(
                         HandlerOutput::ErrorMessage(err.to_string(), None)
-                    ).await.unwrap();
-                },
+                    ).await?;
+                }
             };
         }
+
+        Ok(())
     }
 
     fn handle_output(
         &mut self,
-        signal_sender: Sender<Signal>,
+        signal_sender: BroadcastSender<Signal>,
         output_sender: Sender<OutgoingPacket>,
         query_sender: BroadcastSender<HandlerOutput>,
         mut query_receiver: BroadcastReceiver<HandlerOutput>,
         notify: Arc<Notify>,
-    ) -> JoinHandle<()> {
+    ) -> Task {
         let session = Arc::clone(&self.session);
         let reader = Arc::clone(&self._reader);
         let writer = Arc::clone(&self._writer);
@@ -363,12 +391,12 @@ impl Client {
                                     opcode,
                                     data,
                                     json_details,
-                                }).await.unwrap();
-                            },
+                                }).await?;
+                            }
                             HandlerOutput::ConnectionRequest(host, port) => {
                                 match Self::connect_inner(&host, port).await {
                                     Ok(stream) => {
-                                        signal_sender.send(Signal::Reconnect).await.unwrap();
+                                        signal_sender.broadcast(Signal::Reconnect).await?;
 
                                         let session_key = {
                                             let guard = session.lock().await;
@@ -387,38 +415,40 @@ impl Client {
                                         query_sender.broadcast(
                                             HandlerOutput::SuccessMessage(
                                                 format!("Connected to {}:{}", host, port),
-                                                None
+                                                None,
                                             )
-                                        ).await.unwrap();
-                                    },
+                                        ).await?;
+                                    }
                                     Err(err) => {
                                         query_sender.broadcast(
                                             HandlerOutput::ErrorMessage(err.to_string(), None)
-                                        ).await.unwrap();
+                                        ).await?;
                                     }
                                 }
-                            },
+                            }
                             HandlerOutput::Drop => {
                                 break;
-                            },
+                            }
                             HandlerOutput::SelectRealm(realm) => {
                                 session.lock().await.selected_realm = Some(realm);
                                 notify.notify_one();
-                            },
+                            }
                             HandlerOutput::SelectCharacter(character) => {
                                 session.lock().await.me = Some(character);
                                 notify.notify_one();
-                            },
-                            _ => {},
+                            }
+                            _ => {}
                         };
-                    },
+                    }
                     Err(err) => {
                         query_sender.broadcast(
                             HandlerOutput::ErrorMessage(err.to_string(), None)
-                        ).await.unwrap();
-                    },
+                        ).await?;
+                    }
                 };
             }
+
+            Ok(())
         })
     }
 
@@ -426,14 +456,14 @@ impl Client {
         &mut self,
         mut output_receiver: Receiver<OutgoingPacket>,
         query_sender: BroadcastSender<HandlerOutput>,
-    ) -> JoinHandle<()> {
+    ) -> Task {
         let writer = Arc::clone(&self._writer);
 
         tokio::spawn(async move {
             loop {
-                if let Some(packet) = output_receiver.recv().await {
+                if let Some(mut packet) = output_receiver.recv().await {
                     if !packet.data.is_empty() {
-                        let result = Self::write_packet(&writer, &packet).await;
+                        let result = Self::write_packet(writer.clone(), &mut packet).await;
 
                         match result {
                             Ok(bytes_sent) => {
@@ -446,14 +476,14 @@ impl Client {
 
                                 query_sender.broadcast(
                                     HandlerOutput::RequestMessage(
-                                        message, Some(packet.json_details)
+                                        message, Some(packet.json_details),
                                     )
-                                ).await.unwrap();
-                            },
+                                ).await?;
+                            }
                             Err(err) => {
                                 query_sender.broadcast(
                                     HandlerOutput::ErrorMessage(err.to_string(), None)
-                                ).await.unwrap();
+                                ).await?;
                             }
                         }
                     }
@@ -462,33 +492,52 @@ impl Client {
         })
     }
 
-    async fn read_packet(reader: &Arc<Mutex<Option<Reader>>>) -> AnyResult<IncomingPacket> {
-        let error = Error::new(ErrorKind::NotFound, "Not connected to TCP");
+    #[cfg(feature = "relay")]
+    fn handle_external_write(
+        &mut self,
+        mut incoming_receiver: Receiver<IncomingPacket>,
+        mut signal_receiver: BroadcastReceiver<Signal>,
+    ) -> Task {
+        tokio::spawn(async move {
+            loop {
+                tokio::select! {
+                    _ = signal_receiver.recv() => {
+                        break;
+                    },
+                    _ = incoming_receiver.recv() => {},
+                }
+            }
 
-        if let Some(reader) = &mut *reader.lock().await {
-            return match reader.read().await {
-                Ok(packet) => Ok(packet),
-                Err(err) => Err(err),
+            let mut stream = loop {
+                match TcpStream::connect("127.0.0.1:3788").await {
+                    Ok(stream) => {
+                        break stream;
+                    }
+                    Err(_) => {
+                        tokio::time::sleep(Duration::from_secs(10)).await;
+                    }
+                }
             };
-        }
 
-        Err(anyhow::Error::new(error))
+            while let Some(incoming_packet) = incoming_receiver.recv().await {
+                let IncomingPacket { header: mut packet, body, .. } = incoming_packet;
+                packet.extend_from_slice(&body);
+                stream.write(&packet).await?;
+            }
+
+            Ok(())
+        })
+    }
+
+    async fn read_packet(reader: Arc<Mutex<Option<Reader>>>) -> anyhow::Result<IncomingPacket> {
+        reader.lock().await.as_mut().unwrap().read().await
     }
 
     async fn write_packet(
-        writer: &Arc<Mutex<Option<Writer>>>,
-        packet: &OutgoingPacket
-    ) -> AnyResult<usize> {
-        let error = Error::new(ErrorKind::NotFound, "Not connected to TCP");
-
-        if let Some(writer) = &mut *writer.lock().await {
-            return match writer.write(packet).await {
-                Ok(bytes_sent) => Ok(bytes_sent),
-                Err(err) => Err(err)
-            };
-        }
-
-        Err(anyhow::Error::new(error))
+        writer: Arc<Mutex<Option<Writer>>>,
+        packet: &mut OutgoingPacket,
+    ) -> anyhow::Result<usize> {
+        writer.lock().await.as_mut().unwrap().write(packet).await
     }
 }
 
@@ -506,10 +555,10 @@ impl Client {
                 ).await;
 
                 Ok(())
-            },
+            }
             Err(err) => {
                 Err(err)
-            },
+            }
         }
     }
 }
@@ -517,11 +566,11 @@ impl Client {
 #[cfg(test)]
 mod tests {
     use async_broadcast::broadcast;
-    use tokio::io::{AsyncReadExt};
-    use tokio::net::TcpListener;
-    use tokio::sync::{mpsc};
     use tentacli_traits::types::{HandlerOutput, OutgoingPacket};
     use tentacli_traits::types::shared::{ActionFlags, StateFlags};
+    use tokio::io::AsyncReadExt;
+    use tokio::net::TcpListener;
+    use tokio::sync::mpsc;
 
     use crate::primary::client::{Client, CreateOptions};
 
@@ -558,7 +607,6 @@ mod tests {
         assert!(session.party.is_empty());
         assert_eq!(ActionFlags::NONE, session.action_flags);
         assert_eq!(StateFlags::NONE, session.state_flags);
-
     }
 
     #[tokio::test]

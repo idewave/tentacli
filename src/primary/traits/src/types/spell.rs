@@ -1,4 +1,3 @@
-use anyhow::{Result as AnyResult};
 use std::io::BufRead;
 use bitflags::bitflags;
 use byteorder::{LittleEndian, ReadBytesExt};
@@ -260,12 +259,12 @@ pub struct Spell {
 }
 
 impl BinaryConverter for Spell {
-    fn write_into(&mut self, buffer: &mut Vec<u8>) -> AnyResult<()> {
+    fn write_into(&mut self, buffer: &mut Vec<u8>) -> anyhow::Result<()> {
         self.spell_id.write_into(buffer)?;
         Ok(())
     }
 
-    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> anyhow::Result<Self> {
         let label = "Spell";
 
         let spell = Spell {
@@ -290,7 +289,7 @@ pub struct CooldownInfo {
 }
 
 impl BinaryConverter for CooldownInfo {
-    fn write_into(&mut self, buffer: &mut Vec<u8>) -> AnyResult<()> {
+    fn write_into(&mut self, buffer: &mut Vec<u8>) -> anyhow::Result<()> {
         self.spell_id.write_into(buffer)?;
         self.item_id.write_into(buffer)?;
         self.spell_category.write_into(buffer)?;
@@ -300,7 +299,7 @@ impl BinaryConverter for CooldownInfo {
         Ok(())
     }
 
-    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> anyhow::Result<Self> {
         let label = "CooldownInfo";
 
         let spell_id = reader.read_u32::<LittleEndian>()
@@ -352,13 +351,13 @@ impl Default for AuraFlags {
 impl_serialize_for_flags!(AuraFlags);
 
 impl BinaryConverter for AuraFlags {
-    fn write_into(&mut self, buffer: &mut Vec<u8>) -> AnyResult<()> {
+    fn write_into(&mut self, buffer: &mut Vec<u8>) -> anyhow::Result<()> {
         self.bits().write_into(buffer)?;
 
         Ok(())
     }
 
-    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self>
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> anyhow::Result<Self>
     where
         Self: Sized
     {

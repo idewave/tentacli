@@ -1,6 +1,13 @@
-use anyhow::{Result as AnyResult};
 use std::sync::{Arc, Mutex as SyncMutex};
+
+use chat::Message;
+use player::Player;
+use realm::Realm;
 use tokio::sync::Mutex;
+use tokio::task::JoinHandle;
+
+use crate::PacketHandler;
+use crate::types::shared::{DataStorage, Session};
 
 pub mod auth;
 pub mod chat;
@@ -20,13 +27,6 @@ pub mod warden;
 pub mod world;
 pub mod errors;
 pub mod object;
-
-use chat::{Message};
-use player::{Player};
-use realm::Realm;
-
-use crate::PacketHandler;
-use crate::types::shared::{DataStorage, Session};
 
 #[derive(Debug, Clone)]
 pub enum Signal {
@@ -84,16 +84,19 @@ pub enum HandlerOutput {
     ErrorMessage(String, Option<String>),
 }
 
-pub type HandlerResult = AnyResult<Vec<HandlerOutput>>;
+pub type HandlerResult = anyhow::Result<Vec<HandlerOutput>>;
 
 pub type ProcessorResult = Vec<Box<dyn PacketHandler + Send>>;
 
 pub type ProcessorFunction = Box<dyn Fn(u16) -> ProcessorResult + Send>;
 
+pub type Task = JoinHandle<anyhow::Result<()>>;
+
 #[derive(Default, Debug, Clone)]
 pub struct IncomingPacket {
     pub opcode: u16,
     pub body: Vec<u8>,
+    pub header: Vec<u8>,
 }
 
 #[derive(Default, Debug, Clone)]

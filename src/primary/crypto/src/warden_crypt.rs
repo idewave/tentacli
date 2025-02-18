@@ -19,11 +19,11 @@ impl WardenCrypt {
         }
     }
 
-    pub fn encrypt(&mut self, data: &[u8]) -> Vec<u8> {
+    pub fn encrypt(&mut self, data: &mut [u8]) {
         self.encryptor.encrypt(data)
     }
 
-    pub fn decrypt(&mut self, data: &[u8]) -> Vec<u8> {
+    pub fn decrypt(&mut self, data: &mut [u8]) {
         self.decryptor.encrypt(data)
     }
 

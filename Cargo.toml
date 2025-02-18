@@ -22,18 +22,19 @@ bitflags = { version = "2.6.0", optional = true }
 byteorder = "1.5.0"
 cfg-if = { version = "1.0.0", features = [] }
 chrono = { version = "0.4", optional = true }
-colored = { version = "2.1.0", optional = true }
+colored = { version = "3.0.0", optional = true }
+console-subscriber = { version = "0.4.1", optional = true }
 crossterm = { version = "0.28.1", optional = true }
 futures = { version = "0.3" }
-rand = { version = "0.8.5", optional = true }
+rand = { version = "0.9.0", optional = true }
 regex = { version = "1.10.6", optional = true }
 serde = { version = "1.0", features = ["derive"] }
 sha-1 = { version = "0.9.8", optional = true }
-tentacli-crypto = "0.1.0"
+tentacli-crypto = "1.0.0"
 tentacli-formatters = "0.1.0"
 tentacli-packet = "7.0.0"
-tentacli-traits = "9.2.1"
-tentacli-utils = "2.1.0"
+tentacli-traits = "9.3.0"
+tentacli-utils = "2.1.1"
 tokio = { version = "1", features = ["sync", "net", "io-util", "macros", "time", "rt-multi-thread"] }
 tui = { version = "0", features = ["crossterm"], optional = true }
 
@@ -46,3 +47,6 @@ ui = ["crossterm/default", "tui/crossterm", "crossterm/event-stream", "bitflags"
 console = ["colored"]
 wotlk_login = ["rand", "sha-1", "async-trait", "regex"]
 wotlk_realm = ["async-trait", "regex"]
+# RUSTFLAGS="--cfg tokio_unstable" cargo build to use with tokio-console
+debug = ["console-subscriber"]
+relay = []

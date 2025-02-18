@@ -1,11 +1,11 @@
 use async_trait::async_trait;
-use tentacli_traits::{PacketHandler};
+use tentacli_traits::PacketHandler;
 use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
 use tentacli_traits::types::custom_fields::PackedGuid;
 use tentacli_traits::types::movement::Movement;
 use tentacli_traits::types::object::{Container, Corpse, DynamicObject, GameObject, Item, Unit};
 use tentacli_traits::types::opcodes::Opcode;
-use tentacli_traits::types::player::{Player};
+use tentacli_traits::types::player::Player;
 use tentacli_traits::types::update_data::{BlockType, ObjectTypeID, ObjectTypeMask, UpdateData};
 use tentacli_traits::types::update_fields::{FieldValue, ItemField, ObjectField};
 
@@ -41,7 +41,7 @@ pub struct Block {
     #[depends_on(guid_count)]
     #[conditional]
     #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub guids: Vec<PackedGuid>
+    pub guids: Vec<PackedGuid>,
 }
 
 impl Block {
@@ -99,6 +99,7 @@ impl Block {
 }
 
 pub struct Handler;
+
 #[async_trait]
 impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
@@ -156,7 +157,7 @@ impl PacketHandler for Handler {
 
                         let mut guard = input.data_storage.lock().unwrap();
                         guard.players_map.insert(guid, object);
-                    },
+                    }
                     m if m & ObjectTypeMask::UNIT != 0 => {
                         update_data = block.update_data.clone();
                         let mut object = Unit {
@@ -170,7 +171,7 @@ impl PacketHandler for Handler {
 
                         let mut guard = input.data_storage.lock().unwrap();
                         guard.units_map.insert(guid, object);
-                    },
+                    }
                     m if m & ObjectTypeMask::GAMEOBJECT != 0 => {
                         update_data = block.update_data.clone();
                         let mut object = GameObject {
@@ -184,7 +185,7 @@ impl PacketHandler for Handler {
 
                         let mut guard = input.data_storage.lock().unwrap();
                         guard.game_objects_map.insert(guid, object);
-                    },
+                    }
                     m if m & ObjectTypeMask::DYNAMICOBJECT != 0 => {
                         update_data = block.update_data.clone();
                         let mut object = DynamicObject {
@@ -198,7 +199,7 @@ impl PacketHandler for Handler {
 
                         let mut guard = input.data_storage.lock().unwrap();
                         guard.dynamic_objects_map.insert(guid, object);
-                    },
+                    }
                     m if m & ObjectTypeMask::ITEM != 0 => {
                         update_data = block.update_data.clone();
                         if let Some(FieldValue::Long(guid)) =
@@ -222,7 +223,7 @@ impl PacketHandler for Handler {
 
                         let mut guard = input.data_storage.lock().unwrap();
                         guard.items_map.insert(guid, object);
-                    },
+                    }
                     m if m & ObjectTypeMask::CONTAINER != 0 => {
                         update_data = block.update_data.clone();
                         if let Some(FieldValue::Long(guid)) =
@@ -246,7 +247,7 @@ impl PacketHandler for Handler {
 
                         let mut guard = input.data_storage.lock().unwrap();
                         guard.containers_map.insert(guid, object);
-                    },
+                    }
                     m if m & ObjectTypeMask::CORPSE != 0 => {
                         update_data = block.update_data.clone();
                         let mut object = Corpse {
@@ -261,7 +262,7 @@ impl PacketHandler for Handler {
                         let mut guard = input.data_storage.lock().unwrap();
                         guard.corpses_map.insert(guid, object);
                     }
-                    _ => {},
+                    _ => {}
                 }
             } else {
                 let mut guard = input.data_storage.lock().unwrap();
@@ -274,7 +275,7 @@ impl PacketHandler for Handler {
                         });
 
                         response.push(HandlerOutput::UpdatePlayer(guid));
-                    },
+                    }
                     g if guard.units_map.contains_key(&g) => {
                         guard.units_map.entry(guid).and_modify(|o| {
                             o.update_data.extend_or_clear_source(&mut block.update_data);
@@ -282,7 +283,7 @@ impl PacketHandler for Handler {
                         });
 
                         response.push(HandlerOutput::UpdateNPC(guid));
-                    },
+                    }
                     g if guard.game_objects_map.contains_key(&g) => {
                         guard.game_objects_map.entry(guid).and_modify(|o| {
                             o.update_data.extend_or_clear_source(&mut block.update_data);
@@ -290,7 +291,7 @@ impl PacketHandler for Handler {
                         });
 
                         response.push(HandlerOutput::UpdateGameObject(guid));
-                    },
+                    }
                     g if guard.dynamic_objects_map.contains_key(&g) => {
                         guard.dynamic_objects_map.entry(guid).and_modify(|o| {
                             o.update_data.extend_or_clear_source(&mut block.update_data);
@@ -298,7 +299,7 @@ impl PacketHandler for Handler {
                         });
 
                         response.push(HandlerOutput::UpdateDynamicObject(guid));
-                    },
+                    }
                     g if guard.items_map.contains_key(&g) => {
                         guard.items_map.entry(guid).and_modify(|o| {
                             o.update_data.extend_or_clear_source(&mut block.update_data);
@@ -306,7 +307,7 @@ impl PacketHandler for Handler {
                         });
 
                         response.push(HandlerOutput::UpdateItem(guid));
-                    },
+                    }
                     g if guard.containers_map.contains_key(&g) => {
                         guard.containers_map.entry(guid).and_modify(|o| {
                             o.update_data.extend_or_clear_source(&mut block.update_data);
@@ -314,7 +315,7 @@ impl PacketHandler for Handler {
                         });
 
                         response.push(HandlerOutput::UpdateContainer(guid));
-                    },
+                    }
                     g if guard.corpses_map.contains_key(&g) => {
                         guard.corpses_map.entry(guid).and_modify(|o| {
                             o.update_data.extend_or_clear_source(&mut block.update_data);
@@ -322,8 +323,8 @@ impl PacketHandler for Handler {
                         });
 
                         response.push(HandlerOutput::UpdateCorpse(guid));
-                    },
-                    _ => {},
+                    }
+                    _ => {}
                 }
             }
 
@@ -350,19 +351,20 @@ impl PacketHandler for Handler {
 
 #[cfg(test)]
 mod tests {
-    use anyhow::{Result as AnyResult};
     use std::collections::BTreeMap;
+
     use tentacli_traits::types::custom_fields::PackedGuid;
     use tentacli_traits::types::movement::{
-        Movement, MovementExtraFlags, MovementFlags, MovementInfo, ObjectUpdateFlags, UnitMoveType
+        Movement, MovementExtraFlags, MovementFlags, MovementInfo, ObjectUpdateFlags, UnitMoveType,
     };
     use tentacli_traits::types::opcodes::Opcode;
     use tentacli_traits::types::update_data::{BlockType, ObjectTypeID, ObjectTypeMask, UpdateData};
     use tentacli_traits::types::update_fields::{FieldValue, ObjectField, PlayerField, UnitField};
+
     use crate::features::wotlk_realm::object::update_object::{Block, Incoming};
 
     #[test]
-    fn test_packet_building() -> AnyResult<()> {
+    fn test_packet_building() -> anyhow::Result<()> {
         const GUID: u64 = 123;
         const TYPE: i32 = ObjectTypeMask::PLAYER | ObjectTypeMask::UNIT | ObjectTypeMask::OBJECT;
         const SCALE_X: f32 = 3.;
