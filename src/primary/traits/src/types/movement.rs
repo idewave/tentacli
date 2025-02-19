@@ -1,7 +1,7 @@
-use anyhow::{Result as AnyResult};
 use std::collections::BTreeMap;
 use std::io::{BufRead, Cursor};
-use bitflags::{bitflags};
+
+use bitflags::bitflags;
 use byteorder::{LittleEndian, ReadBytesExt};
 use serde::{Serialize, Serializer};
 
@@ -103,13 +103,13 @@ impl Movement {
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeMap;
-    use anyhow::{Result as AnyResult};
+
     use crate::BinaryConverter;
     use crate::types::movement::{Movement, MovementExtraFlags, MovementFlags, MovementInfo, ObjectUpdateFlags, UnitMoveType};
     use crate::types::position::Vector3D;
 
     #[test]
-    fn test_movement_building() -> AnyResult<()> {
+    fn test_movement_building() -> anyhow::Result<()> {
         let mut movement = Movement::default();
         let movement_info = MovementInfo {
             movement_flags: MovementFlags::NONE,
@@ -166,7 +166,7 @@ mod tests {
     }
 
     #[test]
-    fn test_movement_low_guid() -> AnyResult<()> {
+    fn test_movement_low_guid() -> anyhow::Result<()> {
         const LOW_GUID: u32 = 123;
 
         let mut movement = Movement::default();
@@ -189,7 +189,7 @@ mod tests {
     }
 
     #[test]
-    fn test_movement_high_guid() -> AnyResult<()> {
+    fn test_movement_high_guid() -> anyhow::Result<()> {
         const HIGH_GUID: u32 = 123;
 
         let mut movement = Movement::default();
@@ -213,7 +213,7 @@ mod tests {
 }
 
 impl BinaryConverter for Movement {
-    fn write_into(&mut self, buffer: &mut Vec<u8>) -> AnyResult<()> {
+    fn write_into(&mut self, buffer: &mut Vec<u8>) -> anyhow::Result<()> {
         self.object_update_flags.bits().write_into(buffer)?;
 
         if let Some(mut movement_info) = self.movement_info {
@@ -254,14 +254,14 @@ impl BinaryConverter for Movement {
         Ok(())
     }
 
-    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> anyhow::Result<Self> {
         let mut instance = Self::default();
 
         instance.object_update_flags = ObjectUpdateFlags::from_bits(
             reader.read_u16::<LittleEndian>()?
         ).unwrap();
 
-        if instance.object_update_flags.contains(ObjectUpdateFlags::SELF)  {}
+        if instance.object_update_flags.contains(ObjectUpdateFlags::SELF) {}
 
         if instance.object_update_flags.contains(ObjectUpdateFlags::LIVING) {
             let movement_info = MovementInfo::read_from(reader, &mut vec![])?;
@@ -290,7 +290,6 @@ impl BinaryConverter for Movement {
             }
 
             instance.movement_info = Some(movement_info);
-
         } else {
             if instance.object_update_flags.contains(ObjectUpdateFlags::POSITION) {
                 instance.position_info = Some(PositionInfo::read_from(reader, &mut vec![])?);
@@ -366,7 +365,7 @@ impl MovementInfo {
 }
 
 impl BinaryConverter for MovementInfo {
-    fn write_into(&mut self, buffer: &mut Vec<u8>) -> AnyResult<()> {
+    fn write_into(&mut self, buffer: &mut Vec<u8>) -> anyhow::Result<()> {
         self.movement_flags.bits().write_into(buffer)?;
         self.movement_extra_flags.bits().write_into(buffer)?;
         self.time.write_into(buffer)?;
@@ -385,7 +384,7 @@ impl BinaryConverter for MovementInfo {
         Ok(())
     }
 
-    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> anyhow::Result<Self> {
         let mut instance = Self::default();
 
         instance.movement_flags = MovementFlags::from_bits(
@@ -404,7 +403,7 @@ impl BinaryConverter for MovementInfo {
             instance.taxi_info = Some(TaxiInfo::read_from(reader, &mut dependencies)?);
         }
 
-        if instance.movement_flags.contains(MovementFlags::SWIMMING)  ||
+        if instance.movement_flags.contains(MovementFlags::SWIMMING) ||
             instance.movement_flags.contains(MovementFlags::FLYING) ||
             instance.movement_extra_flags.contains(MovementExtraFlags::ALWAYS_ALLOW_PITCHING) {
             let _pitch = reader.read_f32::<LittleEndian>()?;
@@ -433,7 +432,7 @@ pub struct JumpInfo {
 }
 
 impl BinaryConverter for JumpInfo {
-    fn write_into(&mut self, buffer: &mut Vec<u8>) -> AnyResult<()> {
+    fn write_into(&mut self, buffer: &mut Vec<u8>) -> anyhow::Result<()> {
         self.vertical_speed.write_into(buffer)?;
         self.sin_angle.write_into(buffer)?;
         self.cos_angle.write_into(buffer)?;
@@ -442,7 +441,7 @@ impl BinaryConverter for JumpInfo {
         Ok(())
     }
 
-    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> anyhow::Result<Self> {
         let vertical_speed = reader.read_f32::<LittleEndian>()?;
         let sin_angle = reader.read_f32::<LittleEndian>()?;
         let cos_angle = reader.read_f32::<LittleEndian>()?;
@@ -477,7 +476,7 @@ pub struct SplineInfo {
 }
 
 impl BinaryConverter for SplineInfo {
-    fn write_into(&mut self, buffer: &mut Vec<u8>) -> AnyResult<()> {
+    fn write_into(&mut self, buffer: &mut Vec<u8>) -> anyhow::Result<()> {
         self.spline_flags.bits().write_into(buffer)?;
 
         if let Some(mut value) = self.facing_angle {
@@ -507,7 +506,7 @@ impl BinaryConverter for SplineInfo {
         Ok(())
     }
 
-    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> anyhow::Result<Self> {
         let mut instance = Self::default();
 
         let spline_flags = SplineFlags::from_bits(
@@ -565,7 +564,7 @@ pub struct TaxiInfo {
 }
 
 impl BinaryConverter for TaxiInfo {
-    fn write_into(&mut self, buffer: &mut Vec<u8>) -> AnyResult<()> {
+    fn write_into(&mut self, buffer: &mut Vec<u8>) -> anyhow::Result<()> {
         self.guid.write_into(buffer)?;
         self.location.write_into(buffer)?;
         self.time.write_into(buffer)?;
@@ -578,7 +577,7 @@ impl BinaryConverter for TaxiInfo {
         Ok(())
     }
 
-    fn read_from<R: BufRead>(reader: &mut R, dependencies: &mut Vec<u8>) -> AnyResult<Self> {
+    fn read_from<R: BufRead>(reader: &mut R, dependencies: &mut Vec<u8>) -> anyhow::Result<Self> {
         let mut instance = Self::default();
 
         instance.guid = PackedGuid::read_from(reader, &mut vec![])?;
@@ -606,7 +605,7 @@ pub struct PositionInfo {
 }
 
 impl BinaryConverter for PositionInfo {
-    fn write_into(&mut self, buffer: &mut Vec<u8>) -> AnyResult<()> {
+    fn write_into(&mut self, buffer: &mut Vec<u8>) -> anyhow::Result<()> {
         self.transport_guid.write_into(buffer)?;
         self.world_object_point.write_into(buffer)?;
         self.location.write_into(buffer)?;
@@ -615,7 +614,7 @@ impl BinaryConverter for PositionInfo {
         Ok(())
     }
 
-    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> anyhow::Result<Self> {
         let transport_guid = PackedGuid::read_from(reader, &mut vec![])?;
         let world_object_point = Point3D::read_from(reader, &mut vec![])?;
         // according to mangos, when transport guid exists, location contain transport offset
@@ -633,6 +632,7 @@ impl BinaryConverter for PositionInfo {
 
 #[non_exhaustive]
 pub struct UnitMoveType;
+
 impl UnitMoveType {
     pub const MOVE_WALK: u8 = 0;
     pub const MOVE_RUN: u8 = 1;

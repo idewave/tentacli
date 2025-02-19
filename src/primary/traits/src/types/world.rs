@@ -1,7 +1,8 @@
-use anyhow::{Result as AnyResult};
-use std::io::{BufRead};
+use std::io::BufRead;
+
 use byteorder::{LittleEndian, ReadBytesExt};
 use serde::{Serialize, Serializer};
+
 use crate::{BinaryConverter, FieldError};
 
 #[non_exhaustive]
@@ -25,13 +26,13 @@ impl WeatherState {
 }
 
 impl BinaryConverter for WeatherState {
-    fn write_into(&mut self, buffer: &mut Vec<u8>) -> AnyResult<()> {
+    fn write_into(&mut self, buffer: &mut Vec<u8>) -> anyhow::Result<()> {
         u32::write_into(&mut self.0, buffer)?;
 
         Ok(())
     }
 
-    fn read_from<R: BufRead>(reader: &mut R, dependencies: &mut Vec<u8>) -> AnyResult<Self> {
+    fn read_from<R: BufRead>(reader: &mut R, dependencies: &mut Vec<u8>) -> anyhow::Result<Self> {
         let value = u32::read_from(reader, dependencies)?;
 
         Ok(Self(value))
@@ -39,7 +40,10 @@ impl BinaryConverter for WeatherState {
 }
 
 impl Serialize for WeatherState {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
         let field_name = match self.0 {
             Self::FINE => "FINE",
             Self::LIGHT_RAIN => "LIGHT_RAIN",
@@ -67,16 +71,16 @@ pub struct WorldState {
 }
 
 impl BinaryConverter for WorldState {
-    fn write_into(&mut self, buffer: &mut Vec<u8>) -> AnyResult<()> {
+    fn write_into(&mut self, buffer: &mut Vec<u8>) -> anyhow::Result<()> {
         self.state.write_into(buffer)?;
         self.value.write_into(buffer)?;
 
         Ok(())
     }
 
-    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self>
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> anyhow::Result<Self>
     where
-        Self: Sized
+        Self: Sized,
     {
         let label = "WorldState+";
 
@@ -87,7 +91,7 @@ impl BinaryConverter for WorldState {
 
         Ok(Self {
             state,
-            value
+            value,
         })
     }
 }

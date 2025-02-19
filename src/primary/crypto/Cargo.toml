@@ -1,6 +1,6 @@
 [package]
 name = "tentacli-crypto"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
 authors = ["Sergio Ivanuzzo <sergio.ivanuzzo@gmail.com>"]
 description = "Crypto functions for tentacli"
@@ -14,7 +14,7 @@ license-file = "../../../LICENSE"
 [dependencies]
 hmac-sha = "0.6.1"
 num-bigint = "0.4.3"
-rand = "0.8.5"
+rand = "0.9.0"
 sha-1 = "0.9.8"
 
 [lib]

@@ -1,13 +1,13 @@
-use anyhow::{Result as AnyResult};
-use std::fmt::{Debug};
+use std::fmt::Debug;
 use std::io::BufRead;
+
 use bitflags::bitflags;
 use byteorder::{LittleEndian, ReadBytesExt};
-use serde::{Serialize};
+use serde::Serialize;
 
+use crate::BinaryConverter;
 use crate::types::errors::FieldError;
-use crate::{BinaryConverter};
-use crate::types::movement::{Movement};
+use crate::types::movement::Movement;
 use crate::types::position::Point3D;
 use crate::types::update_data::UpdateData;
 
@@ -27,11 +27,11 @@ pub struct Player {
 }
 
 impl BinaryConverter for Player {
-    fn write_into(&mut self, _: &mut Vec<u8>) -> AnyResult<()> {
+    fn write_into(&mut self, _: &mut Vec<u8>) -> anyhow::Result<()> {
         todo!()
     }
 
-    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> anyhow::Result<Self> {
         let label = "Player";
 
         let guid = reader.read_u64::<LittleEndian>()

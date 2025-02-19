@@ -1,7 +1,8 @@
 use std::io::{Cursor, Read};
+
 use byteorder::{LittleEndian, ReadBytesExt};
 use tentacli_crypto::RC4;
-use tentacli_utils::{zlib_decompress, encode_hex};
+use tentacli_utils::{encode_hex, zlib_decompress};
 
 #[derive(Debug)]
 pub struct WardenModuleInfo {
@@ -38,9 +39,9 @@ impl WardenModuleInfo {
     }
 
     pub fn assemble(&mut self) {
-        let decoded_binary = self.decoder.encrypt(&self.binary);
+        self.decoder.encrypt(&mut self.binary);
 
-        let mut reader = Cursor::new(&decoded_binary);
+        let mut reader = Cursor::new(&self.binary);
         let _module_size = reader.read_u32::<LittleEndian>().unwrap();
 
         let mut compressed_module = Vec::new();

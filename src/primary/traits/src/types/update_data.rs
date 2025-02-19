@@ -1,6 +1,7 @@
-use anyhow::{Context, Result as AnyResult};
-use std::collections::{BTreeMap};
-use std::io::{BufRead};
+use std::collections::BTreeMap;
+use std::io::BufRead;
+
+use anyhow::Context;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use serde::{Serialize, Serializer};
 
@@ -10,21 +11,21 @@ use crate::types::update_fields::{ContainerField, CorpseField, DynamicObjectFiel
 #[derive(Serialize, Clone, Default, Debug, PartialEq)]
 pub struct UpdateData {
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
-    pub object_fields:  BTreeMap<ObjectField, FieldValue>,
+    pub object_fields: BTreeMap<ObjectField, FieldValue>,
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
-    pub unit_fields:  BTreeMap<UnitField, FieldValue>,
+    pub unit_fields: BTreeMap<UnitField, FieldValue>,
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
-    pub player_fields:  BTreeMap<PlayerField, FieldValue>,
+    pub player_fields: BTreeMap<PlayerField, FieldValue>,
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
-    pub item_fields:  BTreeMap<ItemField, FieldValue>,
+    pub item_fields: BTreeMap<ItemField, FieldValue>,
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
-    pub container_fields:  BTreeMap<ContainerField, FieldValue>,
+    pub container_fields: BTreeMap<ContainerField, FieldValue>,
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
-    pub game_object_fields:  BTreeMap<GameObjectField, FieldValue>,
+    pub game_object_fields: BTreeMap<GameObjectField, FieldValue>,
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
-    pub dynamic_object_fields:  BTreeMap<DynamicObjectField, FieldValue>,
+    pub dynamic_object_fields: BTreeMap<DynamicObjectField, FieldValue>,
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
-    pub corpse_fields:  BTreeMap<CorpseField, FieldValue>,
+    pub corpse_fields: BTreeMap<CorpseField, FieldValue>,
 }
 
 impl UpdateData {
@@ -88,7 +89,7 @@ impl UpdateData {
                 let high = (value >> 32) as u32;
                 let low = (value & 0xFFFFFFFF) as u32;
                 vec![low, high]
-            },
+            }
             FieldValue::LongArray(values) => {
                 let mut result: Vec<u32> = vec![];
                 for value in values {
@@ -99,40 +100,40 @@ impl UpdateData {
                 }
 
                 result
-            },
+            }
             FieldValue::Integer(value) => {
                 vec![*value as u32]
-            },
+            }
             FieldValue::IntegerArray(values) => {
                 values.iter().map(|&value| value as u32).collect()
-            },
+            }
             FieldValue::Bytes(value) => vec![*value],
             FieldValue::BytesArray(values) => values.clone(),
             FieldValue::Float(value) => vec![value.to_bits()],
             FieldValue::FloatArray(values) => values.iter().map(|value| value.to_bits()).collect(),
             FieldValue::TwoShorts((first, second)) => {
                 vec![(*first as u32) << 16 | *second as u32]
-            },
+            }
             FieldValue::TwoShortsArray(values) => {
                 values.iter()
                     .map(|&(first, second)| (first as u32) << 16 | second as u32)
                     .collect()
-            },
-            _ => {vec![]}
+            }
+            _ => { vec![] }
         }
     }
 
     fn build_blocks(
         update_blocks: &BTreeMap<u32, u32>,
         start: u32,
-        end: u32
+        end: u32,
     ) -> BTreeMap<u32, u32> {
         update_blocks.range(start..=end).map(|(&key, &value)| (key, value)).collect()
     }
 }
 
 impl BinaryConverter for UpdateData {
-    fn write_into(&mut self, buffer: &mut Vec<u8>) -> AnyResult<()> {
+    fn write_into(&mut self, buffer: &mut Vec<u8>) -> anyhow::Result<()> {
         let mut update_fields: BTreeMap<u32, u32> = BTreeMap::new();
 
         for (key, option) in self.object_fields.iter() {
@@ -200,7 +201,7 @@ impl BinaryConverter for UpdateData {
         Ok(())
     }
 
-    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> AnyResult<Self> {
+    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> anyhow::Result<Self> {
         let blocks_amount = u8::read_from(reader, &mut vec![])?;
 
         if blocks_amount > 0 {
@@ -246,7 +247,7 @@ impl BinaryConverter for UpdateData {
 
                 ObjectField::read_from(
                     blocks.values().copied().collect::<Vec<u32>>(),
-                    &mut update_mask
+                    &mut update_mask,
                 ).unwrap_or_default()
             };
 
@@ -262,13 +263,13 @@ impl BinaryConverter for UpdateData {
                 let blocks = Self::build_blocks(
                     &update_blocks,
                     ObjectField::get_limit() + 1,
-                    UnitField::get_limit()
+                    UnitField::get_limit(),
                 );
 
                 if mask == 0 || mask & ObjectTypeMask::UNIT != 0 {
                     UnitField::read_from(
                         blocks.values().copied().collect::<Vec<u32>>(),
-                        &mut update_mask
+                        &mut update_mask,
                     ).unwrap_or_default()
                 } else {
                     BTreeMap::default()
@@ -279,13 +280,13 @@ impl BinaryConverter for UpdateData {
                 let blocks = Self::build_blocks(
                     &update_blocks,
                     UnitField::get_limit() + 1,
-                    PlayerField::get_limit()
+                    PlayerField::get_limit(),
                 );
 
                 if mask == 0 || mask & ObjectTypeMask::PLAYER != 0 {
                     PlayerField::read_from(
                         blocks.values().copied().collect::<Vec<u32>>(),
-                        &mut update_mask
+                        &mut update_mask,
                     ).unwrap_or_default()
                 } else {
                     BTreeMap::default()
@@ -296,13 +297,13 @@ impl BinaryConverter for UpdateData {
                 let blocks = Self::build_blocks(
                     &update_blocks,
                     ObjectField::get_limit() + 1,
-                    ItemField::get_limit()
+                    ItemField::get_limit(),
                 );
 
                 if mask == 0 || mask & ObjectTypeMask::ITEM != 0 {
                     ItemField::read_from(
                         blocks.values().copied().collect::<Vec<u32>>(),
-                        &mut update_mask
+                        &mut update_mask,
                     ).unwrap_or_default()
                 } else {
                     BTreeMap::default()
@@ -313,13 +314,13 @@ impl BinaryConverter for UpdateData {
                 let blocks = Self::build_blocks(
                     &update_blocks,
                     ObjectField::get_limit() + 1,
-                    GameObjectField::get_limit()
+                    GameObjectField::get_limit(),
                 );
 
                 if mask == 0 || mask & ObjectTypeMask::GAMEOBJECT != 0 {
                     GameObjectField::read_from(
                         blocks.values().copied().collect::<Vec<u32>>(),
-                        &mut update_mask
+                        &mut update_mask,
                     ).unwrap_or_default()
                 } else {
                     BTreeMap::default()
@@ -330,13 +331,13 @@ impl BinaryConverter for UpdateData {
                 let blocks = Self::build_blocks(
                     &update_blocks,
                     ObjectField::get_limit() + 1,
-                    DynamicObjectField::get_limit()
+                    DynamicObjectField::get_limit(),
                 );
 
                 if mask == 0 || mask & ObjectTypeMask::DYNAMICOBJECT != 0 {
                     DynamicObjectField::read_from(
                         blocks.values().copied().collect::<Vec<u32>>(),
-                        &mut update_mask
+                        &mut update_mask,
                     ).unwrap_or_default()
                 } else {
                     BTreeMap::default()
@@ -347,13 +348,13 @@ impl BinaryConverter for UpdateData {
                 let blocks = Self::build_blocks(
                     &update_blocks,
                     ItemField::get_limit() + 1,
-                    ContainerField::get_limit()
+                    ContainerField::get_limit(),
                 );
 
                 if mask == 0 || mask & ObjectTypeMask::CONTAINER != 0 {
                     ContainerField::read_from(
                         blocks.values().copied().collect::<Vec<u32>>(),
-                        &mut update_mask
+                        &mut update_mask,
                     ).unwrap_or_default()
                 } else {
                     BTreeMap::default()
@@ -364,13 +365,13 @@ impl BinaryConverter for UpdateData {
                 let blocks = Self::build_blocks(
                     &update_blocks,
                     ObjectField::get_limit() + 1,
-                    CorpseField::get_limit()
+                    CorpseField::get_limit(),
                 );
 
                 if mask == 0 || mask & ObjectTypeMask::CORPSE != 0 {
                     CorpseField::read_from(
                         blocks.values().copied().collect::<Vec<u32>>(),
-                        &mut update_mask
+                        &mut update_mask,
                     ).unwrap_or_default()
                 } else {
                     BTreeMap::default()
@@ -396,6 +397,7 @@ impl BinaryConverter for UpdateData {
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeMap;
+
     use crate::BinaryConverter;
     use crate::types::update_data::UpdateData;
     use crate::types::update_fields::{FieldValue, ObjectField, PlayerField, UnitField};
@@ -470,14 +472,14 @@ mod tests {
                 map.insert(UnitField::Health, FieldValue::Integer(HEALTH));
                 map.insert(
                     UnitField::BaseAttackTime,
-                    FieldValue::IntegerArray(vec![BASE_ATTACK_TIME_0, BASE_ATTACK_TIME_1])
+                    FieldValue::IntegerArray(vec![BASE_ATTACK_TIME_0, BASE_ATTACK_TIME_1]),
                 );
                 map.insert(
                     UnitField::Powers,
                     FieldValue::IntegerArray(
                         vec![POWER_MANA, POWER_RAGE, POWER_FOCUS, POWER_ENERGY,
                              POWER_HAPPINESS, POWER_RUNES, POWER_RUNIC_POWER]
-                    )
+                    ),
                 );
 
                 map
@@ -490,15 +492,15 @@ mod tests {
                 map.insert(PlayerField::KeyringSlot, FieldValue::LongArray(keyring_slots.clone()));
                 map.insert(
                     PlayerField::CurrencyTokenSlot,
-                    FieldValue::LongArray(cur_token_slots.clone())
+                    FieldValue::LongArray(cur_token_slots.clone()),
                 );
                 map.insert(
                     PlayerField::CharacterPoints,
-                    FieldValue::IntegerArray(character_points.clone())
+                    FieldValue::IntegerArray(character_points.clone()),
                 );
                 map.insert(
                     PlayerField::KnownTitles,
-                    FieldValue::LongArray(known_titles.clone())
+                    FieldValue::LongArray(known_titles.clone()),
                 );
 
                 map
@@ -534,7 +536,7 @@ mod tests {
             result.unit_fields.get(&UnitField::Powers),
             Some(&FieldValue::IntegerArray(vec![
                 POWER_MANA, POWER_RAGE, POWER_FOCUS, POWER_ENERGY,
-                POWER_HAPPINESS, POWER_RUNES, POWER_RUNIC_POWER
+                POWER_HAPPINESS, POWER_RUNES, POWER_RUNIC_POWER,
             ]))
         );
         assert_eq!(
@@ -569,6 +571,7 @@ mod tests {
 
 #[non_exhaustive]
 pub struct ObjectTypeMask;
+
 #[allow(dead_code)]
 impl ObjectTypeMask {
     pub const OBJECT: i32 = 0x0001;
@@ -584,6 +587,7 @@ impl ObjectTypeMask {
 #[non_exhaustive]
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct BlockType(pub u8);
+
 #[allow(dead_code)]
 impl BlockType {
     pub const VALUES: u8 = 0;
@@ -599,13 +603,13 @@ impl BlockType {
 }
 
 impl BinaryConverter for BlockType {
-    fn write_into(&mut self, buffer: &mut Vec<u8>) -> AnyResult<()> {
+    fn write_into(&mut self, buffer: &mut Vec<u8>) -> anyhow::Result<()> {
         u8::write_into(&mut self.0, buffer)?;
 
         Ok(())
     }
 
-    fn read_from<R: BufRead>(reader: &mut R, dependencies: &mut Vec<u8>) -> AnyResult<Self> {
+    fn read_from<R: BufRead>(reader: &mut R, dependencies: &mut Vec<u8>) -> anyhow::Result<Self> {
         let value = u8::read_from(reader, dependencies)?;
 
         Ok(Self(value))
@@ -613,7 +617,10 @@ impl BinaryConverter for BlockType {
 }
 
 impl Serialize for BlockType {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
         let field_name = match self.0 {
             Self::VALUES => "VALUES",
             Self::MOVEMENT => "MOVEMENT",
@@ -631,6 +638,7 @@ impl Serialize for BlockType {
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ObjectTypeID(pub i8);
+
 #[allow(dead_code)]
 impl ObjectTypeID {
     pub const NONE: i8 = -1;
@@ -659,13 +667,13 @@ impl Default for ObjectTypeID {
 }
 
 impl BinaryConverter for ObjectTypeID {
-    fn write_into(&mut self, buffer: &mut Vec<u8>) -> AnyResult<()> {
+    fn write_into(&mut self, buffer: &mut Vec<u8>) -> anyhow::Result<()> {
         i8::write_into(&mut self.0, buffer)?;
 
         Ok(())
     }
 
-    fn read_from<R: BufRead>(reader: &mut R, dependencies: &mut Vec<u8>) -> AnyResult<Self> {
+    fn read_from<R: BufRead>(reader: &mut R, dependencies: &mut Vec<u8>) -> anyhow::Result<Self> {
         let value = i8::read_from(reader, dependencies)?;
 
         Ok(Self(value))
@@ -673,7 +681,10 @@ impl BinaryConverter for ObjectTypeID {
 }
 
 impl Serialize for ObjectTypeID {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
         let field_name = match self.0 {
             Self::OBJECT => "OBJECT",
             Self::ITEM => "ITEM",

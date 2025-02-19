@@ -1,9 +1,7 @@
-use anyhow::{Result as AnyResult};
 use async_broadcast::{Sender as BroadcastSender, Receiver as BroadcastReceiver};
-use tokio::task::JoinHandle;
 use colored::*;
 use tentacli_traits::{Feature, FeatureError};
-use tentacli_traits::types::HandlerOutput;
+use tentacli_traits::types::{HandlerOutput, Task};
 
 #[derive(Default)]
 pub struct Console {
@@ -21,7 +19,7 @@ impl Feature for Console {
         self._receiver = Some(receiver);
     }
 
-    fn get_tasks(&mut self) -> AnyResult<Vec<JoinHandle<()>>> {
+    fn get_tasks(&mut self) -> anyhow::Result<Vec<Task>> {
         let mut receiver = self._receiver.as_mut().ok_or(FeatureError::ReceiverNotFound)?.clone();
 
         let handle_input = || {

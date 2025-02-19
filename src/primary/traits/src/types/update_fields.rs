@@ -1,8 +1,9 @@
-use anyhow::{anyhow, Result as AnyResult};
-use std::collections::{BTreeMap};
-use std::ops::Range;
 use core::slice::Iter;
-use serde::{Serialize};
+use std::collections::BTreeMap;
+use std::ops::Range;
+
+use anyhow::anyhow;
+use serde::Serialize;
 
 #[macro_export]
 macro_rules! fields {
@@ -58,7 +59,7 @@ macro_rules! fields {
             pub fn read_from(
                 buffer: Vec<u32>,
                 update_mask: &mut Vec<bool>,
-            ) -> AnyResult<BTreeMap<Self, FieldValue>> {
+            ) -> anyhow::Result<BTreeMap<Self, FieldValue>> {
                 let mut fields = BTreeMap::new();
 
                 let indices_to_update: Vec<u32> = update_mask.iter()
@@ -125,7 +126,7 @@ macro_rules! fields {
                 buffer_iter: &mut Iter<u32>,
                 field_indices: Vec<u32>,
                 range: Range<u32>
-            ) -> AnyResult<FieldValue> {
+            ) -> anyhow::Result<FieldValue> {
                 let value = match field_type {
                     "Long" => {
                         let mut values: Vec<u32> = vec![];
@@ -262,7 +263,7 @@ macro_rules! fields {
                         } else {
                             FieldValue::Custom(values[0].clone())
                         }
-                    },
+                    }
                     _ => FieldValue::None
                 };
 

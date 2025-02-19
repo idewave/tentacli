@@ -1,19 +1,18 @@
 use std::collections::BTreeMap;
-use anyhow::{Result as AnyResult};
-use async_broadcast::{Sender as BroadcastSender, Receiver as BroadcastReceiver};
+
+use async_broadcast::{Receiver as BroadcastReceiver, Sender as BroadcastSender};
 use tentacli_traits::{Feature, FeatureError, Processor};
-use tentacli_traits::types::{HandlerOutput, ProcessorFunction, ProcessorResult};
+use tentacli_traits::types::{HandlerOutput, ProcessorFunction, ProcessorResult, Task};
 use tentacli_traits::types::opcodes::Opcode;
-use tokio::task::JoinHandle;
+
+pub use auth::{LoginChallengeResponse, LoginProofResponse, RealmlistResponse};
+use auth::AuthProcessor;
+
+use crate::features::wotlk_login::realm::packet::LogoutOutcoming;
+use crate::features::wotlk_login::realm::RealmProcessor;
 
 mod auth;
 mod realm;
-
-pub use auth::{LoginChallengeResponse, LoginProofResponse, RealmlistResponse};
-
-use auth::AuthProcessor;
-use crate::features::wotlk_login::realm::packet::LogoutOutcoming;
-use crate::features::wotlk_login::realm::RealmProcessor;
 
 #[derive(Default)]
 pub struct WotlkLogin {
@@ -25,13 +24,13 @@ impl Feature for WotlkLogin {
     fn set_broadcast_channel(
         &mut self,
         sender: BroadcastSender<HandlerOutput>,
-        receiver: BroadcastReceiver<HandlerOutput>
+        receiver: BroadcastReceiver<HandlerOutput>,
     ) {
         self._sender = Some(sender);
         self._receiver = Some(receiver);
     }
 
-    fn get_tasks(&mut self) -> AnyResult<Vec<JoinHandle<()>>> {
+    fn get_tasks(&mut self) -> anyhow::Result<Vec<Task>> {
         let sender = self._sender.as_ref().ok_or(FeatureError::SenderNotFound)?.clone();
         let mut receiver = self._receiver.as_mut().ok_or(FeatureError::ReceiverNotFound)?.clone();
 

@@ -1,6 +1,6 @@
 [package]
 name = "tentacli-traits"
-version = "9.2.1"
+version = "9.3.0"
 edition = "2021"
 authors = ["Sergio Ivanuzzo <sergio.ivanuzzo@gmail.com>"]
 description = "Traits and types for tentacli and related projects"
@@ -19,9 +19,9 @@ bitflags = "2.5.0"
 byteorder = "1.4.3"
 dotenv = "0.15.0"
 serde = { version = "1.0.197", features = ["derive"] }
-tentacli-crypto = "0.1.0"
-tentacli-utils = "2.1.0"
-thiserror = "1.0"
+tentacli-crypto = "1.0.0"
+tentacli-utils = "2.1.1"
+thiserror = "2.0.11"
 tokio = { version = "1", features = ["sync", "net", "io-util", "macros", "time", "rt-multi-thread"] }
 yaml-rust = "0.4.5"
 tempdir = "0.3.7"

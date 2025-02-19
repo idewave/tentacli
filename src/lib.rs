@@ -20,12 +20,11 @@
 //! ```rust
 //! use std::collections::BTreeMap;
 //! use anyhow::{Result as AnyResult};
-//! use tokio::task::JoinHandle;
 //!
 //! use tentacli::async_broadcast::{BroadcastSender, BroadcastReceiver};
 //! use tentacli::{Client, CreateOptions, RunOptions};
 //! use tentacli_traits::{Feature, FeatureError};
-//! use tentacli_traits::types::{HandlerOutput, ProcessorFunction, ProcessorResult};
+//! use tentacli_traits::types::{HandlerOutput, ProcessorFunction, ProcessorResult, Task};
 //!
 //! #[tokio::main]
 //! async fn main() {
@@ -45,7 +44,7 @@
 //!             self._receiver = Some(receiver);
 //!         }
 //!
-//!         fn get_tasks(&mut self) -> AnyResult<Vec<JoinHandle<()>>> {
+//!         fn get_tasks(&mut self) -> anyhow::Result<Vec<Task>> {
 //!             let mut receiver = self._receiver.as_mut().ok_or(FeatureError::ReceiverNotFound)?.clone();
 //!
 //!             let handle_smth = || {
@@ -95,24 +94,24 @@
 //! }
 //! ```
 
+#[macro_use]
+extern crate cfg_if;
 #[cfg(feature = "ui")]
 extern crate chrono;
 #[macro_use]
-extern crate tentacli_packet;
-#[macro_use]
 extern crate serde;
 #[macro_use]
-extern crate cfg_if;
+extern crate tentacli_packet;
+
+pub use primary::client::{Client, CreateOptions, RunOptions};
 
 mod features;
 mod primary;
 
-pub use primary::client::{Client, CreateOptions, RunOptions};
-
 pub mod async_broadcast {
-    pub use async_broadcast::{broadcast, Sender as BroadcastSender, Receiver as BroadcastReceiver};
+    pub use async_broadcast::{broadcast, Receiver as BroadcastReceiver, Sender as BroadcastSender};
 }
 
 pub mod serializers {
-    pub use crate::primary::serializers::{serialize_array};
+    pub use crate::primary::serializers::serialize_array;
 }

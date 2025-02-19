@@ -1,4 +1,3 @@
-use anyhow::{Result as AnyResult};
 use std::process::exit;
 use std::sync::{Arc, Mutex as SyncMutex};
 use std::time::Duration;
@@ -20,14 +19,13 @@ use crossterm::{
 };
 use futures::{FutureExt, StreamExt};
 use crossterm::event::EventStream;
-use tokio::task::JoinHandle;
 use async_broadcast::{Receiver as BroadcastReceiver, Sender as BroadcastSender};
 use tokio::time::sleep;
 use tui::backend::CrosstermBackend;
 use tui::layout::{Constraint, Direction, Layout};
 use tui::Terminal;
 use tentacli_traits::{Feature, FeatureError};
-use tentacli_traits::types::HandlerOutput;
+use tentacli_traits::types::{HandlerOutput, Task};
 
 mod characters_modal;
 mod debug_panel;
@@ -71,7 +69,7 @@ impl Feature for UI {
         self._receiver = Some(receiver);
     }
 
-    fn get_tasks(&mut self) -> AnyResult<Vec<JoinHandle<()>>> {
+    fn get_tasks(&mut self) -> anyhow::Result<Vec<Task>> {
         let sender = self._sender.as_ref().ok_or(FeatureError::SenderNotFound)?.clone();
         let mut receiver = self._receiver.as_mut().ok_or(FeatureError::ReceiverNotFound)?.clone();
 

@@ -1,12 +1,12 @@
-use rand::distributions::Alphanumeric;
-use rand::prelude::SliceRandom;
-use rand::{Rng, thread_rng};
+use rand::distr::Alphanumeric;
+use rand::Rng;
+use rand::seq::IndexedRandom;
 use tentacli_traits::types::player::{Class, Gender, Race};
 
 pub trait CharacterCreateToolkit {
     fn generate_random_string(capitalize: bool) -> String {
-        let mut rng = thread_rng();
-        let random_length = rng.gen_range(9..=11);
+        let mut rng = rand::rng();
+        let random_length = rng.random_range(9..=11);
 
         let string: String = rng
             .sample_iter(&Alphanumeric)
@@ -34,7 +34,7 @@ pub trait CharacterCreateToolkit {
             Race::TROLL,
         ];
 
-        let mut rng = thread_rng();
+        let mut rng = rand::rng();
         *races.choose(&mut rng).unwrap()
     }
 
@@ -44,7 +44,7 @@ pub trait CharacterCreateToolkit {
             Class::ROGUE,
         ];
 
-        let mut rng = thread_rng();
+        let mut rng = rand::rng();
         *races.choose(&mut rng).unwrap()
     }
 
@@ -54,7 +54,7 @@ pub trait CharacterCreateToolkit {
             Gender::GENDER_FEMALE,
         ];
 
-        let mut rng = thread_rng();
+        let mut rng = rand::rng();
         *races.choose(&mut rng).unwrap()
     }
 }
