@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use tentacli_traits::PacketHandler;
-use tentacli_traits::types::custom_fields::PackedGuid;
 use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
+use tentacli_traits::types::custom_fields::PackedGuid;
 use tentacli_traits::types::opcodes::Opcode;
 use tentacli_traits::types::shared::ActionFlags;
 
@@ -12,6 +12,7 @@ struct Incoming {
 }
 
 pub struct Handler;
+
 #[async_trait]
 impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
@@ -25,14 +26,11 @@ impl PacketHandler for Handler {
             Some(json),
         ));
 
-        let my_guid: Option<u64> = {
-            let guard = input.session.lock().await;
-            guard.me.as_ref().map(|player| player.guid)
-        };
+        let my_guid: Option<u64> = input.session.lock().await.my_guid;
 
         if my_guid.is_some() {
             input.session.lock().await.action_flags.set(
-                ActionFlags::IS_CASTING, my_guid.unwrap() == caster_guid
+                ActionFlags::IS_CASTING, my_guid.unwrap() == caster_guid,
             );
         }
 

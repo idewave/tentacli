@@ -9,33 +9,16 @@ pub trait BinaryConverter {
     fn read_from<R: BufRead>(reader: &mut R, dependencies: &mut Vec<u8>) -> anyhow::Result<Self>
     where
         Self: Sized;
-
-    // fn read_from_with_logging<R: BufRead>(reader: &mut R, dependencies: &mut Vec<u8>) -> anyhow::Result<Self>
-    // where Self: Sized + std::fmt::Debug
-    // {
-    //     println!("Calling read_from for type: {}", std::any::type_name::<Self>());
-    //     let result = Self::read_from(reader, dependencies);
-    //
-    //     match &result {
-    //         Ok(value) => println!("Successfully read value: {:?}", value),
-    //         Err(e) => println!("Failed to read value: {:?}", e),
-    //     }
-    //
-    //     result
-    // }
 }
 
 impl BinaryConverter for bool {
     fn write_into(&mut self, buffer: &mut Vec<u8>) -> anyhow::Result<()> {
-        let flag = if *self { 1 } else { 0 };
-        buffer.write_u8(flag)?;
-
+        buffer.write_u8(*self as u8)?;
         Ok(())
     }
 
     fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> anyhow::Result<Self> {
-        let value = reader.read_u8()?;
-        Ok(if value == 1 { true } else { false })
+        Ok(reader.read_u8()? == 1)
     }
 }
 
@@ -189,16 +172,25 @@ impl BinaryConverter for String {
     }
 }
 
-impl<const N: usize> BinaryConverter for [u8; N] {
+impl<const N: usize, T> BinaryConverter for [T; N]
+where
+    T: Sized + BinaryConverter + Clone + core::fmt::Debug,
+{
     fn write_into(&mut self, buffer: &mut Vec<u8>) -> anyhow::Result<()> {
-        buffer.write_all(self)?;
+        for i in 0..self.len() {
+            self[i].write_into(buffer)?;
+        }
+        
         Ok(())
     }
 
     fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> anyhow::Result<Self> {
-        let mut internal_buf = [0; N];
-        reader.read_exact(&mut internal_buf)?;
-        Ok(internal_buf)
+        let mut buffer = Vec::with_capacity(N);
+        for _ in 0..N {
+            buffer.push(T::read_from(reader, &mut vec![])?);
+        }
+
+        Ok(buffer.try_into().unwrap())
     }
 }
 

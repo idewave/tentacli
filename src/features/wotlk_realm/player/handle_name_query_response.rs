@@ -1,9 +1,9 @@
 use async_trait::async_trait;
 use tentacli_traits::PacketHandler;
-use tentacli_traits::types::custom_fields::{PackedGuid};
 use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
+use tentacli_traits::types::custom_fields::PackedGuid;
 use tentacli_traits::types::opcodes::Opcode;
-use tentacli_traits::types::player::Player;
+use tentacli_traits::types::shared::Object;
 
 #[derive(WorldPacket, Serialize, Debug)]
 struct CheckEmptyIncoming {
@@ -23,6 +23,7 @@ struct Incoming {
 }
 
 pub struct Handler;
+
 #[async_trait]
 impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
@@ -36,13 +37,7 @@ impl PacketHandler for Handler {
             return Ok(response);
         }
 
-        let (Incoming {
-            packed_guid,
-            name,
-            race,
-            class,
-            ..
-        }, json) = Incoming::from_binary(&input.data)?;
+        let (Incoming { packed_guid, name, .. }, json) = Incoming::from_binary(&input.data)?;
 
         response.push(HandlerOutput::ResponseMessage(
             Opcode::get_opcode_name(input.opcode as u32)
@@ -52,24 +47,19 @@ impl PacketHandler for Handler {
 
         let PackedGuid(guid) = packed_guid;
 
-        let my_guid = {
-            input.session.lock().await.me.as_ref().unwrap().guid
+        let is_my_guid = {
+            let guard = input.session.lock().await;
+            guard.my_guid.map_or(false, |my_guid| my_guid == guid)
         };
 
-        // modify/insert only another players
-        // current player stored inside Session instance
-        if my_guid != guid {
-            input.data_storage.lock().unwrap().players_map.entry(guid).and_modify(|p| {
+        if !is_my_guid {
+            input.data_storage.lock().await.players_map.entry(guid).and_modify(|p| {
                 p.name = name.to_string();
-                p.race = race;
-                p.class = class;
             }).or_insert_with(|| {
-                Player {
+                Object {
                     guid,
                     name,
-                    race,
-                    class,
-                    ..Player::default()
+                    ..Object::default()
                 }
             });
         }

@@ -26,7 +26,7 @@ const BUFFER_SIZE: usize = 100;
 
 #[derive(Default)]
 pub struct CreateOptions {
-    pub data_storage: Option<Arc<SyncMutex<DataStorage>>>,
+    pub data_storage: Option<Arc<Mutex<DataStorage>>>,
 }
 
 pub struct RunOptions<'a> {
@@ -42,7 +42,7 @@ pub struct Client {
     _warden_crypt: Arc<SyncMutex<Option<WardenCrypt>>>,
 
     session: Arc<Mutex<Session>>,
-    data_storage: Arc<SyncMutex<DataStorage>>,
+    data_storage: Arc<Mutex<DataStorage>>,
 }
 
 impl Client {
@@ -52,9 +52,9 @@ impl Client {
             _writer: Arc::new(Mutex::new(None)),
             _warden_crypt: Arc::new(SyncMutex::new(None)),
 
-            session: Arc::new(Mutex::new(Session::new())),
+            session: Arc::new(Mutex::new(Session::default())),
             data_storage: options.data_storage
-                .unwrap_or_else(|| Arc::new(SyncMutex::new(DataStorage::default()))),
+                .unwrap_or_else(|| Arc::new(Mutex::new(DataStorage::default()))),
         }
     }
 
@@ -433,8 +433,9 @@ impl Client {
                                 session.lock().await.selected_realm = Some(realm);
                                 notify.notify_one();
                             }
-                            HandlerOutput::SelectCharacter(character) => {
-                                session.lock().await.me = Some(character);
+                            HandlerOutput::SelectCharacter(my_guid) => {
+                                // if the character is being selected manually
+                                session.lock().await.my_guid = Some(my_guid);
                                 notify.notify_one();
                             }
                             _ => {}
@@ -594,19 +595,18 @@ mod tests {
         let warden_crypt = &mut *client._warden_crypt.lock().unwrap();
         assert!(warden_crypt.is_none());
 
-        let data_storage = &mut *client.data_storage.lock().unwrap();
+        let data_storage = client.data_storage.lock().await;
         assert!(data_storage.players_map.is_empty());
 
         let session = &mut *client.session.lock().await;
         assert!(session.srp.is_none());
-        assert!(session.me.is_none());
         assert!(session.warden_module_info.is_none());
         assert!(session.config.is_none());
         assert!(session.follow_target.is_none());
         assert!(session.selected_realm.is_none());
-        assert!(session.party.is_empty());
-        assert_eq!(ActionFlags::NONE, session.action_flags);
-        assert_eq!(StateFlags::NONE, session.state_flags);
+        assert!(session.my_guid.is_none());
+        assert_eq!(session.action_flags, ActionFlags::NONE);
+        assert_eq!(session.state_flags, StateFlags::NONE);
     }
 
     #[tokio::test]

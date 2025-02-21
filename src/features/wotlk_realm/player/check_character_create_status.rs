@@ -14,6 +14,7 @@ struct Incoming {
 }
 
 pub struct Handler;
+
 #[async_trait]
 impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
@@ -38,10 +39,10 @@ impl PacketHandler for Handler {
                     "Character created successfully".into(),
                     None,
                 ));
-            },
+            }
             CharacterCreateResponseCode::CHAR_CREATE_NAME_IN_USE => {
                 if auto_create_character_for_new_account {
-                    let random_name = Self::generate_random_string(true);
+                    let random_name = Self::generate_random_name();
                     response.push(HandlerOutput::ResponseMessage(
                         format!("Creating character with name \"{}\"", random_name),
                         None,
@@ -67,22 +68,22 @@ impl PacketHandler for Handler {
                         )
                     );
                 }
-            },
+            }
             CharacterCreateResponseCode::CHAR_CREATE_ACCOUNT_LIMIT => {
                 response.push(HandlerOutput::SuccessMessage(
                     "Account limit is exceeded".into(),
                     None,
                 ));
                 response.push(HandlerOutput::Drop);
-            },
+            }
             CharacterCreateResponseCode::CHAR_CREATE_SERVER_LIMIT => {
                 response.push(HandlerOutput::SuccessMessage(
                     "Server limit is exceeded".into(),
                     None,
                 ));
                 response.push(HandlerOutput::Drop);
-            },
-            _ => {},
+            }
+            _ => {}
         }
 
         Ok(response)

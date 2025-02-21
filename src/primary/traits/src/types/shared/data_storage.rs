@@ -1,15 +1,27 @@
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 
-use crate::types::object::{Container, Corpse, DynamicObject, GameObject, Item, Unit};
-use crate::types::player::Player;
+use serde::Serialize;
+
+use crate::types::movement::Movement;
+use crate::types::update_data::UpdateData;
+
+#[derive(Serialize, Clone, Default, Debug)]
+pub struct Object {
+    pub guid: u64,
+    pub name: String,
+    #[serde(skip_serializing_if = "Movement::is_default")]
+    pub movement: Movement,
+    #[serde(skip_serializing_if = "UpdateData::is_default")]
+    pub update_data: UpdateData,
+}
 
 #[derive(Debug, Default)]
 pub struct DataStorage {
-    pub players_map: BTreeMap<u64, Player>,
-    pub units_map: BTreeMap<u64, Unit>,
-    pub items_map: BTreeMap<u64, Item>,
-    pub containers_map: BTreeMap<u64, Container>,
-    pub game_objects_map: BTreeMap<u64, GameObject>,
-    pub dynamic_objects_map: BTreeMap<u64, DynamicObject>,
-    pub corpses_map: BTreeMap<u64, Corpse>,
+    pub players_map: HashMap<u64, Object>,
+    pub units_map: HashMap<u64, Object>,
+    pub items_map: HashMap<u64, Object>,
+    pub containers_map: HashMap<u64, Object>,
+    pub game_objects_map: HashMap<u64, Object>,
+    pub dynamic_objects_map: HashMap<u64, Object>,
+    pub corpses_map: HashMap<u64, Object>,
 }

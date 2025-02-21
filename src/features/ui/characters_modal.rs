@@ -1,40 +1,35 @@
 use std::sync::{Arc, Mutex as SyncMutex};
+
 use crossterm::event::{KeyCode, KeyModifiers};
+use tentacli_traits::types::HandlerOutput;
+use tentacli_traits::types::shared::Object;
 use tui::style::{Color, Modifier, Style};
 use tui::text::{Span, Spans};
 use tui::widgets::{ListItem, ListState};
-use tentacli_traits::types::HandlerOutput;
-use tentacli_traits::types::player::Player;
 
-use crate::features::ui::traits::{UIModalComponent};
-use crate::features::ui::types::{UIEventFlags};
+use crate::features::ui::traits::UIModalComponent;
+use crate::features::ui::types::UIEventFlags;
 
 pub struct CharactersModal {
     state: ListState,
-    characters: Vec<Player>,
+    characters: Vec<Object>,
 }
 
 impl CharactersModal {
-    pub fn set_items(&mut self, characters: Vec<Player>) -> &mut Self {
+    pub fn set_items(&mut self, characters: Vec<Object>) -> &mut Self {
         self.characters = characters;
         self
     }
 
-    pub fn get_selected(&mut self) -> Option<Player> {
-        if self.state.selected().is_some() {
-            let index = self.state.selected().unwrap();
-            let realm = self.characters.remove(index);
-            Some(realm)
-        } else {
-            None
-        }
+    pub fn get_selected(&mut self) -> Option<Object> {
+        self.state.selected().map(|index| self.characters.remove(index))
     }
 
     pub fn handle_key_event(
         &mut self,
         _: KeyModifiers,
         key_code: KeyCode,
-        event_flags: Arc<SyncMutex<UIEventFlags>>
+        event_flags: Arc<SyncMutex<UIEventFlags>>,
     ) -> Option<HandlerOutput> {
         let mut output = None;
 
@@ -45,22 +40,23 @@ impl CharactersModal {
                     self.prev();
                     event_flags.lock().unwrap().set(UIEventFlags::IS_EVENT_HANDLED, true);
                 }
-            },
+            }
             KeyCode::Down => {
                 if is_modal_opened {
                     self.next();
                     event_flags.lock().unwrap().set(UIEventFlags::IS_EVENT_HANDLED, true);
                 }
-            },
+            }
             KeyCode::Enter => {
                 if is_modal_opened {
                     if let Some(selected) = self.get_selected() {
-                        output = Some(HandlerOutput::SelectCharacter(selected));
-                        event_flags.lock().unwrap().set(UIEventFlags::IS_CHARACTERS_MODAL_OPENED, false);
+                        output = Some(HandlerOutput::SelectCharacter(selected.guid));
+                        event_flags.lock().unwrap()
+                            .set(UIEventFlags::IS_CHARACTERS_MODAL_OPENED, false);
                     }
                 }
-            },
-            _ => {},
+            }
+            _ => {}
         };
 
         output
@@ -89,14 +85,9 @@ impl UIModalComponent for CharactersModal {
                         character.name.to_string(),
                         Style::default()
                             .fg(Color::LightGreen)
-                            .add_modifier(Modifier::BOLD)
+                            .add_modifier(Modifier::BOLD),
                     ),
-                    Span::raw(format!(", guid: {:?}, ", character.guid)),
-                    Span::styled(
-                        format!("{} lvl", character.level),
-                        Style::default()
-                            .fg(Color::LightYellow)
-                    ),
+                    Span::raw(format!(", guid: {:?}", character.guid)),
                 ])
             ]))
             .collect();
