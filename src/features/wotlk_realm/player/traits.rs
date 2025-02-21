@@ -4,7 +4,7 @@ use rand::seq::IndexedRandom;
 use tentacli_traits::types::player::{Class, Gender, Race};
 
 pub trait CharacterCreateToolkit {
-    fn generate_random_string(capitalize: bool) -> String {
+    fn generate_random_name() -> String {
         let mut rng = rand::rng();
         let random_length = rng.random_range(9..=11);
 
@@ -15,13 +15,9 @@ pub trait CharacterCreateToolkit {
             .map(|c| c as char)
             .collect();
 
-        if capitalize {
-            let first_letter = string.chars().next().unwrap();
+        let first_letter = string.chars().next().unwrap();
 
-            format!("{}{}", first_letter.to_uppercase(), string.to_lowercase())
-        } else {
-            string.to_lowercase()
-        }
+        format!("{}{}", first_letter.to_uppercase(), string.to_lowercase())
     }
 
     fn get_random_race() -> u8 {

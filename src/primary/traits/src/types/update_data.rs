@@ -2,11 +2,22 @@ use std::collections::BTreeMap;
 use std::io::BufRead;
 
 use anyhow::Context;
+use bitflags::bitflags;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use serde::{Serialize, Serializer};
 
-use crate::{BinaryConverter, FieldError};
-use crate::types::update_fields::{ContainerField, CorpseField, DynamicObjectField, FieldValue, GameObjectField, ItemField, ObjectField, PlayerField, UnitField};
+use crate::BinaryConverter;
+use crate::types::update_fields::{
+    ContainerField,
+    CorpseField,
+    DynamicObjectField,
+    FieldValue,
+    GameObjectField,
+    ItemField,
+    ObjectField,
+    PlayerField,
+    UnitField,
+};
 
 #[derive(Serialize, Clone, Default, Debug, PartialEq)]
 pub struct UpdateData {
@@ -33,54 +44,15 @@ impl UpdateData {
         *self == Self::default()
     }
 
-    pub fn extend_or_clear_source(&mut self, source: &mut UpdateData) {
-        if !self.player_fields.is_empty() {
-            self.player_fields.extend(source.player_fields.clone());
-        } else {
-            source.player_fields.clear();
-        }
-
-        if !self.unit_fields.is_empty() {
-            self.unit_fields.extend(source.unit_fields.clone());
-        } else {
-            source.unit_fields.clear();
-        }
-
-        if !self.object_fields.is_empty() {
-            self.object_fields.extend(source.object_fields.clone());
-        } else {
-            source.object_fields.clear();
-        }
-
-        if !self.item_fields.is_empty() {
-            self.item_fields.extend(source.item_fields.clone());
-        } else {
-            source.item_fields.clear();
-        }
-
-        if !self.game_object_fields.is_empty() {
-            self.game_object_fields.extend(source.game_object_fields.clone());
-        } else {
-            source.game_object_fields.clear();
-        }
-
-        if !self.dynamic_object_fields.is_empty() {
-            self.dynamic_object_fields.extend(source.dynamic_object_fields.clone());
-        } else {
-            source.dynamic_object_fields.clear();
-        }
-
-        if !self.container_fields.is_empty() {
-            self.container_fields.extend(source.container_fields.clone());
-        } else {
-            source.container_fields.clear();
-        }
-
-        if !self.corpse_fields.is_empty() {
-            self.corpse_fields.extend(source.corpse_fields.clone());
-        } else {
-            source.corpse_fields.clear();
-        }
+    pub fn update_fields(&mut self, source: &mut UpdateData) {
+        self.player_fields.append(&mut source.player_fields);
+        self.unit_fields.append(&mut source.unit_fields);
+        self.object_fields.append(&mut source.object_fields);
+        self.item_fields.append(&mut source.item_fields);
+        self.game_object_fields.append(&mut source.game_object_fields);
+        self.dynamic_object_fields.append(&mut source.dynamic_object_fields);
+        self.container_fields.append(&mut source.container_fields);
+        self.corpse_fields.append(&mut source.corpse_fields);
     }
 
     pub fn parse_value(option: &FieldValue) -> Vec<u32> {
@@ -129,6 +101,7 @@ impl UpdateData {
         end: u32,
     ) -> BTreeMap<u32, u32> {
         update_blocks.range(start..=end).map(|(&key, &value)| (key, value)).collect()
+        // update_blocks.range(start..=end).copied().collect()
     }
 }
 
@@ -180,8 +153,7 @@ impl BinaryConverter for UpdateData {
 
         let blocks_amount = ((values_limit + 31) / 32) as u8;
 
-        buffer.write_u8(blocks_amount)
-            .map_err(|e| FieldError::CannotWrite(e, "u8".to_string()))?;
+        buffer.write_u8(blocks_amount)?;
 
         let mut update_mask: Vec<u32> = vec![0; blocks_amount as usize];
         for index in update_fields.keys() {
@@ -204,9 +176,9 @@ impl BinaryConverter for UpdateData {
     fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> anyhow::Result<Self> {
         let blocks_amount = u8::read_from(reader, &mut vec![])?;
 
-        if blocks_amount > 0 {
-            let mut update_blocks: BTreeMap<u32, u32> = BTreeMap::new();
+        let mut instance = Self::default();
 
+        if blocks_amount > 0 {
             let mut update_mask = (0..blocks_amount)
                 .map(|_| reader
                     .read_u32::<LittleEndian>()
@@ -229,15 +201,10 @@ impl BinaryConverter for UpdateData {
                 .filter_map(|(index, &value)| if value { Some(index as u32) } else { None })
                 .collect();
 
-            for index in update_indices {
-                let value = reader.read_u32::<LittleEndian>()
-                    .context(format!(
-                        "Failed to read UPD BLOCK from reader with {} blocks on index {}",
-                        blocks_amount, index
-                    ))?;
-
-                update_blocks.insert(index, value);
-            }
+            let update_blocks: BTreeMap<u32, u32> = update_indices
+                .into_iter()
+                .map(|index| (index, reader.read_u32::<LittleEndian>().unwrap()))
+                .collect();
 
             let object_fields: BTreeMap<ObjectField, FieldValue> = {
                 let blocks: BTreeMap<u32, u32> = update_blocks
@@ -251,146 +218,126 @@ impl BinaryConverter for UpdateData {
                 ).unwrap_or_default()
             };
 
-            let mask = object_fields.get(&ObjectField::Type).and_then(|field| {
-                if let FieldValue::Integer(mask) = field {
-                    Some(*mask)
-                } else {
-                    None
-                }
-            }).unwrap_or_default();
-
-            let unit_fields: BTreeMap<UnitField, FieldValue> = {
-                let blocks = Self::build_blocks(
-                    &update_blocks,
-                    ObjectField::get_limit() + 1,
-                    UnitField::get_limit(),
+            let mask = object_fields
+                .get(&ObjectField::Type)
+                .map_or(
+                    ObjectTypeMask::NONE,
+                    |field| if let FieldValue::Integer(mask) = field {
+                        ObjectTypeMask::from_bits(*mask).unwrap()
+                    } else {
+                        ObjectTypeMask::NONE
+                    },
                 );
 
-                if mask == 0 || mask & ObjectTypeMask::UNIT != 0 {
+            if mask.contains(ObjectTypeMask::UNIT) || mask.contains(ObjectTypeMask::NONE) {
+                instance.unit_fields = {
+                    let blocks = Self::build_blocks(
+                        &update_blocks,
+                        ObjectField::get_limit() + 1,
+                        UnitField::get_limit(),
+                    );
+
                     UnitField::read_from(
                         blocks.values().copied().collect::<Vec<u32>>(),
                         &mut update_mask,
                     ).unwrap_or_default()
-                } else {
-                    BTreeMap::default()
-                }
-            };
+                };
+            }
 
-            let player_fields: BTreeMap<PlayerField, FieldValue> = {
-                let blocks = Self::build_blocks(
-                    &update_blocks,
-                    UnitField::get_limit() + 1,
-                    PlayerField::get_limit(),
-                );
+            if mask.contains(ObjectTypeMask::PLAYER) || mask.contains(ObjectTypeMask::NONE) {
+                instance.player_fields = {
+                    let blocks = Self::build_blocks(
+                        &update_blocks,
+                        UnitField::get_limit() + 1,
+                        PlayerField::get_limit(),
+                    );
 
-                if mask == 0 || mask & ObjectTypeMask::PLAYER != 0 {
                     PlayerField::read_from(
                         blocks.values().copied().collect::<Vec<u32>>(),
                         &mut update_mask,
                     ).unwrap_or_default()
-                } else {
-                    BTreeMap::default()
-                }
-            };
+                };
+            }
 
-            let item_fields: BTreeMap<ItemField, FieldValue> = {
-                let blocks = Self::build_blocks(
-                    &update_blocks,
-                    ObjectField::get_limit() + 1,
-                    ItemField::get_limit(),
-                );
+            if mask.contains(ObjectTypeMask::ITEM) || mask.contains(ObjectTypeMask::NONE) {
+                instance.item_fields = {
+                    let blocks = Self::build_blocks(
+                        &update_blocks,
+                        ObjectField::get_limit() + 1,
+                        ItemField::get_limit(),
+                    );
 
-                if mask == 0 || mask & ObjectTypeMask::ITEM != 0 {
                     ItemField::read_from(
                         blocks.values().copied().collect::<Vec<u32>>(),
                         &mut update_mask,
                     ).unwrap_or_default()
-                } else {
-                    BTreeMap::default()
-                }
-            };
+                };
+            }
 
-            let game_object_fields: BTreeMap<GameObjectField, FieldValue> = {
-                let blocks = Self::build_blocks(
-                    &update_blocks,
-                    ObjectField::get_limit() + 1,
-                    GameObjectField::get_limit(),
-                );
+            if mask.contains(ObjectTypeMask::GAMEOBJECT) || mask.contains(ObjectTypeMask::NONE) {
+                instance.game_object_fields = {
+                    let blocks = Self::build_blocks(
+                        &update_blocks,
+                        ObjectField::get_limit() + 1,
+                        GameObjectField::get_limit(),
+                    );
 
-                if mask == 0 || mask & ObjectTypeMask::GAMEOBJECT != 0 {
                     GameObjectField::read_from(
                         blocks.values().copied().collect::<Vec<u32>>(),
                         &mut update_mask,
                     ).unwrap_or_default()
-                } else {
-                    BTreeMap::default()
-                }
-            };
+                };
+            }
 
-            let dynamic_object_fields: BTreeMap<DynamicObjectField, FieldValue> = {
-                let blocks = Self::build_blocks(
-                    &update_blocks,
-                    ObjectField::get_limit() + 1,
-                    DynamicObjectField::get_limit(),
-                );
+            if mask.contains(ObjectTypeMask::DYNAMICOBJECT) || mask.contains(ObjectTypeMask::NONE) {
+                instance.dynamic_object_fields = {
+                    let blocks = Self::build_blocks(
+                        &update_blocks,
+                        ObjectField::get_limit() + 1,
+                        DynamicObjectField::get_limit(),
+                    );
 
-                if mask == 0 || mask & ObjectTypeMask::DYNAMICOBJECT != 0 {
                     DynamicObjectField::read_from(
                         blocks.values().copied().collect::<Vec<u32>>(),
                         &mut update_mask,
                     ).unwrap_or_default()
-                } else {
-                    BTreeMap::default()
-                }
-            };
+                };
+            }
 
-            let container_fields: BTreeMap<ContainerField, FieldValue> = {
-                let blocks = Self::build_blocks(
-                    &update_blocks,
-                    ItemField::get_limit() + 1,
-                    ContainerField::get_limit(),
-                );
+            if mask.contains(ObjectTypeMask::CONTAINER) || mask.contains(ObjectTypeMask::NONE) {
+                instance.container_fields = {
+                    let blocks = Self::build_blocks(
+                        &update_blocks,
+                        ItemField::get_limit() + 1,
+                        ContainerField::get_limit(),
+                    );
 
-                if mask == 0 || mask & ObjectTypeMask::CONTAINER != 0 {
                     ContainerField::read_from(
                         blocks.values().copied().collect::<Vec<u32>>(),
                         &mut update_mask,
                     ).unwrap_or_default()
-                } else {
-                    BTreeMap::default()
-                }
-            };
+                };
+            }
 
-            let corpse_fields: BTreeMap<CorpseField, FieldValue> = {
-                let blocks = Self::build_blocks(
-                    &update_blocks,
-                    ObjectField::get_limit() + 1,
-                    CorpseField::get_limit(),
-                );
+            if mask.contains(ObjectTypeMask::CORPSE) || mask.contains(ObjectTypeMask::NONE) {
+                instance.corpse_fields = {
+                    let blocks = Self::build_blocks(
+                        &update_blocks,
+                        ObjectField::get_limit() + 1,
+                        CorpseField::get_limit(),
+                    );
 
-                if mask == 0 || mask & ObjectTypeMask::CORPSE != 0 {
                     CorpseField::read_from(
                         blocks.values().copied().collect::<Vec<u32>>(),
                         &mut update_mask,
                     ).unwrap_or_default()
-                } else {
-                    BTreeMap::default()
-                }
-            };
+                };
+            }
 
-            Ok(Self {
-                object_fields,
-                unit_fields,
-                player_fields,
-                item_fields,
-                container_fields,
-                game_object_fields,
-                dynamic_object_fields,
-                corpse_fields,
-            })
-        } else {
-            Ok(Self::default())
+            instance.object_fields = object_fields;
         }
+
+        Ok(instance)
     }
 }
 
@@ -569,19 +516,19 @@ mod tests {
     }
 }
 
-#[non_exhaustive]
-pub struct ObjectTypeMask;
-
-#[allow(dead_code)]
-impl ObjectTypeMask {
-    pub const OBJECT: i32 = 0x0001;
-    pub const ITEM: i32 = 0x0002;
-    pub const CONTAINER: i32 = 0x0004;
-    pub const UNIT: i32 = 0x0008;
-    pub const PLAYER: i32 = 0x0010;
-    pub const GAMEOBJECT: i32 = 0x0020;
-    pub const DYNAMICOBJECT: i32 = 0x0040;
-    pub const CORPSE: i32 = 0x0080;
+bitflags! {
+    #[derive(Default, Debug)]
+    pub struct ObjectTypeMask: i32 {
+        const NONE = 0x0000;
+        const OBJECT = 0x0001;
+        const ITEM = 0x0002;
+        const CONTAINER = 0x0004;
+        const UNIT = 0x0008;
+        const PLAYER = 0x0010;
+        const GAMEOBJECT = 0x0020;
+        const DYNAMICOBJECT = 0x0040;
+        const CORPSE = 0x0080;
+    }
 }
 
 #[non_exhaustive]

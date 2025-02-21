@@ -1,13 +1,12 @@
-use std::sync::{Arc, Mutex as SyncMutex};
+use std::sync::Arc;
 
 use chat::Message;
-use player::Player;
 use realm::Realm;
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 
 use crate::PacketHandler;
-use crate::types::shared::{DataStorage, Session};
+use crate::types::shared::{DataStorage, Object, Session};
 
 pub mod auth;
 pub mod chat;
@@ -26,7 +25,6 @@ pub mod update_fields;
 pub mod warden;
 pub mod world;
 pub mod errors;
-pub mod object;
 
 #[derive(Debug, Clone)]
 pub enum Signal {
@@ -37,7 +35,7 @@ pub enum Signal {
 pub struct HandlerInput {
     pub session: Arc<Mutex<Session>>,
     pub data: Vec<u8>,
-    pub data_storage: Arc<SyncMutex<DataStorage>>,
+    pub data_storage: Arc<Mutex<DataStorage>>,
     pub opcode: u16,
 }
 
@@ -57,9 +55,8 @@ pub enum HandlerOutput {
     // data transfer
     ChatMessage(Message),
     Data((u32, Vec<u8>, String)),
-    TransferCharactersList(Vec<Player>),
+    TransferCharactersList(Vec<Object>),
     TransferRealmsList(Vec<Realm>),
-    IdentifyMe(u64),
     UpdatePlayer(u64),
     UpdateNPC(u64),
     UpdateItem(u64),
@@ -73,7 +70,7 @@ pub enum HandlerOutput {
     Drop,
     ExitRequest,
     Freeze,
-    SelectCharacter(Player),
+    SelectCharacter(u64),
     SelectRealm(Realm),
 
     // messages

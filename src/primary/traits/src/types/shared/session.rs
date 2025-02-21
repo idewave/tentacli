@@ -1,44 +1,29 @@
 use std::collections::HashSet;
-use std::fmt::{Debug};
+use std::fmt::Debug;
+
 use bitflags::bitflags;
 use tentacli_crypto::Srp;
 
-use crate::types::errors::ConfigError;
 use crate::types::config::{Config, ConfigParams};
-use crate::types::player::Player;
+use crate::types::errors::ConfigError;
 use crate::types::realm::Realm;
 use crate::types::warden::WardenModuleInfo;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Session {
     pub srp: Option<Srp>,
     pub selected_realm: Option<Realm>,
     pub warden_module_info: Option<WardenModuleInfo>,
     pub config: Option<Config>,
-    pub me: Option<Player>,
     pub follow_target: Option<u64>,
     pub action_flags: ActionFlags,
     pub state_flags: StateFlags,
-    pub party: Vec<Player>,
     pub spells_map: HashSet<u32>,
+    pub my_guid: Option<u64>,
+    pub inventory: Vec<i32>,
 }
 
 impl Session {
-    pub fn new() -> Self {
-        Self {
-            srp: None,
-            selected_realm: None,
-            warden_module_info: None,
-            config: None,
-            me: None,
-            follow_target: None,
-            action_flags: ActionFlags::NONE,
-            state_flags: StateFlags::NONE,
-            party: Vec::new(),
-            spells_map: HashSet::new(),
-        }
-    }
-
     pub fn get_config(&self) -> Result<&Config, ConfigError> {
         self.config.as_ref().ok_or(ConfigError::NotFound)
     }

@@ -1,112 +1,43 @@
 use std::fmt::Debug;
-use std::io::BufRead;
+use std::ops::{Index, IndexMut};
 
 use bitflags::bitflags;
-use byteorder::{LittleEndian, ReadBytesExt};
-use serde::Serialize;
 
-use crate::BinaryConverter;
-use crate::types::errors::FieldError;
-use crate::types::movement::Movement;
-use crate::types::position::Point3D;
-use crate::types::update_data::UpdateData;
+pub type EquipId = u32;
 
-#[derive(Serialize, Clone, Default, Debug)]
-pub struct Player {
-    pub guid: u64,
-    pub name: String,
-    pub race: u8,
-    pub class: u8,
-    pub level: u8,
-    #[serde(skip_serializing_if = "Movement::is_default")]
-    pub movement: Movement,
-    #[serde(skip_serializing_if = "UpdateData::is_default")]
-    pub update_data: UpdateData,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub inventory: Vec<u64>,
+pub enum EquipmentSlots {
+    HEAD = 0,
+    NECK = 1,
+    SHOULDERS = 2,
+    BODY = 3,
+    CHEST = 4,
+    WAIST = 5,
+    LEGS = 6,
+    FEET = 7,
+    WRISTS = 8,
+    HANDS = 9,
+    FINGER1 = 10,
+    FINGER2 = 11,
+    TRINKET1 = 12,
+    TRINKET2 = 13,
+    BACK = 14,
+    MAINHAND = 15,
+    OFFHAND = 16,
+    RANGED = 17,
+    TABARD = 18,
+    END = 19,
 }
 
-impl BinaryConverter for Player {
-    fn write_into(&mut self, _: &mut Vec<u8>) -> anyhow::Result<()> {
-        todo!()
+impl Index<EquipmentSlots> for Vec<EquipId> {
+    type Output = EquipId;
+    fn index(&self, index: EquipmentSlots) -> &Self::Output {
+        &self[index as usize]
     }
+}
 
-    fn read_from<R: BufRead>(reader: &mut R, _: &mut Vec<u8>) -> anyhow::Result<Self> {
-        let label = "Player";
-
-        let guid = reader.read_u64::<LittleEndian>()
-            .map_err(|e| FieldError::CannotRead(e, format!("guid:u64 ({})", label)))?;
-
-        let mut name_buf = Vec::new();
-        reader.read_until(0, &mut name_buf)
-            .map_err(|e| FieldError::CannotRead(e, format!("name_buf:Vec<u8> ({})", label)))?;
-        let name = String::from_utf8(
-            name_buf[..(name_buf.len() - 1)].to_vec()
-        ).map_err(|e| FieldError::InvalidString(e, label.to_owned()))?;
-
-        let race = reader.read_u8()
-            .map_err(|e| FieldError::CannotRead(e, format!("race:u8 ({})", label)))?;
-        let class = reader.read_u8()
-            .map_err(|e| FieldError::CannotRead(e, format!("class:u8 ({})", label)))?;
-        let _gender = reader.read_u8()
-            .map_err(|e| FieldError::CannotRead(e, format!("gender:u8 ({})", label)))?;
-
-        let _skin = reader.read_u8()
-            .map_err(|e| FieldError::CannotRead(e, format!("skin:u8 ({})", label)))?;
-        let _face = reader.read_u8()
-            .map_err(|e| FieldError::CannotRead(e, format!("face:u8 ({})", label)))?;
-        let _hair_style = reader.read_u8()
-            .map_err(|e| FieldError::CannotRead(e, format!("hair_style:u8 ({})", label)))?;
-        let _hair_color = reader.read_u8()
-            .map_err(|e| FieldError::CannotRead(e, format!("hair_color:u8 ({})", label)))?;
-
-        let _facial_hair = reader.read_u8()
-            .map_err(|e| FieldError::CannotRead(e, format!("facial_hair:u8 ({})", label)))?;
-        let level = reader.read_u8()
-            .map_err(|e| FieldError::CannotRead(e, format!("level:u8 ({})", label)))?;
-
-        let _zone_id = reader.read_u32::<LittleEndian>()
-            .map_err(|e| FieldError::CannotRead(e, format!("zone_id:u32 ({})", label)))?;
-        let _map_id = reader.read_u32::<LittleEndian>()
-            .map_err(|e| FieldError::CannotRead(e, format!("map_id:u32 ({})", label)))?;
-
-        let _location = Point3D::read_from(reader, &mut vec![])?;
-
-        let _guild_id = reader.read_u32::<LittleEndian>()
-            .map_err(|e| FieldError::CannotRead(e, format!("guild_id:u32 ({})", label)))?;
-        let _char_flags = reader.read_u32::<LittleEndian>()
-            .map_err(|e| FieldError::CannotRead(e, format!("char_flags:u32 ({})", label)))?;
-        let _char_customize_flags = reader.read_u32::<LittleEndian>()
-            .map_err(|e| FieldError::CannotRead(e, format!("char_customize_flags:u32 ({})", label)))?;
-
-        let _first_login = reader.read_u8()
-            .map_err(|e| FieldError::CannotRead(e, format!("first_login:u8 ({})", label)))?;
-
-        let _pet_display_id = reader.read_u32::<LittleEndian>()
-            .map_err(|e| FieldError::CannotRead(e, format!("pet_display_id:u32 ({})", label)))?;
-        let _pet_level = reader.read_u32::<LittleEndian>()
-            .map_err(|e| FieldError::CannotRead(e, format!("pet_level:u32 ({})", label)))?;
-        let _pet_family = reader.read_u32::<LittleEndian>()
-            .map_err(|e| FieldError::CannotRead(e, format!("pet_family:u32 ({})", label)))?;
-
-        // inventory
-        for _ in 0..23 {
-            reader.read_u32::<LittleEndian>()
-                .map_err(|e| FieldError::CannotRead(e, format!("inventory:u32 ({})", label)))?;
-            reader.read_u8()
-                .map_err(|e| FieldError::CannotRead(e, format!("inventory:u8 ({})", label)))?;
-            reader.read_u32::<LittleEndian>()
-                .map_err(|e| FieldError::CannotRead(e, format!("inventory:u32_2 ({})", label)))?;
-        }
-
-        Ok(Player {
-            guid,
-            name,
-            race,
-            class,
-            level,
-            ..Player::default()
-        })
+impl IndexMut<EquipmentSlots> for Vec<EquipId> {
+    fn index_mut(&mut self, index: EquipmentSlots) -> &mut Self::Output {
+        &mut self[index as usize]
     }
 }
 

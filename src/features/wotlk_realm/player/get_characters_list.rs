@@ -1,10 +1,10 @@
-use anyhow::bail;
 use async_trait::async_trait;
 use regex::Regex;
-use tentacli_traits::{CharacterListError, PacketHandler};
+use tentacli_traits::PacketHandler;
 use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
 use tentacli_traits::types::opcodes::Opcode;
-use tentacli_traits::types::player::Player;
+use tentacli_traits::types::position::Point3D;
+use tentacli_traits::types::shared::Object;
 
 use crate::features::wotlk_realm::globals::CharacterEnumOutgoing;
 use crate::features::wotlk_realm::player::packet::CharCreateOutgoing;
@@ -14,10 +14,49 @@ use crate::features::wotlk_realm::player::traits::CharacterCreateToolkit;
 struct Incoming {
     characters_count: u8,
     #[depends_on(characters_count)]
-    characters: Vec<Player>,
+    characters: Vec<Character>,
+}
+
+#[derive(Segment, Serialize, Debug, Clone, Default)]
+struct Character {
+    guid: u64,
+    name: String,
+    race: u8,
+    class: u8,
+    gender: u8,
+    skin: u8,
+    face: u8,
+    hair_style: u8,
+    hair_color: u8,
+    facial_hair: u8,
+    level: u8,
+    zone_id: u32,
+    map_id: u32,
+    location: Point3D,
+    guild_id: u32,
+    flags: u32,
+    customize_flags: u32,
+    first_login: bool,
+    pet_info: PetInfo,
+    equipment: [EquippedItem; 23],
+}
+
+#[derive(Segment, Serialize, Debug, Clone, Default)]
+struct PetInfo {
+    display_id: u32,
+    level: u32,
+    family: u32,
+}
+
+#[derive(Segment, Serialize, Debug, Clone, Default)]
+struct EquippedItem {
+    display_id: u32,
+    inventory_type: u8,
+    aura_id: u32,
 }
 
 pub struct Handler;
+
 #[async_trait]
 impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
@@ -31,24 +70,24 @@ impl PacketHandler for Handler {
             Some(json),
         ));
 
-        let me_exists = {
-            let guard = input.session.lock().await;
-            guard.me.is_some()
-        };
-
-        if me_exists {
-            return Ok(response);
-        }
-
-        let auto_create_character_for_new_account = {
+        let (enable_auto_create, name_pattern) = {
             let guard = input.session.lock().await;
             let config = guard.get_config()?;
-            config.common.auto_create_character_for_new_account
+            let enable_auto_create = config.common.auto_create_character_for_new_account;
+            let name_pattern = config.connection_data.autoselect_character_name.to_string();
+
+            (enable_auto_create, name_pattern)
         };
 
-        if characters.is_empty() {
-            return if auto_create_character_for_new_account {
-                let random_name = Self::generate_random_string(true);
+        let player_objects = characters.into_iter().map(|c| Object {
+            guid: c.guid,
+            name: c.name,
+            ..Default::default()
+        }).collect::<Vec<Object>>();
+
+        match player_objects.is_empty() {
+            true if enable_auto_create => {
+                let random_name = Self::generate_random_name();
                 response.push(HandlerOutput::ResponseMessage(
                     format!("Creating character with name \"{}\"", random_name),
                     None,
@@ -73,36 +112,27 @@ impl PacketHandler for Handler {
                             .unpack_with_client_opcode(Opcode::CMSG_CHAR_ENUM)?
                     )
                 );
-
-                Ok(response)
-            } else {
-                Ok(response)
             }
-        }
-
-        let name_pattern = {
-            let guard = input.session.lock().await;
-            let config = guard.get_config()?;
-            config.connection_data.autoselect_character_name.to_string()
-        };
-
-        let autoselect_character: bool = !name_pattern.is_empty();
-
-        if !autoselect_character {
-            response.push(HandlerOutput::TransferCharactersList(characters));
-            response.push(HandlerOutput::Freeze);
-        } else {
-            let re = Regex::new(&name_pattern).unwrap();
-            if let Some(character) = characters.into_iter().find(|item| re.is_match(&item.name[..]))
-            {
-                response.push(HandlerOutput::DebugMessage(
-                    format!("Selected \"{}\" Character", character.name),
-                    None,
-                ));
-                input.session.lock().await.me = Some(character);
-            } else if !auto_create_character_for_new_account {
-                bail!(CharacterListError::NotFound);
+            false if name_pattern.is_empty() => {
+                response.push(HandlerOutput::TransferCharactersList(player_objects));
+                response.push(HandlerOutput::Freeze);
             }
+            false => {
+                let re = Regex::new(&name_pattern)?;
+                let character = player_objects.into_iter().find(|item| re.is_match(&item.name[..]));
+
+                if let Some(character) = character {
+                    response.push(HandlerOutput::DebugMessage(
+                        format!("Selected \"{}\" Character", character.name),
+                        None,
+                    ));
+
+                    response.push(HandlerOutput::SelectCharacter(character.guid));
+
+                    input.session.lock().await.my_guid = Some(character.guid);
+                }
+            }
+            _ => {}
         }
 
         Ok(response)

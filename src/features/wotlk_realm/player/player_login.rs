@@ -10,42 +10,27 @@ struct Outgoing {
 }
 
 pub struct Handler;
+
 #[async_trait]
 impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
-        let mut response = Vec::new();
-
-        let me_exists = {
+        let (my_guid, enable_auto_create) = {
             let guard = input.session.lock().await;
-            guard.me.is_some()
+            let my_guid = guard.my_guid;
+            let enable_auto_create = guard
+                .get_config()?.common.auto_create_character_for_new_account;
+
+            (my_guid, enable_auto_create)
         };
 
-        let auto_create_character_for_new_account = {
-            let guard = input.session.lock().await;
-            let config = guard.get_config()?;
-            config.common.auto_create_character_for_new_account
-        };
-
-        if !me_exists {
-            if auto_create_character_for_new_account {
-                return Ok(response);
+        match my_guid {
+            Some(guid) => {
+                Ok(vec![HandlerOutput::Data(
+                    Outgoing { guid }.unpack_with_client_opcode(Opcode::CMSG_PLAYER_LOGIN)?
+                )])
             }
-
-            bail!(CharacterListError::Empty);
+            None if enable_auto_create => Ok(vec![]),
+            None => bail!(CharacterListError::Empty),
         }
-
-        let my_guid = {
-            input.session.lock().await.me.as_ref().unwrap().guid
-        };
-
-        response.push(
-            HandlerOutput::Data(
-                Outgoing { guid: my_guid }.unpack_with_client_opcode(Opcode::CMSG_PLAYER_LOGIN)?
-            )
-        );
-
-        response.push(HandlerOutput::IdentifyMe(my_guid));
-
-        Ok(response)
     }
 }

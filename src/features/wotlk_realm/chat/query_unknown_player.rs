@@ -15,6 +15,7 @@ pub struct NameQueryOutgoing {
 }
 
 pub struct Handler;
+
 #[async_trait]
 impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
@@ -28,14 +29,12 @@ impl PacketHandler for Handler {
             Some(json),
         ));
 
-        let players_map = &mut input.data_storage.lock().unwrap().players_map;
-        if players_map.get(&sender_guid).is_none() {
+        let guard = input.data_storage.lock().await;
+        if guard.players_map.get(&sender_guid).is_none() {
             response.push(HandlerOutput::Data(
                 NameQueryOutgoing { guid: sender_guid }
                     .unpack_with_client_opcode(Opcode::CMSG_NAME_QUERY)?
             ));
-
-            return Ok(response);
         }
 
         Ok(response)

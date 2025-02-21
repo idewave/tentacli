@@ -1,11 +1,12 @@
+use std::collections::HashMap;
+
 use async_trait::async_trait;
 use tentacli_traits::PacketHandler;
 use tentacli_traits::types::{HandlerInput, HandlerOutput, HandlerResult};
 use tentacli_traits::types::custom_fields::PackedGuid;
 use tentacli_traits::types::movement::Movement;
-use tentacli_traits::types::object::{Container, Corpse, DynamicObject, GameObject, Item, Unit};
 use tentacli_traits::types::opcodes::Opcode;
-use tentacli_traits::types::player::Player;
+use tentacli_traits::types::shared::Object;
 use tentacli_traits::types::update_data::{BlockType, ObjectTypeID, ObjectTypeMask, UpdateData};
 use tentacli_traits::types::update_fields::{FieldValue, ItemField, ObjectField};
 
@@ -105,7 +106,7 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let mut response = Vec::new();
 
-        let (Incoming { blocks, blocks_amount }, _) = {
+        let (Incoming { blocks, .. }, json) = {
             if input.opcode == Opcode::SMSG_UPDATE_OBJECT {
                 Incoming::from_binary(&input.data)?
             } else {
@@ -113,239 +114,132 @@ impl PacketHandler for Handler {
             }
         };
 
-        if input.session.lock().await.me.is_none() {
-            response.push(HandlerOutput::ErrorMessage(
-                "Session player was not initialized ?!!".to_string(),
-                None,
-            ));
-            return Ok(response);
-        }
-
-        let my_guid = {
-            input.session.lock().await.me.as_ref().unwrap().guid
-        };
-
-        let mut refined_blocks: Vec<Block> = vec![];
-
-        for mut block in blocks {
-            let mut update_data = UpdateData::default();
-            let cloned_block = block.clone();
-
-            let PackedGuid(guid) = block.guid;
-
-            if let Some(FieldValue::Integer(mask)) =
-                block.update_data.object_fields.get(&ObjectField::Type)
-            {
-                match mask {
-                    m if m & ObjectTypeMask::PLAYER != 0 => {
-                        update_data = block.update_data.clone();
-                        let mut object = Player {
-                            update_data: block.update_data,
-                            guid,
-                            ..Player::default()
-                        };
-
-                        object.movement = block.movement;
-
-                        if guid == my_guid {
-                            let mut guard = input.session.lock().await;
-                            let me = guard.me.as_mut().unwrap();
-                            *me = object.clone();
-                        }
-
-                        response.push(HandlerOutput::UpdatePlayer(guid));
-
-                        let mut guard = input.data_storage.lock().unwrap();
-                        guard.players_map.insert(guid, object);
-                    }
-                    m if m & ObjectTypeMask::UNIT != 0 => {
-                        update_data = block.update_data.clone();
-                        let mut object = Unit {
-                            update_data: block.update_data,
-                            guid,
-                            ..Unit::default()
-                        };
-
-                        object.movement = block.movement;
-                        response.push(HandlerOutput::UpdateNPC(guid));
-
-                        let mut guard = input.data_storage.lock().unwrap();
-                        guard.units_map.insert(guid, object);
-                    }
-                    m if m & ObjectTypeMask::GAMEOBJECT != 0 => {
-                        update_data = block.update_data.clone();
-                        let mut object = GameObject {
-                            update_data: block.update_data,
-                            guid,
-                            ..GameObject::default()
-                        };
-
-                        object.movement = block.movement;
-                        response.push(HandlerOutput::UpdateGameObject(guid));
-
-                        let mut guard = input.data_storage.lock().unwrap();
-                        guard.game_objects_map.insert(guid, object);
-                    }
-                    m if m & ObjectTypeMask::DYNAMICOBJECT != 0 => {
-                        update_data = block.update_data.clone();
-                        let mut object = DynamicObject {
-                            update_data: block.update_data,
-                            guid,
-                            ..DynamicObject::default()
-                        };
-
-                        object.movement = block.movement;
-                        response.push(HandlerOutput::UpdateDynamicObject(guid));
-
-                        let mut guard = input.data_storage.lock().unwrap();
-                        guard.dynamic_objects_map.insert(guid, object);
-                    }
-                    m if m & ObjectTypeMask::ITEM != 0 => {
-                        update_data = block.update_data.clone();
-                        if let Some(FieldValue::Long(guid)) =
-                            block.update_data.item_fields.get(&ItemField::Owner)
-                        {
-                            if my_guid == *guid {
-                                let mut guard = input.session.lock().await;
-                                let me = guard.me.as_mut().unwrap();
-                                me.inventory.push(*guid);
-                            }
-                        }
-
-                        let mut object = Item {
-                            update_data: block.update_data,
-                            guid,
-                            ..Item::default()
-                        };
-
-                        object.movement = block.movement;
-                        response.push(HandlerOutput::UpdateItem(guid));
-
-                        let mut guard = input.data_storage.lock().unwrap();
-                        guard.items_map.insert(guid, object);
-                    }
-                    m if m & ObjectTypeMask::CONTAINER != 0 => {
-                        update_data = block.update_data.clone();
-                        if let Some(FieldValue::Long(guid)) =
-                            block.update_data.item_fields.get(&ItemField::Owner)
-                        {
-                            if my_guid == *guid {
-                                let mut guard = input.session.lock().await;
-                                let me = guard.me.as_mut().unwrap();
-                                me.inventory.push(*guid);
-                            }
-                        }
-
-                        let mut object = Container {
-                            update_data: block.update_data,
-                            guid,
-                            ..Container::default()
-                        };
-
-                        object.movement = block.movement;
-                        response.push(HandlerOutput::UpdateContainer(guid));
-
-                        let mut guard = input.data_storage.lock().unwrap();
-                        guard.containers_map.insert(guid, object);
-                    }
-                    m if m & ObjectTypeMask::CORPSE != 0 => {
-                        update_data = block.update_data.clone();
-                        let mut object = Corpse {
-                            update_data: block.update_data,
-                            guid,
-                            ..Corpse::default()
-                        };
-
-                        object.movement = block.movement;
-                        response.push(HandlerOutput::UpdateCorpse(guid));
-
-                        let mut guard = input.data_storage.lock().unwrap();
-                        guard.corpses_map.insert(guid, object);
-                    }
-                    _ => {}
-                }
-            } else {
-                let mut guard = input.data_storage.lock().unwrap();
-
-                match guid {
-                    g if guard.players_map.contains_key(&g) => {
-                        guard.players_map.entry(guid).and_modify(|o| {
-                            o.update_data.extend_or_clear_source(&mut block.update_data);
-                            update_data = block.update_data.clone();
-                        });
-
-                        response.push(HandlerOutput::UpdatePlayer(guid));
-                    }
-                    g if guard.units_map.contains_key(&g) => {
-                        guard.units_map.entry(guid).and_modify(|o| {
-                            o.update_data.extend_or_clear_source(&mut block.update_data);
-                            update_data = block.update_data.clone();
-                        });
-
-                        response.push(HandlerOutput::UpdateNPC(guid));
-                    }
-                    g if guard.game_objects_map.contains_key(&g) => {
-                        guard.game_objects_map.entry(guid).and_modify(|o| {
-                            o.update_data.extend_or_clear_source(&mut block.update_data);
-                            update_data = block.update_data.clone();
-                        });
-
-                        response.push(HandlerOutput::UpdateGameObject(guid));
-                    }
-                    g if guard.dynamic_objects_map.contains_key(&g) => {
-                        guard.dynamic_objects_map.entry(guid).and_modify(|o| {
-                            o.update_data.extend_or_clear_source(&mut block.update_data);
-                            update_data = block.update_data.clone();
-                        });
-
-                        response.push(HandlerOutput::UpdateDynamicObject(guid));
-                    }
-                    g if guard.items_map.contains_key(&g) => {
-                        guard.items_map.entry(guid).and_modify(|o| {
-                            o.update_data.extend_or_clear_source(&mut block.update_data);
-                            update_data = block.update_data.clone();
-                        });
-
-                        response.push(HandlerOutput::UpdateItem(guid));
-                    }
-                    g if guard.containers_map.contains_key(&g) => {
-                        guard.containers_map.entry(guid).and_modify(|o| {
-                            o.update_data.extend_or_clear_source(&mut block.update_data);
-                            update_data = block.update_data.clone();
-                        });
-
-                        response.push(HandlerOutput::UpdateContainer(guid));
-                    }
-                    g if guard.corpses_map.contains_key(&g) => {
-                        guard.corpses_map.entry(guid).and_modify(|o| {
-                            o.update_data.extend_or_clear_source(&mut block.update_data);
-                            update_data = block.update_data.clone();
-                        });
-
-                        response.push(HandlerOutput::UpdateCorpse(guid));
-                    }
-                    _ => {}
-                }
-            }
-
-            refined_blocks.push(Block {
-                update_data,
-                ..cloned_block
-            });
-        }
-
-        let json = Incoming {
-            blocks_amount,
-            blocks: refined_blocks,
-        }.get_json_details()?;
-
         response.push(HandlerOutput::ResponseMessage(
             Opcode::get_opcode_name(input.opcode as u32)
                 .unwrap_or(format!("Unknown opcode: {}", input.opcode)),
             Some(json),
         ));
 
+        for block in blocks {
+            let mask = {
+                let value = match block.update_data.object_fields.get(&ObjectField::Type) {
+                    Some(FieldValue::Integer(mask)) => *mask,
+                    _ => 0,
+                };
+
+                ObjectTypeMask::from_bits(value).unwrap_or_default()
+            };
+
+            let PackedGuid(guid) = block.guid;
+
+            let mut guard = input.data_storage.lock().await;
+
+            let is_player_guid = guard.players_map.contains_key(&guid);
+            let is_unit_guid = guard.units_map.contains_key(&guid);
+            let is_item_guid = guard.items_map.contains_key(&guid);
+            let is_game_object_guid = guard.game_objects_map.contains_key(&guid);
+            let is_dynamic_object_guid = guard.dynamic_objects_map.contains_key(&guid);
+            let is_container_guid = guard.containers_map.contains_key(&guid);
+            let is_corpse_guid = guard.corpses_map.contains_key(&guid);
+
+            match mask {
+                m if m.contains(ObjectTypeMask::PLAYER) || is_player_guid => {
+                    response.push(HandlerOutput::UpdatePlayer(guid));
+                    Self::update_or_insert(&mut guard.players_map, guid, Object {
+                        update_data: block.update_data,
+                        movement: block.movement,
+                        guid,
+                        ..Object::default()
+                    });
+                }
+                m if m.contains(ObjectTypeMask::UNIT) || is_unit_guid => {
+                    response.push(HandlerOutput::UpdateNPC(guid));
+                    Self::update_or_insert(&mut guard.units_map, guid, Object {
+                        update_data: block.update_data,
+                        movement: block.movement,
+                        guid,
+                        ..Object::default()
+                    });
+                }
+                m if m.contains(ObjectTypeMask::ITEM) || is_item_guid => {
+                    let is_my_item = {
+                        if let Some(my_guid) = input.session.lock().await.my_guid {
+                            match block.update_data.item_fields.get(&ItemField::Owner) {
+                                Some(FieldValue::Long(guid)) => *guid == my_guid,
+                                _ => false,
+                            }
+                        } else {
+                            false
+                        }
+                    };
+
+                    if is_my_item {
+                        match block.update_data.object_fields.get(&ObjectField::Entry) {
+                            Some(FieldValue::Integer(entry)) => {
+                                let mut guard = input.session.lock().await;
+                                guard.inventory.push(*entry);
+                            }
+                            _ => {}
+                        }
+                    }
+
+                    response.push(HandlerOutput::UpdateItem(guid));
+                    Self::update_or_insert(&mut guard.items_map, guid, Object {
+                        update_data: block.update_data,
+                        movement: block.movement,
+                        guid,
+                        ..Object::default()
+                    });
+                }
+                m if m.contains(ObjectTypeMask::GAMEOBJECT) || is_game_object_guid => {
+                    response.push(HandlerOutput::UpdateGameObject(guid));
+                    Self::update_or_insert(&mut guard.game_objects_map, guid, Object {
+                        update_data: block.update_data,
+                        movement: block.movement,
+                        guid,
+                        ..Object::default()
+                    });
+                }
+                m if m.contains(ObjectTypeMask::DYNAMICOBJECT) || is_dynamic_object_guid => {
+                    response.push(HandlerOutput::UpdateDynamicObject(guid));
+                    Self::update_or_insert(&mut guard.dynamic_objects_map, guid, Object {
+                        update_data: block.update_data,
+                        movement: block.movement,
+                        guid,
+                        ..Object::default()
+                    });
+                }
+                m if m.contains(ObjectTypeMask::CONTAINER) || is_container_guid => {
+                    response.push(HandlerOutput::UpdateContainer(guid));
+                    Self::update_or_insert(&mut guard.containers_map, guid, Object {
+                        update_data: block.update_data,
+                        movement: block.movement,
+                        guid,
+                        ..Object::default()
+                    });
+                }
+                m if m.contains(ObjectTypeMask::CORPSE) || is_corpse_guid => {
+                    response.push(HandlerOutput::UpdateCorpse(guid));
+                    Self::update_or_insert(&mut guard.corpses_map, guid, Object {
+                        update_data: block.update_data,
+                        movement: block.movement,
+                        guid,
+                        ..Object::default()
+                    });
+                }
+                _ => {}
+            }
+        }
+
         Ok(response)
+    }
+}
+
+impl Handler {
+    fn update_or_insert(map: &mut HashMap<u64, Object>, guid: u64, mut object: Object) {
+        map.entry(guid)
+            .and_modify(|o| o.update_data.update_fields(&mut object.update_data))
+            .or_insert(object);
     }
 }
 
@@ -366,7 +260,6 @@ mod tests {
     #[test]
     fn test_packet_building() -> anyhow::Result<()> {
         const GUID: u64 = 123;
-        const TYPE: i32 = ObjectTypeMask::PLAYER | ObjectTypeMask::UNIT | ObjectTypeMask::OBJECT;
         const SCALE_X: f32 = 3.;
         const AURA_STATE: i32 = 35;
         const HEALTH: i32 = 52;
@@ -417,9 +310,13 @@ mod tests {
             },
             update_data: UpdateData {
                 object_fields: {
+                    let obj_type = ObjectTypeMask::PLAYER
+                        | ObjectTypeMask::UNIT
+                        | ObjectTypeMask::OBJECT;
+
                     let mut map: BTreeMap<ObjectField, FieldValue> = BTreeMap::new();
                     map.insert(ObjectField::Guid, FieldValue::Long(GUID));
-                    map.insert(ObjectField::Type, FieldValue::Integer(TYPE));
+                    map.insert(ObjectField::Type, FieldValue::Integer(obj_type.bits()));
                     map.insert(ObjectField::ScaleX, FieldValue::Float(SCALE_X));
 
                     map
