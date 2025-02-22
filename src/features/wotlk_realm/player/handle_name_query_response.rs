@@ -6,7 +6,7 @@ use tentacli_traits::types::opcodes::Opcode;
 use tentacli_traits::types::shared::Object;
 
 #[derive(WorldPacket, Serialize, Debug)]
-struct CheckEmptyIncoming {
+struct CheckEmpty {
     packed_guid: PackedGuid,
     unknown: u8,
 }
@@ -29,7 +29,7 @@ impl PacketHandler for Handler {
     async fn handle(&mut self, input: &mut HandlerInput) -> HandlerResult {
         let mut response = Vec::new();
 
-        let (CheckEmptyIncoming { unknown, .. }, _) = CheckEmptyIncoming::from_binary(&input.data)?;
+        let (CheckEmpty { unknown, .. }, _) = CheckEmpty::from_binary(&input.data)?;
 
         if unknown == 1 {
             response.push(HandlerOutput::ErrorMessage("Player not exists".to_string(), None));
@@ -47,22 +47,15 @@ impl PacketHandler for Handler {
 
         let PackedGuid(guid) = packed_guid;
 
-        let is_my_guid = {
-            let guard = input.session.lock().await;
-            guard.my_guid.map_or(false, |my_guid| my_guid == guid)
-        };
-
-        if !is_my_guid {
-            input.data_storage.lock().await.players_map.entry(guid).and_modify(|p| {
-                p.name = name.to_string();
-            }).or_insert_with(|| {
-                Object {
-                    guid,
-                    name,
-                    ..Object::default()
-                }
-            });
-        }
+        input.data_storage.lock().await.players_map.entry(guid).and_modify(|p| {
+            p.name = name.to_string();
+        }).or_insert_with(|| {
+            Object {
+                guid,
+                name,
+                ..Object::default()
+            }
+        });
 
         Ok(response)
     }

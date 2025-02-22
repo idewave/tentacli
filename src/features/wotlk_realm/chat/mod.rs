@@ -1,6 +1,8 @@
 use tentacli_traits::Processor;
-use tentacli_traits::types::{ProcessorResult};
 use tentacli_traits::types::opcodes::Opcode;
+use tentacli_traits::types::ProcessorResult;
+
+pub use query_unknown_player::NameQueryOutgoing;
 
 mod log_chat_message;
 mod query_unknown_player;
@@ -15,10 +17,10 @@ impl Processor for ChatProcessor {
                     Box::new(query_unknown_player::Handler),
                     Box::new(log_chat_message::Handler),
                 ]
-            },
+            }
             Opcode::SMSG_TEXT_EMOTE => {
                 vec![]
-            },
+            }
             _ => vec![]
         };
 
