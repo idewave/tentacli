@@ -24,21 +24,6 @@ impl Processor for PlayerProcessor {
                     Box::new(handle_name_query_response::Handler),
                 ]
             }
-            Opcode::SMSG_SET_PCT_SPELL_MODIFIER => {
-                vec![]
-            }
-            Opcode::SMSG_TALENT_UPDATE => {
-                vec![]
-            }
-            Opcode::MSG_SET_DUNGEON_DIFFICULTY => {
-                vec![]
-            }
-            Opcode::SMSG_QUESTGIVER_STATUS_MULTIPLE => {
-                vec![]
-            }
-            Opcode::SMSG_ACHIEVEMENT_EARNED => {
-                vec![]
-            }
             Opcode::SMSG_INIT_WORLD_STATES => {
                 vec![Box::new(init_world_states::Handler)]
             }

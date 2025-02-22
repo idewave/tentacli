@@ -229,7 +229,7 @@ impl BinaryConverter for UpdateData {
                     },
                 );
 
-            if mask.contains(ObjectTypeMask::UNIT) || mask.contains(ObjectTypeMask::NONE) {
+            if mask.contains(ObjectTypeMask::UNIT) || mask.is_empty() {
                 instance.unit_fields = {
                     let blocks = Self::build_blocks(
                         &update_blocks,
@@ -244,7 +244,7 @@ impl BinaryConverter for UpdateData {
                 };
             }
 
-            if mask.contains(ObjectTypeMask::PLAYER) || mask.contains(ObjectTypeMask::NONE) {
+            if mask.contains(ObjectTypeMask::PLAYER) || mask.is_empty() {
                 instance.player_fields = {
                     let blocks = Self::build_blocks(
                         &update_blocks,
@@ -259,7 +259,7 @@ impl BinaryConverter for UpdateData {
                 };
             }
 
-            if mask.contains(ObjectTypeMask::ITEM) || mask.contains(ObjectTypeMask::NONE) {
+            if mask.contains(ObjectTypeMask::ITEM) || mask.is_empty() {
                 instance.item_fields = {
                     let blocks = Self::build_blocks(
                         &update_blocks,
@@ -274,7 +274,7 @@ impl BinaryConverter for UpdateData {
                 };
             }
 
-            if mask.contains(ObjectTypeMask::GAMEOBJECT) || mask.contains(ObjectTypeMask::NONE) {
+            if mask.contains(ObjectTypeMask::GAMEOBJECT) || mask.is_empty() {
                 instance.game_object_fields = {
                     let blocks = Self::build_blocks(
                         &update_blocks,
@@ -289,7 +289,7 @@ impl BinaryConverter for UpdateData {
                 };
             }
 
-            if mask.contains(ObjectTypeMask::DYNAMICOBJECT) || mask.contains(ObjectTypeMask::NONE) {
+            if mask.contains(ObjectTypeMask::DYNAMICOBJECT) || mask.is_empty() {
                 instance.dynamic_object_fields = {
                     let blocks = Self::build_blocks(
                         &update_blocks,
@@ -304,7 +304,7 @@ impl BinaryConverter for UpdateData {
                 };
             }
 
-            if mask.contains(ObjectTypeMask::CONTAINER) || mask.contains(ObjectTypeMask::NONE) {
+            if mask.contains(ObjectTypeMask::CONTAINER) || mask.is_empty() {
                 instance.container_fields = {
                     let blocks = Self::build_blocks(
                         &update_blocks,
@@ -319,7 +319,7 @@ impl BinaryConverter for UpdateData {
                 };
             }
 
-            if mask.contains(ObjectTypeMask::CORPSE) || mask.contains(ObjectTypeMask::NONE) {
+            if mask.contains(ObjectTypeMask::CORPSE) || mask.is_empty() {
                 instance.corpse_fields = {
                     let blocks = Self::build_blocks(
                         &update_blocks,

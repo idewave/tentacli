@@ -33,7 +33,7 @@ sha-1 = { version = "0.9.8", optional = true }
 tentacli-crypto = "1.0.0"
 tentacli-formatters = "0.1.0"
 tentacli-packet = "7.0.0"
-tentacli-traits = "10.0.0"
+tentacli-traits = "10.0.1"
 tentacli-utils = "2.1.1"
 tokio = { version = "1", features = ["sync", "net", "io-util", "macros", "time", "rt-multi-thread"] }
 tui = { version = "0", features = ["crossterm"], optional = true }

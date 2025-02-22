@@ -10,6 +10,9 @@ use tentacli_traits::types::shared::Object;
 use tentacli_traits::types::update_data::{BlockType, ObjectTypeID, ObjectTypeMask, UpdateData};
 use tentacli_traits::types::update_fields::{FieldValue, ItemField, ObjectField};
 
+use crate::features::wotlk_realm::chat::NameQueryOutgoing;
+use crate::features::wotlk_realm::object::ItemNameQuery;
+
 #[derive(WorldPacket, Serialize, Debug)]
 pub struct Incoming {
     pub blocks_amount: u32,
@@ -145,12 +148,19 @@ impl PacketHandler for Handler {
             match mask {
                 m if m.contains(ObjectTypeMask::PLAYER) || is_player_guid => {
                     response.push(HandlerOutput::UpdatePlayer(guid));
-                    Self::update_or_insert(&mut guard.players_map, guid, Object {
+                    let player = Self::update_or_insert(&mut guard.players_map, guid, Object {
                         update_data: block.update_data,
                         movement: block.movement,
                         guid,
                         ..Object::default()
                     });
+
+                    if player.name.is_empty() {
+                        response.push(HandlerOutput::Data(
+                            NameQueryOutgoing { guid }
+                                .unpack_with_client_opcode(Opcode::CMSG_NAME_QUERY)?
+                        ));
+                    }
                 }
                 m if m.contains(ObjectTypeMask::UNIT) || is_unit_guid => {
                     response.push(HandlerOutput::UpdateNPC(guid));
@@ -183,13 +193,25 @@ impl PacketHandler for Handler {
                         }
                     }
 
+                    let entry = match block.update_data.object_fields.get(&ObjectField::Entry) {
+                        Some(FieldValue::Integer(entry)) => *entry,
+                        _ => -1,
+                    };
+
                     response.push(HandlerOutput::UpdateItem(guid));
-                    Self::update_or_insert(&mut guard.items_map, guid, Object {
+                    let item = Self::update_or_insert(&mut guard.items_map, guid, Object {
                         update_data: block.update_data,
                         movement: block.movement,
                         guid,
                         ..Object::default()
                     });
+
+                    if item.name.is_empty() && entry.is_positive() {
+                        response.push(HandlerOutput::Data(
+                            ItemNameQuery { entry, guid }
+                                .unpack_with_client_opcode(Opcode::CMSG_ITEM_NAME_QUERY)?
+                        ));
+                    }
                 }
                 m if m.contains(ObjectTypeMask::GAMEOBJECT) || is_game_object_guid => {
                     response.push(HandlerOutput::UpdateGameObject(guid));
@@ -236,10 +258,10 @@ impl PacketHandler for Handler {
 }
 
 impl Handler {
-    fn update_or_insert(map: &mut HashMap<u64, Object>, guid: u64, mut object: Object) {
+    fn update_or_insert(map: &mut HashMap<u64, Object>, guid: u64, mut object: Object) -> &Object {
         map.entry(guid)
             .and_modify(|o| o.update_data.update_fields(&mut object.update_data))
-            .or_insert(object);
+            .or_insert(object)
     }
 }
 
