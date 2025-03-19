@@ -1,6 +1,8 @@
 use std::process::exit;
 use std::sync::{Arc, Mutex as SyncMutex};
 use std::time::Duration;
+
+use async_broadcast::{Receiver as BroadcastReceiver, Sender as BroadcastSender};
 use crossterm::{
     event::{
         DisableMouseCapture,
@@ -14,18 +16,24 @@ use crossterm::{
         disable_raw_mode,
         enable_raw_mode,
         EnterAlternateScreen,
-        LeaveAlternateScreen
-    }
+        LeaveAlternateScreen,
+    },
 };
-use futures::{FutureExt, StreamExt};
 use crossterm::event::EventStream;
-use async_broadcast::{Receiver as BroadcastReceiver, Sender as BroadcastSender};
+use futures::{FutureExt, StreamExt};
+use tentacli_traits::{Feature, FeatureError};
+use tentacli_traits::types::{HandlerOutput, Task};
 use tokio::time::sleep;
 use tui::backend::CrosstermBackend;
 use tui::layout::{Constraint, Direction, Layout};
 use tui::Terminal;
-use tentacli_traits::{Feature, FeatureError};
-use tentacli_traits::types::{HandlerOutput, Task};
+
+use crate::features::ui::characters_modal::CharactersModal;
+use crate::features::ui::debug_panel::DebugPanel;
+use crate::features::ui::realm_modal::RealmModal;
+use crate::features::ui::title::Title;
+use crate::features::ui::traits::{UIComponent, UIModalComponent};
+use crate::features::ui::types::{LoggerOutput, UIEventFlags};
 
 mod characters_modal;
 mod debug_panel;
@@ -35,13 +43,6 @@ mod debug_details_panel;
 pub mod types;
 mod title;
 mod traits;
-
-use crate::features::ui::traits::{UIComponent, UIModalComponent};
-use crate::features::ui::characters_modal::CharactersModal;
-use crate::features::ui::debug_panel::DebugPanel;
-use crate::features::ui::realm_modal::RealmModal;
-use crate::features::ui::title::Title;
-use crate::features::ui::types::{LoggerOutput, UIEventFlags};
 
 pub const MARGIN: u16 = 1;
 
@@ -63,7 +64,7 @@ impl Feature for UI {
     fn set_broadcast_channel(
         &mut self,
         sender: BroadcastSender<HandlerOutput>,
-        receiver: BroadcastReceiver<HandlerOutput>
+        receiver: BroadcastReceiver<HandlerOutput>,
     ) {
         self._sender = Some(sender);
         self._receiver = Some(receiver);
@@ -91,7 +92,7 @@ impl Feature for UI {
         let title = Arc::new(SyncMutex::new(Title::new()));
 
         let handle_events = || {
-            let terminal =  Arc::clone(&terminal);
+            let terminal = Arc::clone(&terminal);
             let event_flags = Arc::clone(&event_flags);
             let characters_modal = Arc::clone(&characters_modal);
             let debug_panel = Arc::clone(&debug_panel);
@@ -115,7 +116,7 @@ impl Feature for UI {
                                         UIEventFlags::IS_EVENT_HANDLED, false
                                     );
 
-                                    let outputs: Vec<HandlerOutput> = vec![
+                                    let outputs: Outputs = vec![
                                         characters_modal.lock().unwrap().handle_key_event(
                                             modifiers, code, Arc::clone(&event_flags)
                                         ),
@@ -186,40 +187,40 @@ impl Feature for UI {
                                 debug_panel.lock().unwrap().add_item(
                                     LoggerOutput::Success(message, details)
                                 );
-                            },
+                            }
                             HandlerOutput::ErrorMessage(message, details) => {
                                 debug_panel.lock().unwrap().add_item(
                                     LoggerOutput::Error(message, details)
                                 );
-                            },
+                            }
                             HandlerOutput::DebugMessage(message, details) => {
                                 debug_panel.lock().unwrap().add_item(
                                     LoggerOutput::Debug(message, details)
                                 );
-                            },
+                            }
                             HandlerOutput::ResponseMessage(message, details) => {
                                 debug_panel.lock().unwrap().add_item(
                                     LoggerOutput::Response(message, details)
                                 );
-                            },
+                            }
                             HandlerOutput::RequestMessage(message, details) => {
                                 debug_panel.lock().unwrap().add_item(
                                     LoggerOutput::Request(message, details)
                                 );
-                            },
+                            }
                             HandlerOutput::TransferCharactersList(characters) => {
                                 event_flags.lock().unwrap().set(
-                                    UIEventFlags::IS_CHARACTERS_MODAL_OPENED, true
+                                    UIEventFlags::IS_CHARACTERS_MODAL_OPENED, true,
                                 );
                                 characters_modal.lock().unwrap().set_items(characters);
-                            },
+                            }
                             HandlerOutput::TransferRealmsList(realms) => {
                                 event_flags.lock().unwrap().set(
-                                    UIEventFlags::IS_REALM_MODAL_OPENED, true
+                                    UIEventFlags::IS_REALM_MODAL_OPENED, true,
                                 );
                                 realm_modal.lock().unwrap().set_items(realms);
-                            },
-                            _ => {},
+                            }
+                            _ => {}
                         }
                     }
                 }
@@ -227,7 +228,7 @@ impl Feature for UI {
         };
 
         let handle_render = || {
-            let terminal =  Arc::clone(&terminal);
+            let terminal = Arc::clone(&terminal);
             let event_flags = Arc::clone(&event_flags);
             let characters_modal = Arc::clone(&characters_modal);
             let debug_panel = Arc::clone(&debug_panel);
@@ -261,7 +262,6 @@ impl Feature for UI {
                         if event_flags.lock().unwrap().contains(UIEventFlags::IS_REALM_MODAL_OPENED) {
                             realm_modal.lock().unwrap().render(frame, chunks[1]);
                         }
-
                     }).unwrap();
 
                     sleep(Duration::from_millis(30)).await;

@@ -81,7 +81,9 @@ pub enum HandlerOutput {
     ErrorMessage(String, Option<String>),
 }
 
-pub type HandlerResult = anyhow::Result<Vec<HandlerOutput>>;
+pub type Outputs = Vec<HandlerOutput>;
+
+pub type HandlerResult = anyhow::Result<Outputs>;
 
 pub type ProcessorResult = Vec<Box<dyn PacketHandler + Send>>;
 

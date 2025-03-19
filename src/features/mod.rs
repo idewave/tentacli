@@ -1,5 +1,5 @@
 #[cfg(feature = "ui")]
-pub mod ui;
+pub mod ui2;
 #[cfg(feature = "console")]
 pub mod console;
 #[cfg(feature = "wotlk_login")]

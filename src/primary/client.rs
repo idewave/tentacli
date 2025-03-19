@@ -156,9 +156,9 @@ impl Client {
         let mut features: Vec<Box<dyn Feature>> = external_features;
         cfg_if! {
             if #[cfg(feature = "ui")] {
-                use crate::features::ui::UI;
+                use crate::features::ui2::UI2;
 
-                features.push(Box::new(UI::default()));
+                features.push(Box::new(UI2::default()));
             } else if #[cfg(feature = "console")] {
                 use crate::features::console::Console;
 
@@ -467,13 +467,9 @@ impl Client {
                         let result = Self::write_packet(writer.clone(), &mut packet).await;
 
                         match result {
-                            Ok(bytes_sent) => {
-                                let message = format!(
-                                    "{}: {} bytes sent",
-                                    Opcode::get_opcode_name(packet.opcode)
-                                        .unwrap_or(packet.opcode.to_string()),
-                                    bytes_sent,
-                                );
+                            Ok(_) => {
+                                let message = Opcode::get_opcode_name(packet.opcode)
+                                    .unwrap_or(packet.opcode.to_string());
 
                                 query_sender.broadcast(
                                     HandlerOutput::RequestMessage(
