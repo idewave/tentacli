@@ -1,118 +1,80 @@
-//! TentaCLI is embeddable, extendable console client for WoW 3.3.5a server.
+//! # Tentacli
 //!
-//! You can use it directly by compiling with cargo build,
-//! or you can incorporate it as a library in your own application.
-//! Also you can implement own feature set and pass it to the `run()` method.
-//! See `Feature` trait and `RunOptions`.
+//! Tentacli is a framework for exploring and interacting with network protocols through a
+//! plugin-based, client-side architecture.
 //!
-//! What this client can do:
-//! - it can parse basic packet set, such as SMSG_MESSAGECHAT or SMSG_UPDATE_OBJECT
-//! - it allows you to login on any server, but you can enter the world only on servers without Warden anti-cheat
-//! - you can use `autoselect` options in config file to set default Realm/Character and avoid the step of selecting this data manually
-//! - if installed with `ui` feature (installed by default), it allows scrolling the packets history using keyboard and seeing the details for each packet
-//! - if installed with `console` feature, it will display only minimal output
-//! - if installed without any feature, client will output nothing (but you still can provide own output feature)
-//! - you can implement own packet processors and send them using custom features
-//! - you can pass external data storage to the tentacli using **CreateOptions**
+//! It runs as a protocol participant, not a sniffer or MITM tool: connections are established
+//! directly to servers, packets are framed, parsed, processed, and optionally responded to
+//! in real time.
 //!
-//! ## Examples
+//! ## Core Concepts
 //!
-//! ```rust
-//! use std::collections::BTreeMap;
-//! use anyhow::{Result as AnyResult};
-//! use tokio::task::JoinHandle;
+//! The system is built around three plugin types:
 //!
-//! use tentacli::async_broadcast::{BroadcastSender, BroadcastReceiver};
-//! use tentacli::{Client, CreateOptions, RunOptions};
-//! use tentacli_traits::{Feature, FeatureError};
-//! use tentacli_traits::types::{HandlerOutput, ProcessorFunction, ProcessorResult};
+//! ### NetworkPlugin
+//! Defines how a connection is established and how raw bytes are framed into packets and
+//! serialized back for transmission.
 //!
-//! #[tokio::main]
-//! async fn main() {
-//!     #[derive(Default)]
-//!     pub struct MyFeature {
-//!         _receiver: Option<BroadcastReceiver<HandlerOutput>>,
-//!         _sender: Option<BroadcastSender<HandlerOutput>>,
-//!     }
+//! Responsibilities:
+//! - Select transport (TCP / UDP)
+//! - Establish connections
+//! - Frame incoming byte streams into packets (`BytesRead`)
+//! - Serialize packets for outgoing writes (`Serializer`)
 //!
-//!     impl Feature for MyFeature {
-//!         fn set_broadcast_channel(
-//!             &mut self,
-//!             sender: BroadcastSender<HandlerOutput>,
-//!             receiver: BroadcastReceiver<HandlerOutput>
-//!         ) {
-//!             self._sender = Some(sender);
-//!             self._receiver = Some(receiver);
-//!         }
+//! ### ProcessorPlugin
+//! Extends a specific network plugin by attaching protocol logic.
 //!
-//!         fn get_tasks(&mut self) -> AnyResult<Vec<JoinHandle<()>>> {
-//!             let mut receiver = self._receiver.as_mut().ok_or(FeatureError::ReceiverNotFound)?.clone();
+//! Responsibilities:
+//! - Provide parsers and handlers for specific packet types
+//! - Generate outgoing packets and requests
+//! - Read from and modify the shared runtime context
 //!
-//!             let handle_smth = || {
-//!                 tokio::spawn(async move {
-//!                     loop {
-//!                         if let Ok(output) = receiver.recv().await {
-//!                             match output {
-//!                                 HandlerOutput::SuccessMessage(message, _) => {
-//!                                     println!("{}", message);
-//!                                 }
-//!                                 _ => {}
-//!                             }
-//!                         }
-//!                     }
-//!                 })
-//!             };
+//! Processor plugins attach to network plugins by matching `ServerLabel`.
 //!
-//!             Ok(vec![handle_smth()])
-//!         }
+//! ### CorePlugin
+//! Acts as the system coordinator.
 //!
-//!         fn get_login_processors(&self) -> Vec<ProcessorFunction> {
-//!             vec![]
-//!         }
+//! Responsibilities:
+//! - Receive processing results and events from all plugins
+//! - Route requests and control signals back to network plugins
+//! - Implement external interfaces (TUI, debug UI, automation, etc.)
 //!
-//!         fn get_realm_processors(&self) -> Vec<ProcessorFunction> {
-//!             vec![]
-//!         }
+//! ## Plugin Registration
 //!
-//!         fn get_one_time_handler_maps(&self) -> Vec<BTreeMap<u16, ProcessorResult>> {
-//!             vec![]
-//!         }
+//! Plugins are discovered at runtime using the [`inventory`] crate.
+//! To register a plugin, use the `register_plugin!` macro in any module
+//! that is linked into the final binary:
 //!
-//!         fn get_initial_processors(&self) -> Vec<ProcessorFunction> {
-//!             vec![]
-//!         }
-//!     }
+//! ```rust,ignore
+//! use tentacli::register_plugin;
+//! use tentacli::client::{NetworkPlugin, ProcessorPlugin, CorePlugin};
 //!
-//!     let options = RunOptions {
-//!         external_features: vec![Box::new(MyFeature::default())],
-//!         account: "account_name",
-//!         config_path: "./dir/another_dir/ConfigFileName.yml",
-//!         dotenv_path: "./path/to/.env"
-//!     };
-//!
-//!     // ... pass options to the client
-//!     // Client::new(CreateOptions::default()).run(options).await.unwrap();
-//! }
+//! register_plugin!(MyNetworkPlugin, dyn NetworkPlugin);
+//! register_plugin!(MyProcessors, dyn ProcessorPlugin);
+//! register_plugin!(MyCore, dyn CorePlugin);
 //! ```
+//!
+//! ## Shared Context
+//!
+//! All plugins have access to a shared, typed, dynamic runtime context
+//! implemented using `anymap2` and synchronized via `Arc<RwLock<CtxMap>>`.
+//! This context is used to store protocol state and coordinate logic
+//! across connections and plugins.
+//!
+//! ## Reference Implementations
+//!
+//! Real-world plugin implementations can be found in the repository:
+//! - WoW WotLK network plugin: `plugins/wow/wotlk/login`
+//! - Processor plugins: `plugins/wow/wotlk/login/*` and `plugins/wow/wotlk/realm/*`
+//! - Core plugins: `plugins/tui`, `plugins/dbg_ui`, `plugins/core`
+//!
+//! These serve as full reference implementations for connection handling,
+//! packet framing, protocol logic, context usage, and UI integration.
+//!
+//! [`inventory`]: https://docs.rs/inventory
 
-#[cfg(feature = "ui")]
-extern crate chrono;
-#[macro_use]
-extern crate tentacli_packet;
-#[macro_use]
-extern crate serde;
-#[macro_use]
-extern crate cfg_if;
 
-mod features;
-mod primary;
+pub mod client;
+pub mod plugins;
 
-pub use primary::client::{Client, CreateOptions, RunOptions};
-
-pub mod async_broadcast {
-    pub use async_broadcast::{broadcast, Sender as BroadcastSender, Receiver as BroadcastReceiver};
-}
-
-pub mod serializers {
-    pub use crate::primary::serializers::{serialize_array};
-}
+pub use client::Client;
