@@ -1,21 +1,15 @@
-use cfg_if::cfg_if;
-
-use tentacli::{Client, CreateOptions, RunOptions};
+use tentacli::Client;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    cfg_if! {
-        if #[cfg(feature = "debug")] {
-            console_subscriber::init();
+    let mut args = std::env::args().skip(1);
+
+    if let Some(cmd) = args.next() {
+        if cmd == "doctor" {
+            Client::doctor()?;
+            return Ok(());
         }
     }
 
-    Client::new(CreateOptions::default()).run(RunOptions {
-        external_features: vec![],
-        account: "bot1",
-        config_path: "Config.yml",
-        dotenv_path: ".env",
-    }).await?;
-
-    Ok(())
+    Client::run(None).await
 }

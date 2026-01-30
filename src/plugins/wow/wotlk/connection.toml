@@ -1,0 +1,21 @@
+[connection]
+host = "127.0.0.1:3724"
+account_name = "test"
+password = "test"
+
+[game]
+name = "WoW"
+version = [3, 3, 5]
+build = 12340
+platform = "x86"
+os = "Win"
+locale = "ruRU"
+my_ip = "127.0.0.1"
+timezone = 0
+
+[common]
+create_character_if_empty = true
+
+[autoselect]
+realm_name = ".*"
+character_name = ".*"

@@ -1,42 +1,127 @@
-# TentaCLI
-Tentacli is a headless (like a tentacle) console client for World of Warcraft server (supported version: 3.3.5a).
-By default, it serves as a tool for displaying real-time TCP traffic in human-readable format (JSON).
-It is adapted for scenarios where you need to run multiple clients simultaneously 
-and supports data sharing between instances, making it suitable for stress testing your server.
+## Tentacli
 
-You can extend its functionality by creating your own plugins (features), 
-allowing it to act as a bot or anything else you need. Additionally, it can be integrated into your own app as a crate.
+Tentacli is a framework for exploring how network protocols work, extended through plugins.
 
-Here are some examples of how the default UI looks:
-![Image](https://github.com/user-attachments/assets/f803139a-eaf7-47d7-acf0-8d783f6f4da6)
+It runs as a client application that connects directly to a server (or multiple servers), reads and sends packets according to defined rules, and presents the protocol in a human-readable form.
 
-![Image](https://github.com/user-attachments/assets/45c81ff7-832b-43aa-92d1-2a25b4a3bdf4)
+Tentacli is not a sniffer or a MITM tool.  
+It does not intercept third-party traffic — it participates in the protocol as a full-fledged endpoint.
 
-However, you are not required to use this UI (or any UI at all), as it is possible to implement your own plugin (feature) to replace it.
+On top of Tentacli, you can build automated clients that share a common context.  
+The context (`anymap2`) is shared across all plugins and connections, used to store protocol state and processing logic, and is available for both read and write access at runtime (`Arc<RwLock<CtxMap>>`).
 
-### How to start
+Tentacli can be used, for example:
+- as a protocol visualization tool
+- as a testbed for servers using controlled clients
+- as a foundation for specialized protocol clients
 
-+ Run `cargo run`, so **Config.yml** and **.env** files will be created in the location specified by `config_path` and `dotenv_path` in `RunOptions { ..., config_path, dotenv_path }`.
-+ Edit **Config.yml** to set your account name, password, realm and character for auto-selection (or leave them empty to select manually). You can use regex for name and realm fields.
-+ Edit **.env** to set your WoW server's IP address/hostname or keep `127.0.0.1` for a local server
-+ Run `cargo run` again
+The architecture does not lock you into a fixed set of use cases — what you build is defined by the plugins you write and the packet processing logic you attach.
 
-### Features
-+ Handles authentication (without reconnection).
-+ Parses update packets (both as object and as json), chat, movement and some other packets.
-+ Provides a UI with keyboard interaction, including history scrolling and detailed output.
-+ Supports automatic realm and character selection (configurable in **Config.yml**)
-+ Accepts external features (refer to Feature and src/features for guidance on implementing your own)
-+ Supports multiple configurations (you can specify custom paths for **Config.yml** and **.env**)
-+ Supports multiple accounts per host (configurable in **Config.yml**)
-+ Automatically creates a character if the account is empty (configurable in **Config.yml**)
-+ Packet processors are provided as a separate feature, allowing you to implement your own packet processors and handlers.
+![Image](https://github.com/user-attachments/assets/9f753516-2a2c-41fe-865f-b92dbc963a41)
 
-### You want to contribute
-It's always welcome. Just create pull request with your improvements, bugfix etc.
+# History
 
-### If you want to support...
-...you can buy me a [ko-fi](https://ko-fi.com/idewave)
+Tentacli began as a console-based World of Warcraft client, built to study protocol behavior from the client side.
 
-### Documentation
-I do my best to keep it up-to-date. Have a look at the project's [Wiki](https://github.com/idewave/tentacli/wiki)
+As development progressed, recurring patterns became clear:
+
+- connection management
+- packet framing and parsing
+- protocol semantics
+- event propagation
+- UI and automation
+
+These patterns were extracted into a generic, protocol-agnostic runtime.  
+The result is a framework capable of hosting multiple independent TCP/UDP connections, each extended through modular, reusable plugins.
+
+---
+
+## How Tentacli Is Structured
+
+The core is a runtime responsible for launching and coordinating plugins.  
+There are three types of plugins:
+
+---
+
+### Network plugin
+
+Used to establish a connection to a server and define how the protocol is handled.
+
+Responsible for:
+- establishing the connection to the server
+- selecting the transport (TCP / UDP)
+- reading the raw byte stream from the socket
+- extracting packets from the incoming buffer
+- serializing packets for transmission
+
+Internally, it spawns two asynchronous tasks:
+- `read_task` — reads data from the socket, accumulates a buffer, and extracts packets
+- `write_task` — receives packets from the core and sends them to the server
+
+Each network plugin operates under its own label (`ServerLabel`).  
+Labels must be unique: registering two network plugins with the same label will cause a panic at startup.
+
+---
+
+### Processor plugin
+
+Extends a specific network plugin.
+
+It does not participate in the connection itself. Instead, it provides:
+- parsers for specific packet types
+- groups of protocol logic handlers
+- generators for outgoing packets and requests
+- logic for reading from and modifying the shared context
+
+Processor plugins attach to a network plugin by matching its `ServerLabel` and are inserted into the shared packet processing pipeline.
+
+---
+
+### Core plugin
+
+Acts as the system coordinator.
+
+A core plugin:
+- receives signals from all processor plugins
+- can send control signals and responses back to network plugins
+- can implement higher-level logic for routing and handling those signals
+
+It does not work with raw bytes or protocol data directly, but operates on events and processing results (`HandlerOutput`, `Echo`, `Requests`).
+
+---
+
+## Doctor mode
+
+Tentacli provides a built-in diagnostic mode to inspect the current build and runtime environment:
+
+```bash
+cargo run --no-default-features --features <your features> -- doctor
+
+# or
+
+./tentacli doctor
+```
+
+It reports:
+- Enabled build features
+- Registered plugins (network / processor / core)
+- Wiring between processors and network plugins
+- Configuration resolution context (env, OS config dir, working directory)
+- This is useful for debugging misconfigured builds, missing plugins, or unexpected config resolution.
+
+## Want to Contribute? 
+
+Contributions are always welcome. Feel free to open a pull request with improvements, bug fixes, or new plugins.
+
+At the moment, a network plugin for **WoW WotLK** is implemented.
+
+If this project speaks to you, I’d be glad for any help in building new plugins for other gaming and application-level protocols — network, processor, and core plugins alike.
+
+## Join us in Discord
+
+Before joining, please read the rules: https://discord.gg/tgEdFD8V22 !
+
+## License
+
+This project is licensed under the Apache License 2.0.
+See the LICENSE and NOTICE files for details.
