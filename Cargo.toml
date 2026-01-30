@@ -31,7 +31,7 @@ async-trait = "0.1.88"
 anyhow = "1.0.97"
 binrw = "0.14.1"
 bitflags = { version = "2.9.4", optional = true }
-bitflags-extras = { path = "src/client/macros/bitflags_extras" }
+bitflags-extras = "0.1.0"
 byteorder = "1.5.0"
 cfg-if = "1.0.0"
 chrono = "0.4"
@@ -39,12 +39,12 @@ colored = { version = "3.0.0", optional = true }
 criterion = "0.5.1"
 crossterm = { version = "0.28.1", features = ["default", "event-stream", "serde"], optional = true }
 dirs-next = "2.0.0"
-fields-metadata = { path = "src/client/macros/fields_metadata" }
+fields-metadata = "0.1.0"
 flate2 = { version = "1.0.24", optional = true }
 futures = "0.3.31"
 hmac-sha = { version = "0.6.1", optional = true }
 inventory = "0.3"
-meta-packet = { path = "src/client/macros/meta_packet" }
+meta-packet = "0.1.0"
 num-bigint = { version = "0.4.6", optional = true }
 num_enum = "0.7.4"
 rand = { version = "0.9.0", optional = true }
