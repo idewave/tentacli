@@ -16,5 +16,5 @@ pub use crate::client::types::{
 };
 pub use crate::client::{ConfigParser};
 pub use fields_metadata::FieldsMetadata;
-pub use packet::Packet;
+pub use meta_packet::Packet;
 pub use bitflags_extras::BitflagExtras;
