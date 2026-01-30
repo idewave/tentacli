@@ -53,7 +53,6 @@ regex = "1.11.1"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 sha-1 = { version = "0.9.8", optional = true }
-thiserror = "2.0.16"
 tokio = { version = "1", features = ["sync", "net", "io-util", "macros", "time", "rt-multi-thread", "io-std"] }
 tokio-util = { version = "0.7.15", features = ["compat"] }
 toml = "0.8.20"
