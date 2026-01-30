@@ -211,24 +211,23 @@ impl PacketOptions {
 }
 
 fn normalize_opcode(expr: Expr) -> Expr {
-    if let Expr::Call(call) = &expr {
-        if let Expr::Path(path) = &*call.func {
-            if let Some(id) = path.path.get_ident() {
-                let name = id.to_string();
-                let ok = matches!(
-                    name.as_str(),
-                    "U8" | "U16" | "U32" | "U64" | "Text" | "Raw"
-                );
+    if let Expr::Call(call) = &expr
+        && let Expr::Path(path) = &*call.func
+        && let Some(id) = path.path.get_ident()
+    {
+        let name = id.to_string();
+        let ok = matches!(
+            name.as_str(),
+            "U8" | "U16" | "U32" | "U64" | "Text" | "Raw"
+        );
 
-                if ok && call.args.len() == 1 {
-                    let arg = call.args.first().cloned().unwrap();
-                    let v = Ident::new(&name, id.span());
-                    return syn::parse_quote! {
-                        crate::client::packet
-                            ::PacketOpcode::#v(#arg)
-                    };
-                }
-            }
+        if ok && call.args.len() == 1 {
+            let arg = call.args.first().cloned().unwrap();
+            let v = Ident::new(&name, id.span());
+            return syn::parse_quote! {
+                crate::client::packet
+                    ::PacketOpcode::#v(#arg)
+            };
         }
     }
 

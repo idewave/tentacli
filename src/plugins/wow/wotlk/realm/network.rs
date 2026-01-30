@@ -8,18 +8,10 @@ use crate::plugins::wow::wotlk::realm::rc4::{Decryptor, Encryptor};
 
 const OPCODE_SIZE: usize = 2;
 
+#[derive(Default)]
 pub struct PacketReader {
     decryptor: Option<Decryptor>,
     is_decrypted: bool,
-}
-
-impl Default for PacketReader {
-    fn default() -> Self {
-        Self {
-            decryptor: None,
-            is_decrypted: false,
-        }
-    }
 }
 
 impl BytesRead for PacketReader {
@@ -32,23 +24,23 @@ impl BytesRead for PacketReader {
 
         let mut is_long_packet = false;
 
-        if !self.is_decrypted {
-            if let Some(decryptor) = self.decryptor.as_mut() {
-                decryptor.decrypt(&mut header[..1]);
-                is_long_packet = (header[0] & 0x80) != 0;
-                if is_long_packet {
-                    if buffer.len() < 5 {
-                        anyhow::bail!("Incomplete header (long)... continue reading.");
-                    }
-
-                    let extra_byte = buffer[4];
-                    header.push(extra_byte);
+        if !self.is_decrypted
+            && let Some(decryptor) = self.decryptor.as_mut()
+        {
+            decryptor.decrypt(&mut header[..1]);
+            is_long_packet = (header[0] & 0x80) != 0;
+            if is_long_packet {
+                if buffer.len() < 5 {
+                    anyhow::bail!("Incomplete header (long)... continue reading.");
                 }
-                decryptor.decrypt(&mut header[1..]);
 
-                buffer[..header.len()].copy_from_slice(&header);
-                self.is_decrypted = true;
+                let extra_byte = buffer[4];
+                header.push(extra_byte);
             }
+            decryptor.decrypt(&mut header[1..]);
+
+            buffer[..header.len()].copy_from_slice(&header);
+            self.is_decrypted = true;
         }
 
         let mut header_reader = Cursor::new(&header);
@@ -66,10 +58,10 @@ impl BytesRead for PacketReader {
         reader.read_exact(&mut body)?;
 
         // we set the decryptor once the first packet has been read
-        if self.decryptor.is_none() {
-            if let Some(secret) = context.get::<Secret>() {
-                self.decryptor = Some(Decryptor::new(&secret.0.to_vec()));
-            }
+        if self.decryptor.is_none()
+            && let Some(secret) = context.get::<Secret>()
+        {
+            self.decryptor = Some(Decryptor::new(&secret.0.to_vec()));
         }
 
         self.is_decrypted = false;
@@ -109,10 +101,10 @@ impl Serializer for PacketSerializer {
 
         buffer.extend_from_slice(&packet.content.body);
 
-        if self.encryptor.is_none() {
-            if let Some(secret) = context.get::<Secret>() {
-                self.encryptor = Some(Encryptor::new(&secret.0.to_vec()));
-            }
+        if self.encryptor.is_none()
+            && let Some(secret) = context.get::<Secret>()
+        {
+            self.encryptor = Some(Encryptor::new(&secret.0.to_vec()));
         }
 
         Ok(buffer)

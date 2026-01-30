@@ -53,15 +53,12 @@ impl PacketHandler for Handler {
             let option = guard.get::<HashMap<PackedGuid, Object>>();
             if let Some(objects) = option {
                 for block in incoming.blocks.iter_mut() {
-                    if let BlockType::Values = block.block_type {
-                        if let Some(guid) = block.guid.as_ref() {
-                            if let Some(object) = objects.get(guid) {
-                                if let Some(update_data) = block.update_data.as_mut() {
-                                    sanitize_update_data(update_data, object.object_type_mask);
-                                }
-                            }
-                        }
-
+                    if let BlockType::Values = block.block_type
+                        && let Some(guid) = block.guid.as_ref()
+                        && let Some(object) = objects.get(guid)
+                        && let Some(update_data) = block.update_data.as_mut()
+                    {
+                        sanitize_update_data(update_data, object.object_type_mask);
                     }
                 }
             }
@@ -357,6 +354,7 @@ impl TryFrom<Block> for Object {
 }
 
 #[derive(Debug)]
+#[allow(clippy::enum_variant_names)]
 pub enum ObjectBuildError {
     MissingGuid,
     MissingObjectTypeId,

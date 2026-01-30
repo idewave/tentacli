@@ -417,7 +417,7 @@ impl BinWrite for UpdateData {
         let (update_fields, values_limit) = self.collect_update_fields();
 
         // blocks_amount
-        let blocks_amount: u8 = ((values_limit + 31) / 32) as u8;
+        let blocks_amount: u8 = values_limit.div_ceil(32) as u8;
         u8::write_options(&blocks_amount, writer, endian, ())?;
 
         // mask

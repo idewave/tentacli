@@ -128,7 +128,7 @@ impl AddonInfo {
             4 // u32: number of addons at the start of the buffer
                 + addons.iter()
                 .map(|a|
-                         a.name.as_bytes().len() // addon name bytes
+                         a.name.len() // addon name bytes
                              + 1 // C-string NUL terminator after the name
                              + 1 // flags: u8
                              + 4 // modulus_crc: u32 (little-endian)

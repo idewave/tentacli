@@ -136,12 +136,12 @@ impl EventHandler<KeyEvent> for Modal {
     async fn callback(&mut self, event: KeyEvent) -> anyhow::Result<Vec<Echo>> {
         let mut output = vec![];
 
-        if event.code == KeyCode::Enter {
-            if let Some(selected) = self.list.selected() {
-                output.push(Echo::Choose(selected));
-                self.close();
-                self.emit_up(events::Close).await?;
-            }
+        if event.code == KeyCode::Enter
+            && let Some(selected) = self.list.selected()
+        {
+            output.push(Echo::Choose(selected));
+            self.close();
+            self.emit_up(events::Close).await?;
         }
 
         self.list.emit_down(event).await?;

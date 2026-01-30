@@ -83,7 +83,7 @@ impl BinWrite for PackedGuid {
 
     fn write<W: Write>(&self, writer: &mut W) -> BinResult<()> {
         let mut guid = self.0;
-        let mut packed_guid = vec![0u8; 9];
+        let mut packed_guid = [0u8; 9];
         let mut size = 1;
         let mut index = 0;
 
@@ -107,7 +107,7 @@ impl BinWrite for PackedGuid {
         _: Self::Args<'_>,
     ) -> BinResult<()> {
         let mut guid = self.0;
-        let mut packed_guid = vec![0u8; 9];
+        let mut packed_guid = [0u8; 9];
         let mut size = 1;
         let mut index = 0;
 

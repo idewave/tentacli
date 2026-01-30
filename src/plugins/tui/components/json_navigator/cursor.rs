@@ -87,12 +87,10 @@ impl JsonCursor {
             NodeKeys::Object(keys) => Some(Metadata {
                 key: keys.get(index)?.to_string(),
                 path: self.state.path.join("/"),
-                ..Default::default()
             }),
             NodeKeys::Array(_) => Some(Metadata {
                 key: index.to_string(),
                 path: self.state.path.join("/"),
-                ..Default::default()
             }),
             _ => None,
         }

@@ -279,8 +279,7 @@ impl CalculateMetadata for () {
 pub trait ExtractMetadata: CalculateMetadata {
     fn extract_metadata(&self) -> HashMap<String, MetadataValue> {
         let mut context = MetadataContext::default();
-        let metadata = std::mem::take(&mut self.calculate(&mut context).metadata);
-        metadata
+        std::mem::take(&mut self.calculate(&mut context).metadata)
     }
 }
 

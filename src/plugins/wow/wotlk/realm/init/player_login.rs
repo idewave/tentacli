@@ -31,7 +31,7 @@ impl PacketHandler for Handler {
         let guid = *self.guid.lock().unwrap();
         let mut guard = self.is_logged_in.lock().unwrap();
 
-        if *guard == false && guid > 0 {
+        if !*guard && guid > 0 {
             output.extend(vec![
                 HandlerOutput::Packets(vec![
                     Outgoing { guid }.pack()?

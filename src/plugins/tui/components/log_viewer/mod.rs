@@ -63,9 +63,9 @@ impl LogViewer {
         };
 
         let local_time = Local::now().format("[%H:%M:%S]").to_string();
-        let item = ListItem::new(Line::from(vec![
+        ListItem::new(Line::from(vec![
             Span::styled(
-                format!("{local_time}"),
+                local_time.to_string(),
                 Style::new().fg(Color::Yellow).add_modifier(Modifier::BOLD),
             ),
             Span::styled(
@@ -80,9 +80,7 @@ impl LogViewer {
                     })
                     .add_modifier(Modifier::BOLD),
             ),
-        ]));
-
-        item
+        ]))
     }
 }
 
