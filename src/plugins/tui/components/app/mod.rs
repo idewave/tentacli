@@ -155,11 +155,11 @@ impl App {
                     },
                 }
 
-                if !all_echoes.is_empty() {
-                    if let Some(sender) = echo_senders.get(target) {
-                        for echo in all_echoes.drain(..) {
-                            sender.send(echo).await?;
-                        }
+                if !all_echoes.is_empty()
+                    && let Some(sender) = echo_senders.get(target)
+                {
+                    for echo in all_echoes.drain(..) {
+                        sender.send(echo).await?;
                     }
                 }
             }
@@ -191,15 +191,12 @@ impl EventHandler<log_viewer::events::SelectedIndex> for App {
 
 impl EventHandler<KeyEvent> for App {
     async fn callback(&mut self, event: KeyEvent) -> anyhow::Result<Vec<Echo>> {
-        match event.code {
-            KeyCode::Char('q') => {
-                for sender in self.echo_senders.values() {
-                    let _ = sender.send(Echo::Drop).await;
-                }
+        if let KeyCode::Char('q') = event.code {
+            for sender in self.echo_senders.values() {
+                let _ = sender.send(Echo::Drop).await;
+            }
 
-                self.shutdown.cancel();
-            },
-            _ => {},
+            self.shutdown.cancel();
         }
 
         Ok(vec![])
@@ -283,6 +280,6 @@ struct TerminalGuard;
 
 impl Drop for TerminalGuard {
     fn drop(&mut self) {
-        let _ = ratatui::restore();
+        ratatui::restore();
     }
 }

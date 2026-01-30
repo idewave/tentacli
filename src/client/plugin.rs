@@ -21,6 +21,7 @@ use crate::client::types::{
 
 #[async_trait]
 pub trait NetworkPlugin: Send + Sync + Any where Self: 'static {
+    #[allow(clippy::too_many_arguments)]
     fn connect(
         self: Arc<Self>,
         mut echo_rx: Receiver<Echo>,
@@ -83,7 +84,7 @@ pub trait NetworkPlugin: Send + Sync + Any where Self: 'static {
 
             let local_cancel = shutdown.child_token();
 
-            let _ = plugin.on_connect(
+            plugin.on_connect(
                 // to send packet into write_task
                 packet_tx.clone(),
                 // to broadcast HandlerOutput to the core plugins
@@ -344,6 +345,7 @@ pub trait NetworkPlugin: Send + Sync + Any where Self: 'static {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn handle_requests(
         &self,
         requests: &mut Vec<Request>,
@@ -405,7 +407,7 @@ pub trait NetworkPlugin: Send + Sync + Any where Self: 'static {
         }
 
         if !requests.is_empty() {
-            outputs.push(HandlerOutput::Requests(requests.drain(..).collect()));
+            outputs.push(HandlerOutput::Requests(std::mem::take(requests)));
 
             self.handle_outputs(
                 Arc::new(std::mem::take(outputs)),
@@ -428,15 +430,12 @@ pub trait NetworkPlugin: Send + Sync + Any where Self: 'static {
         broadcast_tx.broadcast(OrderedOutput::new(self.label(), outputs.clone())).await?;
 
         for output in &*outputs {
-            match output {
-                HandlerOutput::Packets(packets) => {
-                    with_cancel(
-                        &format!("{}-connection, handle_outputs", self.label()),
-                        &local_cancel,
-                        packet_tx.send(packets.clone()).map_err(|e| anyhow::anyhow!(e.to_string())),
-                    ).await?;
-                },
-                _ => {},
+            if let HandlerOutput::Packets(packets) = output {
+                with_cancel(
+                    &format!("{}-connection, handle_outputs", self.label()),
+                    local_cancel,
+                    packet_tx.send(packets.clone()).map_err(|e| anyhow::anyhow!(e.to_string())),
+                ).await?;
             }
         }
 

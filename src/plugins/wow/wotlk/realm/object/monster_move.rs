@@ -43,7 +43,7 @@ struct Incoming {
             move_type != MonsterMoveType::Stop
             && spline_flags
                 .as_ref()
-                .map_or(false, |f| f.contains(SplineFlags::ANIMATION))
+                .is_some_and(|f| f.contains(SplineFlags::ANIMATION))
         ))]
     #[serde(skip_serializing_if = "Option::is_none")]
     animation_id: Option<u8>,
@@ -52,7 +52,7 @@ struct Incoming {
             move_type != MonsterMoveType::Stop
             && spline_flags
                 .as_ref()
-                .map_or(false, |f| f.contains(SplineFlags::ANIMATION))
+                .is_some_and(|f| f.contains(SplineFlags::ANIMATION))
         ))]
     #[serde(skip_serializing_if = "Option::is_none")]
     parabolic_start_time: Option<i32>,
@@ -65,7 +65,7 @@ struct Incoming {
             move_type != MonsterMoveType::Stop
             && spline_flags
                 .as_ref()
-                .map_or(false, |f| f.contains(SplineFlags::PARABOLIC))
+                .is_some_and(|f| f.contains(SplineFlags::PARABOLIC))
         ))]
     #[serde(skip_serializing_if = "Option::is_none")]
     vertical_acceleration: Option<f32>,
@@ -74,7 +74,7 @@ struct Incoming {
             move_type != MonsterMoveType::Stop
             && spline_flags
                 .as_ref()
-                .map_or(false, |f| f.contains(SplineFlags::PARABOLIC))
+                .is_some_and(|f| f.contains(SplineFlags::PARABOLIC))
         ))]
     #[serde(skip_serializing_if = "Option::is_none")]
     animation_start_time: Option<i32>,
@@ -85,7 +85,7 @@ struct Incoming {
             move_type != MonsterMoveType::Stop
             && spline_flags
                 .as_ref()
-                .map_or(false, |f| !f.is_catmull_rom())
+                .is_some_and(|f| !f.is_catmull_rom())
         ))]
     #[serde(skip_serializing_if = "Option::is_none")]
     destination_point: Option<Point3D>,
@@ -94,7 +94,7 @@ struct Incoming {
             move_type != MonsterMoveType::Stop
             && spline_flags
                 .as_ref()
-                .map_or(false, |f| !f.is_catmull_rom())
+                .is_some_and(|f| !f.is_catmull_rom())
             && path_size > 1
         ))]
     // it seems the "count" attr is evaluated independently of "if" attr
@@ -107,7 +107,7 @@ struct Incoming {
             move_type != MonsterMoveType::Stop
             && spline_flags
                 .as_ref()
-                .map_or(false, |f| f.is_catmull_rom())
+                .is_some_and(|f| f.is_catmull_rom())
         ))]
     #[br(count = path_size)]
     #[serde(skip_serializing_if = "Option::is_none")]

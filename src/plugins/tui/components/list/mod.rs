@@ -52,10 +52,8 @@ impl StyledList {
 
         if self.markable {
             selected.extend(self.marked.iter().copied());
-        } else {
-            if let Some(index) = self.state.selected() {
-                selected.push(index);
-            }
+        } else if let Some(index) = self.state.selected() {
+            selected.push(index);
         }
 
         if selected.is_empty() {

@@ -94,7 +94,7 @@ fn format_array(arr: &[Value], indent: usize) -> String {
                 .join(", ")
         ));
 
-        if i + 1 < (arr.len() + PER_LINE - 1) / PER_LINE {
+        if i + 1 < arr.len().div_ceil(PER_LINE) {
             out.push(',');
         }
         out.push('\n');

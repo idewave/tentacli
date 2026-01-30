@@ -38,7 +38,7 @@ macro_rules! events_runtime {
                 $(
                     <Self as EventHandler<$LE>>::register_event(
                         self,
-                        crate::plugins::tui::events::traits::EmitType::Local
+                        $crate::plugins::tui::events::traits::EmitType::Local
                     ).await?;
                 )*
 
@@ -46,7 +46,7 @@ macro_rules! events_runtime {
                 $(
                     <Self as EventHandler<$GE>>::register_event(
                         self,
-                        crate::plugins::tui::events::traits::EmitType::Parent
+                        $crate::plugins::tui::events::traits::EmitType::Parent
                     ).await?;
                 )*
 
@@ -74,7 +74,7 @@ macro_rules! events_runtime {
                     output.extend(
                         <Self as EventHandler<$LE>>::try_update(
                             self,
-                            crate::plugins::tui::events::traits::EmitType::Local
+                            $crate::plugins::tui::events::traits::EmitType::Local
                         ).await?
                     );
                 )*
@@ -83,7 +83,7 @@ macro_rules! events_runtime {
                     output.extend(
                         <Self as EventHandler<$GE>>::try_update(
                             self,
-                            crate::plugins::tui::events::traits::EmitType::Parent
+                            $crate::plugins::tui::events::traits::EmitType::Parent
                         ).await?
                     );
                 )*

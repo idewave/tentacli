@@ -105,7 +105,7 @@ impl PacketHandler for Handler {
             ]))
         } else {
             let re = Regex::new(&autoselect.character_name)?;
-            if let Some(character) = characters.into_iter().find(|item| re.is_match(&item.name.as_ref()))
+            if let Some(character) = characters.into_iter().find(|item| re.is_match(item.name.as_ref()))
             {
                 let Character { name, guid, .. } = character;
                 *self.guid.lock().unwrap() = guid;

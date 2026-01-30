@@ -42,6 +42,7 @@ impl NetworkPlugin for RealmPlugin {
 #[derive(Default)]
 pub struct Processors;
 impl ProcessorPlugin for Processors {
+    #[allow(clippy::default_constructed_unit_structs)]
     fn get_processors(&self) -> Vec<Box<dyn Processor>> {
         vec![
             Box::new(InitProcessor::default()),

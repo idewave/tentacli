@@ -318,14 +318,13 @@ macro_rules! fields {
 
                     let types = match field_type {
                         "Custom" => {
-                            #[allow(unused_mut)]
-                            let mut types = Vec::new();
-                            $(
+                            vec![
                                 $(
-                                    types.push(stringify!($custom_types).to_string());
-                                )*
-                            )?
-                            types
+                                    $(
+                                        stringify!($custom_types).to_string(),
+                                    )*
+                                )?
+                            ]
                         }
                         _ => vec![field_type.to_string()],
                     };
