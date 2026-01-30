@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 description = "Internal proc-macros for tentacli"
 repository = "https://github.com/tench-rt/tentacli"
+license-file = "LICENSE"
 
 [lib]
 name = "fields_metadata"
