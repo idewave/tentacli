@@ -3,11 +3,14 @@ name = "tentacli"
 version = "15.0.0"
 edition = "2024"
 authors = ["Sergio Ivanuzzo <sergio.ivanuzzo@gmail.com>"]
-description = "Multipurpose console wow-client, it can be used either as a standalone application or integrated into your own project as a crate."
+description = "Framework for building extensible network protocol clients via modular plugins."
 readme = "README.md"
 keywords = [
-    "sniffer", "wow-client",
-    "network", "console-client"
+    "protocol",
+    "network",
+    "framework",
+    "plugin",
+    "wow"
 ]
 license-file = "LICENSE"
 repository = "https://github.com/tench-rt/tentacli"
