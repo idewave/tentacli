@@ -20,7 +20,6 @@ pub struct WorldLogReader {
 pub struct LogPacket {
     pub timestamp: Option<i64>,
     pub opcode: u16,
-    pub opcode_name: String,
     pub payload: Vec<u8>,
 }
 
@@ -102,7 +101,6 @@ impl WorldLogReader {
             return Some(LogPacket {
                 timestamp,
                 opcode: opcode_code,
-                opcode_name: String::from_utf8_lossy(opcode_name_bytes).into_owned(),
                 payload: std::mem::take(&mut self.payload_buffer),
             });
         }

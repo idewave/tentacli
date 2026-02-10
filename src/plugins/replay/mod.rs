@@ -4,7 +4,6 @@ mod parser;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use anyhow::Context;
 use async_broadcast::Receiver;
 use serde::Deserialize;
 use tokio::io::AsyncWriteExt;

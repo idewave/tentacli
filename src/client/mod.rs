@@ -38,7 +38,9 @@ macro_rules! register_plugin {
 
 cfg_if! {
     if #[cfg(feature = "wow-wotlk")] {
-        use crate::plugins::wow::wotlk::{login, realm};
+        #[cfg(not(feature = "replay"))]
+        use crate::plugins::wow::wotlk::login;
+        use crate::plugins::wow::wotlk::realm;
 
         // network plugins
         #[cfg(not(feature = "replay"))]
