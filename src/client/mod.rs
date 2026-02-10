@@ -41,12 +41,25 @@ cfg_if! {
         use crate::plugins::wow::wotlk::{login, realm};
 
         // network plugins
+        #[cfg(not(feature = "replay"))]
         register_plugin!(login::LoginPlugin, dyn NetworkPlugin);
+        #[cfg(feature = "replay")]
+        register_plugin!(OutgoingPolicy<realm::RealmPlugin, false>, dyn NetworkPlugin);
+
+        #[cfg(not(feature = "replay"))]
         register_plugin!(realm::RealmPlugin, dyn NetworkPlugin);
 
         // processor plugins
+        #[cfg(not(feature = "replay"))]
         register_plugin!(login::Processors, dyn ProcessorPlugin);
         register_plugin!(realm::Processors, dyn ProcessorPlugin);
+    }
+}
+
+cfg_if! {
+    if #[cfg(feature = "replay")] {
+        use crate::plugins::replay::Replay;
+        register_plugin!(Replay, dyn CorePlugin);
     }
 }
 
@@ -235,8 +248,9 @@ impl Client {
 
         println!("[OK] Build features");
         println!("  - tui        : {}", cfg!(feature = "tui"));
-        println!("  - dbg-ui    : {}", cfg!(feature = "dbg-ui"));
-        println!("  - wow-wotlk : {}", cfg!(feature = "wow-wotlk"));
+        println!("  - dbg-ui     : {}", cfg!(feature = "dbg-ui"));
+        println!("  - wow-wotlk  : {}", cfg!(feature = "wow-wotlk"));
+        println!("  - replay     : {}", cfg!(feature = "replay"));
 
         let snapshot = Client::snapshot_plugins();
 

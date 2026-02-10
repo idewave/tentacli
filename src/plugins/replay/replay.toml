@@ -1,0 +1,27 @@
+[replay]
+# Path to World.log (MaNGOS / TrinityCore-style server log)
+world_log_path = "World.log"
+# List of opcode names to replay.
+# Example:
+# opcodes = ["SMSG_MESSAGECHAT", "SMSG_UPDATE_OBJECT"]
+#
+# If empty (opcodes = []), ALL packets found in the log will be replayed.
+opcodes = []
+# Remove broadcast duplicates.
+#
+# When enabled, identical packets (same opcode + payload)
+# that appear multiple times within the same log second
+# are replayed only once.
+#
+# This is useful for broadcast packets that are logged
+# once per connected client (e.g. movement, chat, world updates),
+# but should be replayed as a single logical event.
+dedup = true
+# Replay timing mode:
+#
+# false → packets are sent as fast as possible (with minimal yielding),
+#         ignoring original timestamps in the log.
+#
+# true  → packets are replayed according to their original timestamps,
+#         preserving real-time delays between packets.
+realtime = false

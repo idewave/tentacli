@@ -1,6 +1,6 @@
 [package]
 name = "tentacli"
-version = "15.0.0"
+version = "15.1.0"
 edition = "2024"
 authors = ["Sergio Ivanuzzo <sergio.ivanuzzo@gmail.com>"]
 description = "Framework for building extensible network protocol clients via modular plugins."
@@ -44,6 +44,8 @@ flate2 = { version = "1.0.24", optional = true }
 futures = "0.3.31"
 hmac-sha = { version = "0.6.1", optional = true }
 inventory = "0.3"
+memchr = { version = "2.7.4", optional = true }
+memmap2 = { version = "0.9.5", optional = true }
 meta-packet = "0.1.0"
 num-bigint = { version = "0.4.6", optional = true }
 num_enum = "0.7.4"
@@ -67,3 +69,4 @@ default-dbg = ["wow-wotlk", "dbg-ui"]
 tui = ["crossterm", "ratatui", "async-event-emitter"]
 dbg-ui = ["colored"]
 wow-wotlk = ["bitflags", "flate2", "sha-1", "hmac-sha", "rand", "num-bigint"]
+replay = ["memmap2", "memchr"]
