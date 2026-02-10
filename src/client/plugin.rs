@@ -427,15 +427,17 @@ pub trait NetworkPlugin: Send + Sync + Any where Self: 'static {
         broadcast_tx: async_broadcast::Sender<OrderedOutput>,
         local_cancel: &CancellationToken,
     ) -> anyhow::Result<()> {
-        broadcast_tx.broadcast(OrderedOutput::new(self.label(), outputs.clone())).await?;
+        if self.enabled_outgoing() {
+            broadcast_tx.broadcast(OrderedOutput::new(self.label(), outputs.clone())).await?;
 
-        for output in &*outputs {
-            if let HandlerOutput::Packets(packets) = output {
-                with_cancel(
-                    &format!("{}-connection, handle_outputs", self.label()),
-                    local_cancel,
-                    packet_tx.send(packets.clone()).map_err(|e| anyhow::anyhow!(e.to_string())),
-                ).await?;
+            for output in &*outputs {
+                if let HandlerOutput::Packets(packets) = output {
+                    with_cancel(
+                        &format!("{}-connection, handle_outputs", self.label()),
+                        local_cancel,
+                        packet_tx.send(packets.clone()).map_err(|e| anyhow::anyhow!(e.to_string())),
+                    ).await?;
+                }
             }
         }
 
@@ -487,6 +489,54 @@ pub trait NetworkPlugin: Send + Sync + Any where Self: 'static {
     fn protocol(&self) -> Protocol;
     fn remote_addr(&self) -> anyhow::Result<Option<String>> {
         Ok(None)
+    }
+    fn enabled_outgoing(&self) -> bool {
+        true
+    }
+}
+
+pub struct OutgoingPolicy<T, const ENABLED: bool>(pub T);
+impl<T: Default, const ENABLED: bool> Default for OutgoingPolicy<T, ENABLED> {
+    fn default() -> Self {
+        Self(T::default())
+    }
+}
+
+#[async_trait]
+impl<T, const ENABLED: bool> NetworkPlugin for OutgoingPolicy<T, ENABLED>
+where
+    T: NetworkPlugin + Send + Sync + 'static,
+{
+    fn get_builders(&self) -> Vec<Box<dyn OutputBuilder>> {
+        self.0.get_builders()
+    }
+
+    fn get_reader(&self) -> Box<dyn BytesRead> {
+        self.0.get_reader()
+    }
+
+    fn get_serializer(&self) -> Box<dyn Serializer> {
+        self.0.get_serializer()
+    }
+
+    fn get_processors(&self) -> Vec<Box<dyn Processor>> {
+        self.0.get_processors()
+    }
+
+    fn label(&self) -> ServerLabel {
+        self.0.label()
+    }
+
+    fn protocol(&self) -> Protocol {
+        self.0.protocol()
+    }
+
+    fn remote_addr(&self) -> anyhow::Result<Option<String>> {
+        self.0.remote_addr()
+    }
+
+    fn enabled_outgoing(&self) -> bool {
+        ENABLED
     }
 }
 
