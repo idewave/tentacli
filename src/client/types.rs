@@ -143,11 +143,11 @@ impl OrderedReceiver {
                 self.next = self.buffer.keys().next().copied();
             }
 
-            if let Some(next) = self.next
-                && let Some(entry) = self.buffer.remove(&next)
-            {
-                self.next = Some(next + 1);
-                return Ok(entry);
+            if let Some(next) = self.next {
+                if let Some(entry) = self.buffer.remove(&next) {
+                    self.next = Some(next + 1);
+                    return Ok(entry);
+                }
             }
 
             // soft-fail protection
