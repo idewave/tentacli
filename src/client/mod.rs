@@ -40,6 +40,8 @@ cfg_if! {
     if #[cfg(feature = "wow-wotlk")] {
         #[cfg(not(feature = "replay"))]
         use crate::plugins::wow::wotlk::login;
+        #[cfg(not(feature = "replay"))]
+        use crate::plugins::wow::logger::Logger;
         use crate::plugins::wow::wotlk::realm;
 
         // network plugins
@@ -55,6 +57,8 @@ cfg_if! {
         #[cfg(not(feature = "replay"))]
         register_plugin!(login::Processors, dyn ProcessorPlugin);
         register_plugin!(realm::Processors, dyn ProcessorPlugin);
+        #[cfg(not(feature = "replay"))]
+        register_plugin!(Logger, dyn CorePlugin);
     }
 }
 
