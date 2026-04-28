@@ -16,6 +16,7 @@ use serde::Deserialize;
 use tokio::sync::RwLock;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
+use tokio::time::{self, MissedTickBehavior};
 use tokio_util::sync::CancellationToken;
 
 use crate::client::prelude::*;
@@ -27,12 +28,23 @@ pub struct Config {
     pub logs_dir: String,
     #[serde(default)]
     pub enabled: u8,
+    #[serde(default = "default_flush_interval_ms")]
+    pub flush_interval_ms: u64,
     #[serde(default)]
     pub max_file_size: u64,
 }
 
+fn default_flush_interval_ms() -> u64 {
+    200
+}
+
 #[derive(Default)]
 pub struct Logger;
+
+enum WriterCommand {
+    Entry(Vec<u8>),
+    Flush,
+}
 
 impl Logger {
     fn sanitize_segment(value: &str) -> String {
@@ -154,7 +166,7 @@ impl Logger {
             "{timestamp} \nSERVER:\nSOCKET: 127.0.0.1:{socket_port}\nLENGTH: {}\nOPCODE: {opcode_name} (0x{opcode:04X})\nDATA:\n",
             packet.content.body.len()
         )
-        .ok()?;
+            .ok()?;
 
         for chunk in packet.content.body.chunks(16) {
             for (i, byte) in chunk.iter().enumerate() {
@@ -188,10 +200,11 @@ impl CorePlugin for Logger {
         let log_suffix = Self::resolve_log_file_suffix();
         let log_file = Self::build_log_file_path(&logs_dir, &log_suffix);
         let max_file_size_bytes = config.max_file_size.saturating_mul(1024 * 1024);
+        let flush_interval_ms = config.flush_interval_ms;
 
         Ok(vec![tokio::spawn(async move {
             const QUEUE_SIZE: usize = 4096;
-            let (write_tx, mut write_rx) = mpsc::channel::<Vec<u8>>(QUEUE_SIZE);
+            let (write_tx, mut write_rx) = mpsc::channel::<WriterCommand>(QUEUE_SIZE);
 
             let writer_task = tokio::task::spawn_blocking(move || -> anyhow::Result<()> {
                 fs::create_dir_all(&logs_dir)?;
@@ -205,22 +218,31 @@ impl CorePlugin for Logger {
                 let mut current_size = file.metadata()?.len();
                 let mut writer = BufWriter::new(file);
 
-                while let Some(entry) = write_rx.blocking_recv() {
-                    if max_file_size_bytes > 0 && current_size + entry.len() as u64 > max_file_size_bytes {
-                        writer.flush()?;
+                while let Some(cmd) = write_rx.blocking_recv() {
+                    match cmd {
+                        WriterCommand::Entry(entry) => {
+                            if max_file_size_bytes > 0
+                                && current_size + entry.len() as u64 > max_file_size_bytes
+                            {
+                                writer.flush()?;
 
-                        fragment_idx = fragment_idx.saturating_add(1);
-                        active_path = Self::build_fragment_file_path(&log_file, fragment_idx);
-                        file = OpenOptions::new()
-                            .create(true)
-                            .append(true)
-                            .open(&active_path)?;
-                        current_size = file.metadata()?.len();
-                        writer = BufWriter::new(file);
+                                fragment_idx = fragment_idx.saturating_add(1);
+                                active_path = Self::build_fragment_file_path(&log_file, fragment_idx);
+                                file = OpenOptions::new()
+                                    .create(true)
+                                    .append(true)
+                                    .open(&active_path)?;
+                                current_size = file.metadata()?.len();
+                                writer = BufWriter::new(file);
+                            }
+
+                            writer.write_all(&entry)?;
+                            current_size = current_size.saturating_add(entry.len() as u64);
+                        }
+                        WriterCommand::Flush => {
+                            writer.flush()?;
+                        }
                     }
-
-                    writer.write_all(&entry)?;
-                    current_size = current_size.saturating_add(entry.len() as u64);
                 }
 
                 writer.flush()?;
@@ -228,6 +250,13 @@ impl CorePlugin for Logger {
             });
 
             let mut ordered_rx = OrderedReceiver::new(broadcast_rx);
+            let mut flush_timer = if flush_interval_ms > 0 {
+                let mut interval = time::interval(std::time::Duration::from_millis(flush_interval_ms));
+                interval.set_missed_tick_behavior(MissedTickBehavior::Delay);
+                Some(interval)
+            } else {
+                None
+            };
 
             loop {
                 tokio::select! {
@@ -235,6 +264,18 @@ impl CorePlugin for Logger {
                     _ = shutdown.cancelled() => {
                         break;
                     },
+                    _ = async {
+                        if let Some(timer) = &mut flush_timer {
+                            timer.tick().await;
+                        } else {
+                            futures::future::pending::<()>().await;
+                        }
+                    } => {
+                        write_tx
+                            .send(WriterCommand::Flush)
+                            .await
+                            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+                    }
                     result = ordered_rx.recv() => {
                         match result {
                             Ok(ordered) => {
@@ -251,7 +292,7 @@ impl CorePlugin for Logger {
 
                                             if let Some(entry) = Self::format_entry(packet, 0) {
                                                 write_tx
-                                                    .send(entry)
+                                                    .send(WriterCommand::Entry(entry))
                                                     .await
                                                     .map_err(|e| anyhow::anyhow!(e.to_string()))?;
                                             }
@@ -412,9 +453,10 @@ character_name = "TestChar"
         let cfg: Config = ConfigParser::parse_from_string(
             "logs_dir = \"wow/logger/logs\"\n".to_string()
         )
-        .expect("parse config");
+            .expect("parse config");
 
         assert_eq!(cfg.enabled, 0);
+        assert_eq!(cfg.flush_interval_ms, 200);
         assert_eq!(cfg.max_file_size, 0);
     }
 }
