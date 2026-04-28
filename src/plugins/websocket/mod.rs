@@ -1,7 +1,10 @@
 //! Optional WebSocket broadcast plugin.
 //!
-//! This core plugin broadcasts `HandlerOutput` events to all connected
-//! WebSocket clients as JSON.
+//! This plugin streams `HandlerOutput` events to all connected WebSocket
+//! clients as JSON.
+//!
+//! Only `Packets` and `Messages` are forwarded. `Requests` are intentionally
+//! ignored, as this plugin is read-only and does not provide any interaction.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -11,7 +14,7 @@ use futures::{SinkExt, StreamExt};
 use serde::ser::SerializeSeq;
 use serde::{Deserialize, Serialize};
 use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::{RwLock, broadcast, mpsc::Sender};
+use tokio::sync::{Notify, RwLock, mpsc::Sender};
 use tokio::time::{Duration, timeout};
 use tokio_tungstenite::{accept_async, tungstenite::Message as WsMessage};
 use tokio_util::sync::CancellationToken;
@@ -65,36 +68,50 @@ struct WsEvent<'a> {
 }
 
 #[derive(Default)]
+struct SharedEvents {
+    history: RwLock<Vec<Arc<str>>>,
+    notify: Notify,
+}
+
+#[derive(Default)]
 pub struct WebSocket;
 
 impl WebSocket {
     async fn handle_connection(
         stream: TcpStream,
-        mut event_rx: broadcast::Receiver<Arc<str>>,
+        shared_events: Arc<SharedEvents>,
         shutdown: CancellationToken,
     ) -> anyhow::Result<()> {
         let ws_stream = accept_async(stream).await?;
         let (mut sink, mut source) = ws_stream.split();
+        let mut cursor = 0usize;
 
         loop {
+            let notified = shared_events.notify.notified();
+
+            loop {
+                let payload = {
+                    let history = shared_events.history.read().await;
+                    history.get(cursor).cloned()
+                };
+
+                let Some(payload) = payload else {
+                    break;
+                };
+
+                let send = sink.send(WsMessage::Text(payload.as_ref().into()));
+                match timeout(Duration::from_secs(5), send).await {
+                    Ok(Ok(())) => {
+                        cursor += 1;
+                    }
+                    _ => return Ok(()),
+                }
+            }
+
             tokio::select! {
                 biased;
 
                 _ = shutdown.cancelled() => break,
-
-                event = event_rx.recv() => {
-                    match event {
-                        Ok(payload) => {
-                            let send = sink.send(WsMessage::Text(payload.as_ref().into()));
-                            match timeout(Duration::from_secs(5), send).await {
-                                Ok(Ok(())) => {}
-                                _ => break,
-                            }
-                        }
-                        Err(broadcast::error::RecvError::Lagged(_)) => continue,
-                        Err(broadcast::error::RecvError::Closed) => break,
-                    }
-                }
 
                 incoming = source.next() => {
                     match incoming {
@@ -103,10 +120,21 @@ impl WebSocket {
                         Some(Err(err)) => return Err(err.into()),
                     }
                 }
+
+                _ = notified => {}
             }
         }
 
         Ok(())
+    }
+
+    async fn push_event(shared_events: Arc<SharedEvents>, payload: Arc<str>) {
+        {
+            let mut history = shared_events.history.write().await;
+            history.push(payload);
+        }
+
+        shared_events.notify.notify_waiters();
     }
 }
 
@@ -123,7 +151,7 @@ impl CorePlugin for WebSocket {
 
         Ok(vec![tokio::spawn(async move {
             let listener = TcpListener::bind((bind_host, config.port)).await?;
-            let (event_tx, _) = broadcast::channel::<Arc<str>>(1024);
+            let shared_events = Arc::new(SharedEvents::default());
             let mut ordered_rx = OrderedReceiver::new(broadcast_rx);
 
             loop {
@@ -135,10 +163,10 @@ impl CorePlugin for WebSocket {
                     accepted = listener.accept() => {
                         let (stream, _) = accepted?;
                         let client_shutdown = shutdown.child_token();
-                        let client_rx = event_tx.subscribe();
+                        let client_events = shared_events.clone();
 
                         tokio::spawn(async move {
-                            let _ = Self::handle_connection(stream, client_rx, client_shutdown).await;
+                            let _ = Self::handle_connection(stream, client_events, client_shutdown).await;
                         });
                     }
 
@@ -155,7 +183,7 @@ impl CorePlugin for WebSocket {
                         };
 
                         let payload: Arc<str> = serde_json::to_string(&event)?.into();
-                        let _ = event_tx.send(payload);
+                        Self::push_event(shared_events.clone(), payload).await;
                     }
                 }
             }
@@ -169,8 +197,6 @@ impl CorePlugin for WebSocket {
 mod tests {
     use super::*;
 
-    /// Verifies that only TUI-visible outputs (`Messages`, `Packets`) are
-    /// forwarded, while `Requests` are ignored.
     #[test]
     fn filtered_outputs_ignores_requests() {
         let outputs = vec![
@@ -186,15 +212,13 @@ mod tests {
             label: "realm",
             outputs: FilteredOutputs { outputs: &outputs },
         })
-        .expect("event should serialize");
+            .expect("event should serialize");
 
         assert!(json.contains("\"Messages\""));
         assert!(json.contains("\"Packets\""));
         assert!(!json.contains("\"Requests\""));
     }
 
-    /// Ensures the plugin config can be parsed from TOML and exposes the
-    /// required WebSocket server settings.
     #[test]
     fn websocket_config_parses_port_and_local() {
         let config: Config =
