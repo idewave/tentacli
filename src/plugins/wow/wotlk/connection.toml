@@ -1,4 +1,10 @@
+# NOTE:
+# Avoid modifying this config directly if it is tracked in a public repository.
+# Use ConfigParser mechanisms to define a private/local override instead.
+#
+# See the tentacli github wiki for more detailed information.
 [connection]
+# host must be in host:port format; domains are supported, e.g. "logon.my-server.com:3724"
 host = "127.0.0.1:3724"
 account_name = "test"
 password = "test"
