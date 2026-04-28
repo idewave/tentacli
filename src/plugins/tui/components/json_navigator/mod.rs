@@ -287,21 +287,21 @@ impl EventHandler<KeyEvent> for JsonNavigator {
 
         match event.code {
             KeyCode::Up => {
-                if self.nav_active {
+                if self.nav_active && {
                     moved = self.cursor.step_backward().is_some();
-                    if !moved {
-                        self.json_scroll = self.json_scroll.saturating_sub(1);
-                        self.hex_scroll = self.hex_scroll.saturating_sub(1);
-                    }
+                    !moved
+                } {
+                    self.json_scroll = self.json_scroll.saturating_sub(1);
+                    self.hex_scroll = self.hex_scroll.saturating_sub(1);
                 }
             }
             KeyCode::Down => {
-                if self.nav_active {
+                if self.nav_active && {
                     moved = self.cursor.step_forward().is_some();
-                    if !moved {
-                        self.json_scroll = self.json_scroll.saturating_add(1);
-                        self.hex_scroll = self.hex_scroll.saturating_add(1);
-                    }
+                    !moved
+                } {
+                    self.json_scroll = self.json_scroll.saturating_add(1);
+                    self.hex_scroll = self.hex_scroll.saturating_add(1);
                 }
             }
             KeyCode::Left => {

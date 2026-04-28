@@ -84,25 +84,25 @@ impl CorePlugin for DbgUI {
                                         }
 
                                         loop {
-                                            if let Ok(Some(line)) = lines.next_line().await {
-                                                if let Ok(idx) = line.trim().parse::<usize>() {
-                                                    if let Some(chosen) = items.get(idx) {
-                                                        println!("You chose: {}", chosen);
+                                            if let Ok(Some(line)) = lines.next_line().await
+                                                && let Ok(idx) = line.trim().parse::<usize>()
+                                            {
+                                                if let Some(chosen) = items.get(idx) {
+                                                    println!("You chose: {}", chosen);
 
-                                                        let option = echo_senders.get(&label);
-                                                        if let Some(sender) = option {
-                                                            let _ = sender
-                                                                .send(Echo::Choose(vec![idx]))
-                                                                .await;
-                                                        }
-
-                                                        break;
-                                                    } else {
-                                                        println!(
-                                                            "{}",
-                                                            "Invalid index, try again".bright_red()
-                                                        );
+                                                    let option = echo_senders.get(&label);
+                                                    if let Some(sender) = option {
+                                                        let _ = sender
+                                                            .send(Echo::Choose(vec![idx]))
+                                                            .await;
                                                     }
+
+                                                    break;
+                                                } else {
+                                                    println!(
+                                                        "{}",
+                                                        "Invalid index, try again".bright_red()
+                                                    );
                                                 }
                                             }
                                         }
