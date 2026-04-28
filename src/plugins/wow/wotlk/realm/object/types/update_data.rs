@@ -1,15 +1,15 @@
-use bitflags::bitflags;
 use binrw::{BinRead, BinResult, BinWrite, Endian};
+use bitflags::bitflags;
 use serde::Serialize;
 use std::collections::{BTreeMap, HashSet};
 use std::io::{Read, Seek, Write};
 
-use bitflags_extras::BitflagExtras;
 use crate::client::prelude::*;
 use crate::plugins::wow::wotlk::realm::object::types::update_fields::{
-    ContainerField, CorpseField, DynamicObjectField, FieldEnum, FieldValue,
-    GameObjectField, ItemField, ObjectField, PlayerField, UnitField
+    ContainerField, CorpseField, DynamicObjectField, FieldEnum, FieldValue, GameObjectField,
+    ItemField, ObjectField, PlayerField, UnitField,
 };
+use bitflags_extras::BitflagExtras;
 
 #[derive(Serialize, Clone, Default, Debug, PartialEq)]
 pub struct UpdateData {
@@ -60,39 +60,26 @@ impl UpdateData {
 
             FieldValue::Integer(v) => vec![*v as u32],
 
-            FieldValue::IntegerArray(vs) => {
-                vs.iter()
-                    .filter_map(|v| v.map(|x| x as u32))
-                    .collect()
-            }
+            FieldValue::IntegerArray(vs) => vs.iter().filter_map(|v| v.map(|x| x as u32)).collect(),
 
             FieldValue::Bytes(v) => vec![*v],
 
-            FieldValue::BytesArray(vs) => {
-                vs.iter()
-                    .filter_map(|v| *v)
-                    .collect()
-            }
+            FieldValue::BytesArray(vs) => vs.iter().filter_map(|v| *v).collect(),
 
             FieldValue::Float(v) => vec![v.to_bits()],
 
             FieldValue::FloatArray(vs) => {
-                vs.iter()
-                    .filter_map(|v| v.map(|f| f.to_bits()))
-                    .collect()
+                vs.iter().filter_map(|v| v.map(|f| f.to_bits())).collect()
             }
 
             FieldValue::TwoShorts((a, b)) => {
                 vec![((*a as u32) << 16) | *b as u32]
             }
 
-            FieldValue::TwoShortsArray(vs) => {
-                vs.iter()
-                    .filter_map(|v| {
-                        v.map(|(a, b)| ((a as u32) << 16) | b as u32)
-                    })
-                    .collect()
-            }
+            FieldValue::TwoShortsArray(vs) => vs
+                .iter()
+                .filter_map(|v| v.map(|(a, b)| ((a as u32) << 16) | b as u32))
+                .collect(),
 
             _ => vec![],
         }
@@ -100,9 +87,14 @@ impl UpdateData {
 
     #[inline]
     fn build_blocks(
-        update_blocks: &BTreeMap<u32, u32>, start: u32, end: u32
+        update_blocks: &BTreeMap<u32, u32>,
+        start: u32,
+        end: u32,
     ) -> BTreeMap<u32, u32> {
-        update_blocks.range(start..=end).map(|(&k,&v)| (k,v)).collect()
+        update_blocks
+            .range(start..=end)
+            .map(|(&k, &v)| (k, v))
+            .collect()
     }
 
     #[inline]
@@ -115,7 +107,10 @@ impl UpdateData {
             ItemField::get_limit()
         } else if self.object_type_mask.contains(ObjectTypeMask::GAMEOBJECT) {
             GameObjectField::get_limit()
-        } else if self.object_type_mask.contains(ObjectTypeMask::DYNAMICOBJECT) {
+        } else if self
+            .object_type_mask
+            .contains(ObjectTypeMask::DYNAMICOBJECT)
+        {
             DynamicObjectField::get_limit()
         } else if self.object_type_mask.contains(ObjectTypeMask::CORPSE) {
             CorpseField::get_limit()
@@ -180,12 +175,7 @@ impl UpdateData {
         let base_offset = ctx.offset;
         let total_size = present_count * 4;
 
-        let field_key = format!(
-            "{}/{}/{}",
-            ctx.current_key,
-            group,
-            variant.get_field_name()
-        );
+        let field_key = format!("{}/{}/{}", ctx.current_key, group, variant.get_field_name());
 
         // Metadata for the whole field
         ctx.metadata.insert(
@@ -302,7 +292,7 @@ impl BinRead for UpdateData {
     fn read_options<R: Read + Seek>(
         reader: &mut R,
         endian: Endian,
-        _: Self::Args<'_>
+        _: Self::Args<'_>,
     ) -> BinResult<Self> {
         let blocks_amount = u8::read_options(reader, endian, ())?;
 
@@ -320,7 +310,8 @@ impl BinRead for UpdateData {
             }
         }
 
-        let indices: Vec<u32> = mask_bits.iter()
+        let indices: Vec<u32> = mask_bits
+            .iter()
             .enumerate()
             .filter_map(|(i, &value)| if value { Some(i as u32) } else { None })
             .collect();
@@ -339,7 +330,8 @@ impl BinRead for UpdateData {
             ObjectField::read_from(blocks).unwrap_or_default()
         };
 
-        let object_type_mask = out.object_fields
+        let object_type_mask = out
+            .object_fields
             .get(&ObjectField::Type)
             .and_then(|field| {
                 if let FieldValue::Integer(mask) = field {
@@ -354,49 +346,63 @@ impl BinRead for UpdateData {
 
         if object_type_mask.contains(ObjectTypeMask::UNIT) || object_type_mask.is_empty() {
             let blocks = UpdateData::build_blocks(
-                &update_blocks, ObjectField::get_limit()+1, UnitField::get_limit()
+                &update_blocks,
+                ObjectField::get_limit() + 1,
+                UnitField::get_limit(),
             );
             out.unit_fields = UnitField::read_from(blocks).unwrap_or_default();
         }
 
         if object_type_mask.contains(ObjectTypeMask::PLAYER) || object_type_mask.is_empty() {
             let blocks = UpdateData::build_blocks(
-                &update_blocks, UnitField::get_limit()+1, PlayerField::get_limit()
+                &update_blocks,
+                UnitField::get_limit() + 1,
+                PlayerField::get_limit(),
             );
             out.player_fields = PlayerField::read_from(blocks).unwrap_or_default();
         }
 
         if object_type_mask.contains(ObjectTypeMask::ITEM) || object_type_mask.is_empty() {
             let blocks = UpdateData::build_blocks(
-                &update_blocks, ObjectField::get_limit()+1, ItemField::get_limit()
+                &update_blocks,
+                ObjectField::get_limit() + 1,
+                ItemField::get_limit(),
             );
             out.item_fields = ItemField::read_from(blocks).unwrap_or_default();
         }
 
         if object_type_mask.contains(ObjectTypeMask::GAMEOBJECT) || object_type_mask.is_empty() {
             let blocks = UpdateData::build_blocks(
-                &update_blocks, ObjectField::get_limit()+1, GameObjectField::get_limit()
+                &update_blocks,
+                ObjectField::get_limit() + 1,
+                GameObjectField::get_limit(),
             );
             out.game_object_fields = GameObjectField::read_from(blocks).unwrap_or_default();
         }
 
         if object_type_mask.contains(ObjectTypeMask::DYNAMICOBJECT) || object_type_mask.is_empty() {
             let blocks = UpdateData::build_blocks(
-                &update_blocks, ObjectField::get_limit()+1, DynamicObjectField::get_limit()
+                &update_blocks,
+                ObjectField::get_limit() + 1,
+                DynamicObjectField::get_limit(),
             );
             out.dynamic_object_fields = DynamicObjectField::read_from(blocks).unwrap_or_default();
         }
 
         if object_type_mask.contains(ObjectTypeMask::CONTAINER) || object_type_mask.is_empty() {
             let blocks = UpdateData::build_blocks(
-                &update_blocks, ItemField::get_limit()+1, ContainerField::get_limit()
+                &update_blocks,
+                ItemField::get_limit() + 1,
+                ContainerField::get_limit(),
             );
             out.container_fields = ContainerField::read_from(blocks).unwrap_or_default();
         }
 
         if object_type_mask.contains(ObjectTypeMask::CORPSE) || object_type_mask.is_empty() {
             let blocks = UpdateData::build_blocks(
-                &update_blocks, ObjectField::get_limit()+1, CorpseField::get_limit()
+                &update_blocks,
+                ObjectField::get_limit() + 1,
+                CorpseField::get_limit(),
             );
             out.corpse_fields = CorpseField::read_from(blocks).unwrap_or_default();
         }
@@ -412,7 +418,7 @@ impl BinWrite for UpdateData {
         &self,
         writer: &mut W,
         endian: Endian,
-        _: Self::Args<'_>
+        _: Self::Args<'_>,
     ) -> BinResult<()> {
         let (update_fields, values_limit) = self.collect_update_fields();
 
@@ -453,37 +459,77 @@ impl CalculateMetadata for UpdateData {
 
         let mut slot = 0u32;
         while slot < values_limit {
-            let consumed_opt = self.try_group::<ObjectField>(
-                &self.object_fields, "object_fields", slot, &present_slots, ctx
-            ).or_else(|| {
-                self.try_group::<UnitField>(
-                    &self.unit_fields, "unit_fields", slot, &present_slots, ctx
+            let consumed_opt = self
+                .try_group::<ObjectField>(
+                    &self.object_fields,
+                    "object_fields",
+                    slot,
+                    &present_slots,
+                    ctx,
                 )
-            }).or_else(|| {
-                self.try_group::<PlayerField>(
-                    &self.player_fields, "player_fields", slot, &present_slots, ctx
-                )
-            }).or_else(|| {
-                self.try_group::<ItemField>(
-                    &self.item_fields, "item_fields", slot, &present_slots, ctx
-                )
-            }).or_else(|| {
-                self.try_group::<ContainerField>(
-                    &self.container_fields, "container_fields", slot, &present_slots, ctx
-                )
-            }).or_else(|| {
-                self.try_group::<GameObjectField>(
-                    &self.game_object_fields, "game_object_fields", slot, &present_slots, ctx
-                )
-            }).or_else(|| {
-                self.try_group::<DynamicObjectField>(
-                    &self.dynamic_object_fields, "dynamic_object_fields", slot, &present_slots, ctx
-                )
-            }).or_else(|| {
-                self.try_group::<CorpseField>(
-                    &self.corpse_fields, "corpse_fields", slot, &present_slots, ctx
-                )
-            });
+                .or_else(|| {
+                    self.try_group::<UnitField>(
+                        &self.unit_fields,
+                        "unit_fields",
+                        slot,
+                        &present_slots,
+                        ctx,
+                    )
+                })
+                .or_else(|| {
+                    self.try_group::<PlayerField>(
+                        &self.player_fields,
+                        "player_fields",
+                        slot,
+                        &present_slots,
+                        ctx,
+                    )
+                })
+                .or_else(|| {
+                    self.try_group::<ItemField>(
+                        &self.item_fields,
+                        "item_fields",
+                        slot,
+                        &present_slots,
+                        ctx,
+                    )
+                })
+                .or_else(|| {
+                    self.try_group::<ContainerField>(
+                        &self.container_fields,
+                        "container_fields",
+                        slot,
+                        &present_slots,
+                        ctx,
+                    )
+                })
+                .or_else(|| {
+                    self.try_group::<GameObjectField>(
+                        &self.game_object_fields,
+                        "game_object_fields",
+                        slot,
+                        &present_slots,
+                        ctx,
+                    )
+                })
+                .or_else(|| {
+                    self.try_group::<DynamicObjectField>(
+                        &self.dynamic_object_fields,
+                        "dynamic_object_fields",
+                        slot,
+                        &present_slots,
+                        ctx,
+                    )
+                })
+                .or_else(|| {
+                    self.try_group::<CorpseField>(
+                        &self.corpse_fields,
+                        "corpse_fields",
+                        slot,
+                        &present_slots,
+                        ctx,
+                    )
+                });
 
             if let Some(consumed) = consumed_opt {
                 slot += consumed;

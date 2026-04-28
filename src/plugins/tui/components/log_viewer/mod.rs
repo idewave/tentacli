@@ -1,4 +1,3 @@
-use std::sync::{Arc};
 use async_event_emitter::AsyncEventEmitter;
 use chrono::Local;
 use crossterm::event::{KeyCode, KeyEvent};
@@ -8,18 +7,19 @@ use ratatui::prelude::{Color, Line, Modifier, Span, Style};
 use ratatui::style::Stylize;
 use ratatui::symbols::border;
 use ratatui::widgets::{Block, ListItem, Paragraph};
+use std::sync::Arc;
 
 pub mod events;
 
-use crate::events_runtime;
 use crate::client::{Echo, MsgType, PacketType};
-use crate::plugins::tui::components::app::events::{OutputEvent};
-use crate::plugins::tui::components::app::{OutputItem};
+use crate::events_runtime;
+use crate::plugins::tui::components::app::OutputItem;
+use crate::plugins::tui::components::app::events::OutputEvent;
 use crate::plugins::tui::components::list::{self, ItemType, StyledList};
 use crate::plugins::tui::events::traits::{
-    EventHandler, EventSystem, EventsRuntime, WithEventSystem
+    EventHandler, EventSystem, EventsRuntime, WithEventSystem,
 };
-use crate::plugins::tui::layout::{split_vertical, Values};
+use crate::plugins::tui::layout::{Values, split_vertical};
 use crate::plugins::tui::theme::{KEY_BTN_BG, KEY_BTN_FG, TITLE_BG, TITLE_FG};
 use crate::plugins::tui::traits::{Focusable, UIComponent};
 
@@ -88,11 +88,17 @@ impl UIComponent for LogViewer {
     fn render(&mut self, frame: &mut Frame, rect: Rect) {
         let [top, bottom] = split_vertical(
             rect,
-            Values::Mins([rect.height.saturating_sub(STATS_BLOCK_HEIGHT), STATS_BLOCK_HEIGHT]),
+            Values::Mins([
+                rect.height.saturating_sub(STATS_BLOCK_HEIGHT),
+                STATS_BLOCK_HEIGHT,
+            ]),
         );
 
         let title = Line::from(
-            Span::raw("LOG OUTPUT").fg(TITLE_FG).bg(TITLE_BG).add_modifier(Modifier::BOLD)
+            Span::raw("LOG OUTPUT")
+                .fg(TITLE_FG)
+                .bg(TITLE_BG)
+                .add_modifier(Modifier::BOLD),
         );
 
         let instructions = Line::from(vec![
@@ -102,15 +108,18 @@ impl UIComponent for LogViewer {
             ),
             Span::styled(
                 "<ArrowDown/Up>",
-                Style::new().fg(KEY_BTN_FG).bg(KEY_BTN_BG).add_modifier(Modifier::BOLD),
+                Style::new()
+                    .fg(KEY_BTN_FG)
+                    .bg(KEY_BTN_BG)
+                    .add_modifier(Modifier::BOLD),
             ),
-            Span::styled(
-                " and ",
-                Style::new().add_modifier(Modifier::BOLD),
-            ),
+            Span::styled(" and ", Style::new().add_modifier(Modifier::BOLD)),
             Span::styled(
                 "<Home/End>",
-                Style::new().fg(KEY_BTN_FG).bg(KEY_BTN_BG).add_modifier(Modifier::BOLD),
+                Style::new()
+                    .fg(KEY_BTN_FG)
+                    .bg(KEY_BTN_BG)
+                    .add_modifier(Modifier::BOLD),
             ),
         ]);
 
@@ -121,10 +130,19 @@ impl UIComponent for LogViewer {
 
         frame.render_widget(block, top);
 
-        self.list.render(frame, top.inner(Margin { horizontal: 1, vertical: 1 }));
+        self.list.render(
+            frame,
+            top.inner(Margin {
+                horizontal: 1,
+                vertical: 1,
+            }),
+        );
 
         let title = Line::from(
-            Span::raw("STATS").fg(TITLE_FG).bg(TITLE_BG).add_modifier(Modifier::BOLD)
+            Span::raw("STATS")
+                .fg(TITLE_FG)
+                .bg(TITLE_BG)
+                .add_modifier(Modifier::BOLD),
         );
 
         let block = Block::bordered()
@@ -145,7 +163,9 @@ impl UIComponent for LogViewer {
             Span::styled(format!("[INFO]:{debg} "), Style::new().fg(Color::Gray)),
             Span::styled(format!("[RECV]:{recv} "), Style::new().fg(Color::Magenta)),
             Span::styled(format!("[SENT]:{sent}"), Style::new().fg(Color::LightBlue)),
-        ])).left_aligned().block(block);
+        ]))
+        .left_aligned()
+        .block(block);
 
         frame.render_widget(paragraph, bottom);
     }
@@ -164,11 +184,10 @@ impl EventHandler<OutputEvent> for LogViewer {
         for item in event.items {
             match item {
                 OutputItem::Message(message) => {
-                    let item = Self::make_item(
-                        ItemType::Message(message.msg_type),
-                        message.text,
-                    );
-                    self.list.add_item(ItemType::Message(message.msg_type), item).await?;
+                    let item = Self::make_item(ItemType::Message(message.msg_type), message.text);
+                    self.list
+                        .add_item(ItemType::Message(message.msg_type), item)
+                        .await?;
                 }
 
                 OutputItem::Packet(packet) => {
@@ -176,7 +195,9 @@ impl EventHandler<OutputEvent> for LogViewer {
                         ItemType::Packet(packet.metadata.packet_type),
                         packet.metadata.packet_name,
                     );
-                    self.list.add_item(ItemType::Packet(packet.metadata.packet_type), item).await?;
+                    self.list
+                        .add_item(ItemType::Packet(packet.metadata.packet_type), item)
+                        .await?;
                 }
             }
         }

@@ -1,10 +1,10 @@
+use async_trait::async_trait;
+use binrw::{BinRead, BinResult, Endian};
+use serde::Serialize;
 use std::collections::HashMap;
 use std::io::{Read, Seek};
 use std::mem::size_of;
 use std::sync::Arc;
-use async_trait::async_trait;
-use binrw::{BinRead, BinResult, Endian};
-use serde::Serialize;
 use tokio::sync::RwLock;
 
 use crate::client::prelude::*;
@@ -126,13 +126,9 @@ impl PacketHandler for Handler {
         let mut outputs = vec![];
         let mut incoming = Incoming::unpack(packet)?;
 
-        if let (
-            Some(offsets),
-            Some(dest),
-        ) = (
-            incoming.linear_path.take(),
-            incoming.destination_point,
-        ) {
+        if let (Some(offsets), Some(dest)) =
+            (incoming.linear_path.take(), incoming.destination_point)
+        {
             let start = incoming.start_point;
 
             let middle = Point3D {
@@ -165,14 +161,11 @@ impl PacketHandler for Handler {
             // Overwrite the original field with absolute world-space points
             incoming.linear_path = Some(linear_points.clone());
 
-            packet.set_json(
-                serialize_packet_json(&incoming)?
-            );
+            packet.set_json(serialize_packet_json(&incoming)?);
 
-            outputs.push(HandlerOutput::Requests(vec![
-                Request::SetContext(Some(Box::new(move |ctx: &mut CtxMap| {
-                    let Some(objects) =
-                        ctx.get_mut::<HashMap<PackedGuid, Object>>() else {
+            outputs.push(HandlerOutput::Requests(vec![Request::SetContext(Some(
+                Box::new(move |ctx: &mut CtxMap| {
+                    let Some(objects) = ctx.get_mut::<HashMap<PackedGuid, Object>>() else {
                         return;
                     };
 
@@ -184,11 +177,12 @@ impl PacketHandler for Handler {
                         ..Default::default()
                     });
 
-                    movement.spline_info
+                    movement
+                        .spline_info
                         .get_or_insert_with(Default::default)
                         .path = world_path.clone();
-                }))),
-            ]))
+                }),
+            ))]))
         }
 
         Ok(outputs)
@@ -220,9 +214,9 @@ impl BinRead for LinearPoint3D {
         let packed: u32 = u32::read_options(reader, Endian::Little, ())?;
 
         // Extract raw fields
-        let raw_x = (packed & 0x7FF) as i32;          // 11 bits
-        let raw_y = ((packed >> 11) & 0x7FF) as i32;  // 11 bits
-        let raw_z = ((packed >> 22) & 0x3FF) as i32;  // 10 bits
+        let raw_x = (packed & 0x7FF) as i32; // 11 bits
+        let raw_y = ((packed >> 11) & 0x7FF) as i32; // 11 bits
+        let raw_z = ((packed >> 22) & 0x3FF) as i32; // 10 bits
 
         // Sign-extend
         let sx = sign_extend(raw_x, 11);

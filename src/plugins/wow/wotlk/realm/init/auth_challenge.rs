@@ -1,5 +1,3 @@
-use std::io::Write;
-use std::sync::Arc;
 use async_trait::async_trait;
 use binrw::{BinRead, BinWrite};
 use byteorder::{LittleEndian, WriteBytesExt};
@@ -7,6 +5,8 @@ use flate2::Compression;
 use flate2::write::ZlibEncoder;
 use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
+use std::io::Write;
+use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::client::prelude::*;
@@ -50,21 +50,31 @@ impl PacketHandler for Handler {
     async fn handle(
         &mut self,
         packet: &mut Packet,
-        context: Arc<RwLock<CtxMap>>
+        context: Arc<RwLock<CtxMap>>,
     ) -> anyhow::Result<Vec<HandlerOutput>> {
-        let session_key = context.read().await.get::<Secret>()
+        let session_key = context
+            .read()
+            .await
+            .get::<Secret>()
             .map(|secret: &Secret| secret.0.to_vec())
             .unwrap_or_else(Vec::new);
 
-        let server_id = context.read().await.get::<ServerId>()
+        let server_id = context
+            .read()
+            .await
+            .get::<ServerId>()
             .map(|server_id: &ServerId| server_id.0 as u32)
             .unwrap_or_default();
 
         let Incoming { server_seed, .. } = Incoming::unpack(packet)?;
 
         let config: Config = ConfigParser::parse_from_file("wow/wotlk/connection.toml")?;
-        let connection = config.connection.ok_or_else(|| anyhow::anyhow!("Missing [connection]"))?;
-        let game = config.game.ok_or_else(|| anyhow::anyhow!("Missing [game]"))?;
+        let connection = config
+            .connection
+            .ok_or_else(|| anyhow::anyhow!("Missing [connection]"))?;
+        let game = config
+            .game
+            .ok_or_else(|| anyhow::anyhow!("Missing [game]"))?;
 
         let config: AddonsConfig = ConfigParser::parse_from_file("wow/wotlk/addons.toml")?;
         let addon_info = AddonInfo::build_addon_info(&config.addons, config.timestamp)?;
@@ -94,14 +104,13 @@ impl PacketHandler for Handler {
                     digest: digest.try_into().unwrap(),
                     addons_count: addon_info.len() as u32,
                     addons: compress(&addon_info)?,
-                }.pack()?
-            ]),
-            HandlerOutput::Messages(vec![
-                Message {
-                    msg_type: MsgType::Success,
-                    text: "Authentication successfully finished".to_string(),
                 }
-            ])
+                .pack()?,
+            ]),
+            HandlerOutput::Messages(vec![Message {
+                msg_type: MsgType::Success,
+                text: "Authentication successfully finished".to_string(),
+            }]),
         ])
     }
 }
@@ -110,7 +119,9 @@ pub fn compress(data: &[u8]) -> anyhow::Result<Vec<u8>> {
     let mut encoder = ZlibEncoder::new(Vec::new(), Compression::best());
     encoder.write_all(data)?;
 
-    encoder.finish().map_err(|e| anyhow::anyhow!("Error on compress: {}", e))
+    encoder
+        .finish()
+        .map_err(|e| anyhow::anyhow!("Error on compress: {}", e))
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -135,7 +146,7 @@ impl AddonInfo {
                              + 4 // urlcrc_crc: u32 (little-endian)
                 )
                 .sum::<usize>()
-                + 4 // trailing timestamp: u32 (little-endian)
+                + 4, // trailing timestamp: u32 (little-endian)
         );
 
         // Write addon count (u32, LE)
@@ -147,9 +158,9 @@ impl AddonInfo {
             out.write_u8(0)?; // NUL terminator
 
             // Fixed-size addon fields
-            out.write_u8(addon.flags)?;                        // flags (u8)
+            out.write_u8(addon.flags)?; // flags (u8)
             out.write_u32::<LittleEndian>(addon.modulus_crc)?; // modulus_crc (u32, LE)
-            out.write_u32::<LittleEndian>(addon.urlcrc_crc)?;  // urlcrc_crc (u32, LE)
+            out.write_u32::<LittleEndian>(addon.urlcrc_crc)?; // urlcrc_crc (u32, LE)
         }
 
         // Final "last modified" timestamp (u32, LE)
@@ -157,7 +168,6 @@ impl AddonInfo {
         Ok(out)
     }
 }
-
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -168,4 +178,6 @@ pub struct AddonsConfig {
     pub timestamp: u32,
 }
 
-fn default_addons_timestamp() -> u32 { 1636457673 }
+fn default_addons_timestamp() -> u32 {
+    1636457673
+}

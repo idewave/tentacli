@@ -1,7 +1,7 @@
-use std::sync::Arc;
 use async_trait::async_trait;
 use binrw::BinWrite;
 use serde::Serialize;
+use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::client::prelude::*;
@@ -19,12 +19,10 @@ impl PacketHandler for Handler {
     async fn handle(
         &mut self,
         _: &mut Packet,
-        _: Arc<RwLock<CtxMap>>
+        _: Arc<RwLock<CtxMap>>,
     ) -> anyhow::Result<Vec<HandlerOutput>> {
-        Ok(vec![
-            HandlerOutput::Packets(vec![
-                Outgoing::default().pack()?
-            ])
-        ])
+        Ok(vec![HandlerOutput::Packets(vec![
+            Outgoing::default().pack()?,
+        ])])
     }
 }

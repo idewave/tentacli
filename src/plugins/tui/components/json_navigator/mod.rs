@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use async_event_emitter::AsyncEventEmitter;
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::Frame;
@@ -7,23 +6,24 @@ use ratatui::prelude::{Color, Line, Modifier, Span, Style};
 use ratatui::style::Stylize;
 use ratatui::symbols::border;
 use ratatui::widgets::{Block, Paragraph, Wrap};
+use std::sync::Arc;
 
 mod cursor;
 pub mod events;
 mod helpers;
 
-use crate::events_runtime;
 use crate::client::Echo;
+use crate::events_runtime;
 use crate::plugins::tui::components::app::OutputItem;
-use crate::plugins::tui::components::json_navigator::helpers::{
-    aggregate_field_span, clamp_scroll, ensure_visible, format_json,
-    hex_with_highlight, json_with_highlight
-};
 use crate::plugins::tui::components::json_navigator::cursor::JsonCursor;
-use crate::plugins::tui::events::traits::{
-    EventHandler, EventSystem, WithEventSystem, EventsRuntime
+use crate::plugins::tui::components::json_navigator::helpers::{
+    aggregate_field_span, clamp_scroll, ensure_visible, format_json, hex_with_highlight,
+    json_with_highlight,
 };
-use crate::plugins::tui::layout::{split_horizontal, Values};
+use crate::plugins::tui::events::traits::{
+    EventHandler, EventSystem, EventsRuntime, WithEventSystem,
+};
+use crate::plugins::tui::layout::{Values, split_horizontal};
 use crate::plugins::tui::theme::{KEY_BTN_BG, KEY_BTN_FG, TITLE_BG, TITLE_FG};
 use crate::plugins::tui::traits::{Focusable, UIComponent};
 
@@ -43,8 +43,7 @@ impl UIComponent for JsonNavigator {
         let total = rect.width;
         let hex_width = 58.min(total / 2).max(24);
 
-        let [left, right] =
-            split_horizontal(rect, Values::Lengths([total - hex_width, hex_width]));
+        let [left, right] = split_horizontal(rect, Values::Lengths([total - hex_width, hex_width]));
 
         let instructions = if self.nav_active {
             Line::from(vec![
@@ -75,7 +74,10 @@ impl UIComponent for JsonNavigator {
             ])
         } else {
             Line::from(vec![
-                Span::styled("To enter NAV mode use ", Style::new().add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "To enter NAV mode use ",
+                    Style::new().add_modifier(Modifier::BOLD),
+                ),
                 Span::styled(
                     "<ArrowRight>",
                     Style::new()
@@ -91,22 +93,17 @@ impl UIComponent for JsonNavigator {
 
         let path_line = if show_path {
             let path_title = if self.nav_active {
-                self.cursor
-                    .current_path()
-                    .unwrap_or("/".into())
-                    .to_string()
+                self.cursor.current_path().unwrap_or("/".into()).to_string()
             } else {
                 "/".to_string()
             };
 
-            Some(Line::from(
-                Span::styled(
-                    format!(" {} ", path_title),
-                    Style::default()
-                        .fg(Color::LightGreen)
-                        .add_modifier(Modifier::BOLD),
-                ),
-            ))
+            Some(Line::from(Span::styled(
+                format!(" {} ", path_title),
+                Style::default()
+                    .fg(Color::LightGreen)
+                    .add_modifier(Modifier::BOLD),
+            )))
         } else {
             None
         };
@@ -160,26 +157,23 @@ impl UIComponent for JsonNavigator {
             horizontal: 1,
         });
 
-        let Some(item) = &self.output_item else { return };
+        let Some(item) = &self.output_item else {
+            return;
+        };
 
         match item {
             OutputItem::Message(msg) => {
                 frame.render_widget(
-                    Paragraph::new(
-                        Span::styled(
-                            msg.text.clone(),
-                            Style::new().fg(Color::White).add_modifier(Modifier::BOLD),
-                        ),
-                    )
-                        .wrap(Wrap { trim: false }),
+                    Paragraph::new(Span::styled(
+                        msg.text.clone(),
+                        Style::new().fg(Color::White).add_modifier(Modifier::BOLD),
+                    ))
+                    .wrap(Wrap { trim: false }),
                     left_inner,
                 );
 
-                frame.render_widget(
-                    Paragraph::new(Line::from("")),
-                    right_inner,
-                );
-            },
+                frame.render_widget(Paragraph::new(Line::from("")), right_inner);
+            }
             OutputItem::Packet(packet) => {
                 let json = format_json(&packet.content.json);
                 let highlight = if self.nav_active {
@@ -224,14 +218,14 @@ impl UIComponent for JsonNavigator {
                 frame.render_widget(json_paragraph, left_inner);
 
                 let hex_highlight = if self.nav_active {
-                    self.cursor
-                        .current_path()
-                        .and_then(|p| {
-                            packet.metadata.offsets_info
-                                .get(&p)
-                                .cloned()
-                                .or_else(|| aggregate_field_span(&packet.metadata.offsets_info, &p))
-                        })
+                    self.cursor.current_path().and_then(|p| {
+                        packet
+                            .metadata
+                            .offsets_info
+                            .get(&p)
+                            .cloned()
+                            .or_else(|| aggregate_field_span(&packet.metadata.offsets_info, &p))
+                    })
                 } else {
                     None
                 };
@@ -300,7 +294,7 @@ impl EventHandler<KeyEvent> for JsonNavigator {
                         self.hex_scroll = self.hex_scroll.saturating_sub(1);
                     }
                 }
-            },
+            }
             KeyCode::Down => {
                 if self.nav_active {
                     moved = self.cursor.step_forward().is_some();
@@ -309,7 +303,7 @@ impl EventHandler<KeyEvent> for JsonNavigator {
                         self.hex_scroll = self.hex_scroll.saturating_add(1);
                     }
                 }
-            },
+            }
             KeyCode::Left => {
                 if self.cursor.is_at_root() {
                     self.nav_active = false;
@@ -320,11 +314,11 @@ impl EventHandler<KeyEvent> for JsonNavigator {
                     self.cursor.step_out();
                     moved = self.cursor.state.path_len() != before;
                 }
-            },
+            }
             KeyCode::Right => {
                 self.cursor.step_into();
                 moved = self.cursor.step_forward().is_some();
-            },
+            }
             _ => {}
         }
 

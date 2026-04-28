@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use async_event_emitter::AsyncEventEmitter;
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::Frame;
@@ -8,14 +7,17 @@ use ratatui::style::{Color, Modifier, Style, Stylize};
 use ratatui::symbols::border;
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Clear, ListItem};
+use std::sync::Arc;
 
 pub mod events;
 
-use crate::events_runtime;
 use crate::client::prelude::*;
+use crate::events_runtime;
 use crate::plugins::tui::components::app::events::ChoicesEvent;
 use crate::plugins::tui::components::list::{ItemType, StyledList};
-use crate::plugins::tui::events::traits::{EventHandler, EventSystem, EventsRuntime, WithEventSystem};
+use crate::plugins::tui::events::traits::{
+    EventHandler, EventSystem, EventsRuntime, WithEventSystem,
+};
 use crate::plugins::tui::layout::center;
 use crate::plugins::tui::theme::{KEY_BTN_BG, KEY_BTN_FG};
 use crate::plugins::tui::traits::{Focusable, UIComponent};
@@ -30,17 +32,18 @@ pub struct Modal {
 
 impl Modal {
     pub fn set_items(&mut self, items: ChoiceItems) {
-        self.list.set_items(ItemType::Message(MsgType::default()), items
-            .iter()
-            .map(|item| ListItem::new(
-                Line::from(vec![
-                    Span::styled(
+        self.list.set_items(
+            ItemType::Message(MsgType::default()),
+            items
+                .iter()
+                .map(|item| {
+                    ListItem::new(Line::from(vec![Span::styled(
                         item.to_string(),
-                        Style::new().fg(Color::Magenta).add_modifier(Modifier::BOLD)
-                    )
-                ]))
-            )
-            .collect());
+                        Style::new().fg(Color::Magenta).add_modifier(Modifier::BOLD),
+                    )]))
+                })
+                .collect(),
+        );
     }
 
     pub fn open(&mut self) {
@@ -61,15 +64,24 @@ impl UIComponent for Modal {
         if self.opened() {
             let instructions = {
                 let mut items = vec![
-                    Span::styled("To navigate use ", Style::new().add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        "To navigate use ",
+                        Style::new().add_modifier(Modifier::BOLD),
+                    ),
                     Span::styled(
                         "<ArrowDn>",
-                        Style::new().fg(KEY_BTN_FG).bg(KEY_BTN_BG).add_modifier(Modifier::BOLD),
+                        Style::new()
+                            .fg(KEY_BTN_FG)
+                            .bg(KEY_BTN_BG)
+                            .add_modifier(Modifier::BOLD),
                     ),
                     Span::styled(" and ", Style::new().add_modifier(Modifier::BOLD)),
                     Span::styled(
                         "<ArrowUp>",
-                        Style::new().fg(KEY_BTN_FG).bg(KEY_BTN_BG).add_modifier(Modifier::BOLD),
+                        Style::new()
+                            .fg(KEY_BTN_FG)
+                            .bg(KEY_BTN_BG)
+                            .add_modifier(Modifier::BOLD),
                     ),
                 ];
 
@@ -81,7 +93,10 @@ impl UIComponent for Modal {
                         ),
                         Span::styled(
                             "<Enter>",
-                            Style::new().fg(KEY_BTN_FG).bg(KEY_BTN_BG).add_modifier(Modifier::BOLD),
+                            Style::new()
+                                .fg(KEY_BTN_FG)
+                                .bg(KEY_BTN_BG)
+                                .add_modifier(Modifier::BOLD),
                         ),
                     ]);
                 }
@@ -101,7 +116,9 @@ impl UIComponent for Modal {
 
             let title = Line::from(
                 Span::raw(&self.title)
-                    .fg(Color::LightRed).bg(LightYellow).add_modifier(Modifier::BOLD)
+                    .fg(Color::LightRed)
+                    .bg(LightYellow)
+                    .add_modifier(Modifier::BOLD),
             );
 
             let block = Block::bordered()

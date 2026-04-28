@@ -23,7 +23,9 @@ impl Srp {
             BigInt::from_bytes_le(Sign::Plus, &private_ephemeral)
         };
 
-        self.public_ephemeral = self.generator.modpow(&self.private_ephemeral, &self.modulus);
+        self.public_ephemeral = self
+            .generator
+            .modpow(&self.private_ephemeral, &self.modulus);
         self.server_ephemeral = BigInt::from_bytes_le(Sign::Plus, server_ephemeral);
         self.salt = salt;
     }
@@ -54,14 +56,9 @@ impl Srp {
     pub fn calculate_session_key(&mut self, account: &str, password: &str) {
         let salt = self.salt;
         let x = self.calculate_x(account, password, &salt);
-        let verifier = self.generator.modpow(
-            &x,
-            &self.modulus,
-        );
+        let verifier = self.generator.modpow(&x, &self.modulus);
 
-        let mut session_key = Self::calculate_interleaved(
-            self.calculate_s(x, verifier)
-        );
+        let mut session_key = Self::calculate_interleaved(self.calculate_s(x, verifier));
 
         // sometimes session key has trailing 0, but on mangos side there was no trailing zero
         // so, actually, session key can be less than 40 bytes
@@ -91,10 +88,7 @@ impl Srp {
     }
 
     fn calculate_account_hash(account: &str) -> Vec<u8> {
-        Sha1::new()
-            .chain(account.as_bytes())
-            .finalize()
-            .to_vec()
+        Sha1::new().chain(account.as_bytes()).finalize().to_vec()
     }
 
     fn calculate_xor_hash(&mut self) -> Vec<u8> {
@@ -138,19 +132,15 @@ impl Srp {
         const K: u8 = 3;
         let u = self.calculate_u();
         let mut s = &self.server_ephemeral - K.to_bigint().unwrap() * verifier;
-        s = s.modpow(
-            &(&self.private_ephemeral + u * x),
-            &self.modulus,
-        );
+        s = s.modpow(&(&self.private_ephemeral + u * x), &self.modulus);
         s
     }
 
     fn calculate_interleaved(s: BigInt) -> Vec<u8> {
-        let (even, odd): (Vec<_>, Vec<_>) =
-            Self::pad_to_32_bytes(s.to_bytes_le().1)
-                .into_iter()
-                .enumerate()
-                .partition(|(i, _)| i % 2 == 0);
+        let (even, odd): (Vec<_>, Vec<_>) = Self::pad_to_32_bytes(s.to_bytes_le().1)
+            .into_iter()
+            .enumerate()
+            .partition(|(i, _)| i % 2 == 0);
 
         let part1 = even.iter().map(|(_, v)| *v).collect::<Vec<u8>>();
         let part2 = odd.iter().map(|(_, v)| *v).collect::<Vec<u8>>();

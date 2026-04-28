@@ -1,11 +1,11 @@
-use std::collections::HashMap;
 use ratatui::prelude::{Color, Line, Span, Style};
 use serde_json::Value;
+use std::collections::HashMap;
 
 use crate::client::MetadataValue;
 use crate::plugins::tui::components::json_navigator::cursor::ValueSpan;
 use crate::plugins::tui::theme::{
-    HEX_HIGHLIGHT_BG, HEX_HIGHLIGHT_FG, JSON_HIGHLIGHT_BG, JSON_HIGHLIGHT_FG
+    HEX_HIGHLIGHT_BG, HEX_HIGHLIGHT_FG, JSON_HIGHLIGHT_BG, JSON_HIGHLIGHT_FG,
 };
 
 pub fn format_json(raw: &str) -> String {
@@ -57,11 +57,7 @@ fn format_value(value: &Value, indent: usize) -> String {
                 let len = arr.len();
 
                 for (i, v) in arr.iter().enumerate() {
-                    out.push_str(&format!(
-                        "{}  {}",
-                        pad,
-                        format_value(v, indent + 1)
-                    ));
+                    out.push_str(&format!("{}  {}", pad, format_value(v, indent + 1)));
                     if i + 1 < len {
                         out.push(',');
                     }
@@ -104,10 +100,7 @@ fn format_array(arr: &[Value], indent: usize) -> String {
     out
 }
 
-pub fn hex_with_highlight(
-    data: &[u8],
-    offset: Option<MetadataValue>,
-) -> Vec<Line<'_>> {
+pub fn hex_with_highlight(data: &[u8], offset: Option<MetadataValue>) -> Vec<Line<'_>> {
     const BYTES_PER_LINE: usize = 16;
 
     let (hl_start, hl_end) = offset
@@ -141,7 +134,11 @@ pub fn hex_with_highlight(
             // Render byte (highlighted or normal)
             spans.push(Span::styled(
                 format!("{:02x}", byte),
-                if is_byte_highlighted { highlight_style } else { normal_style },
+                if is_byte_highlighted {
+                    highlight_style
+                } else {
+                    normal_style
+                },
             ));
 
             // Render space AFTER the byte:
@@ -231,10 +228,8 @@ pub fn json_with_highlight(
             highlight_start.get_or_insert(line_idx);
             highlight_end = Some(line_idx);
 
-            let local_hl_start =
-                hl_start.saturating_sub(line_start).min(line_len);
-            let local_hl_end =
-                hl_end.saturating_sub(line_start).min(line_len);
+            let local_hl_start = hl_start.saturating_sub(line_start).min(line_len);
+            let local_hl_end = hl_end.saturating_sub(line_start).min(line_len);
 
             if local_hl_start > 0 {
                 spans.push(Span::raw(&raw_line[..local_hl_start]));
@@ -266,12 +261,7 @@ pub fn json_with_highlight(
     (lines, highlight_range)
 }
 
-pub fn ensure_visible(
-    scroll: &mut u16,
-    start: usize,
-    end: usize,
-    view_height: usize,
-) {
+pub fn ensure_visible(scroll: &mut u16, start: usize, end: usize, view_height: usize) {
     if view_height == 0 {
         return;
     }
@@ -293,12 +283,7 @@ pub fn ensure_visible(
     }
 }
 
-pub fn clamp_scroll(
-    scroll: &mut u16,
-    node_start: usize,
-    node_end: usize,
-    view_height: usize,
-) {
+pub fn clamp_scroll(scroll: &mut u16, node_start: usize, node_end: usize, view_height: usize) {
     if view_height == 0 {
         return;
     }

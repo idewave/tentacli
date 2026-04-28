@@ -1,22 +1,22 @@
+use anyhow::Context;
 use async_broadcast::broadcast;
+use cfg_if::cfg_if;
+use futures::StreamExt;
+use futures::stream::FuturesUnordered;
+use serde::de::DeserializeOwned;
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use anyhow::Context;
-use cfg_if::cfg_if;
-use futures::stream::FuturesUnordered;
-use futures::StreamExt;
-use serde::de::DeserializeOwned;
-use tokio::sync::mpsc::{self, Sender};
 use tokio::sync::RwLock;
+use tokio::sync::mpsc::{self, Sender};
 use tokio_util::sync::CancellationToken;
 
-pub mod plugin;
 pub mod packet;
-pub mod types;
-mod transport;
+pub mod plugin;
 pub mod prelude;
+mod transport;
+pub mod types;
 
 pub use prelude::*;
 
@@ -40,6 +40,8 @@ cfg_if! {
     if #[cfg(feature = "wow-wotlk")] {
         #[cfg(not(feature = "replay"))]
         use crate::plugins::wow::wotlk::login;
+        #[cfg(not(feature = "replay"))]
+        use crate::plugins::wow::logger::Logger;
         use crate::plugins::wow::wotlk::realm;
 
         // network plugins
@@ -55,6 +57,8 @@ cfg_if! {
         #[cfg(not(feature = "replay"))]
         register_plugin!(login::Processors, dyn ProcessorPlugin);
         register_plugin!(realm::Processors, dyn ProcessorPlugin);
+        #[cfg(not(feature = "replay"))]
+        register_plugin!(Logger, dyn CorePlugin);
     }
 }
 
@@ -78,16 +82,22 @@ cfg_if! {
     }
 }
 
+cfg_if! {
+    if #[cfg(feature = "websocket")] {
+        use crate::plugins::websocket::WebSocket;
+        register_plugin!(WebSocket, dyn CorePlugin);
+    }
+}
+
 register_plugin!(crate::plugins::core::Core, dyn CorePlugin);
 
 pub struct Client;
 impl Client {
     fn collect_labels() -> (Vec<ServerLabel>, Vec<ServerLabel>) {
-        let network_labels: Vec<ServerLabel> =
-            inventory::iter::<PluginLoader<dyn NetworkPlugin>>
-                .into_iter()
-                .map(|loader| (loader.load)().label())
-                .collect();
+        let network_labels: Vec<ServerLabel> = inventory::iter::<PluginLoader<dyn NetworkPlugin>>
+            .into_iter()
+            .map(|loader| (loader.load)().label())
+            .collect();
 
         let processor_labels: Vec<ServerLabel> =
             inventory::iter::<PluginLoader<dyn ProcessorPlugin>>
@@ -122,9 +132,7 @@ impl Client {
     }
 
     pub async fn run(context: Option<SharedContext>) -> anyhow::Result<()> {
-        let context = context.unwrap_or_else(|| {
-            Arc::new(RwLock::new(CtxMap::default()))
-        });
+        let context = context.unwrap_or_else(|| Arc::new(RwLock::new(CtxMap::default())));
 
         // Root cancellation token for the whole system
         let shutdown = CancellationToken::new();
@@ -138,15 +146,14 @@ impl Client {
         // Collect and validate plugin labels
         let (network_labels, processor_labels) = Client::collect_labels();
 
-        Client::validate_labels(&network_labels, &processor_labels)
-            .map_err(|err| match err {
-                ValidationError::DuplicateNetworkLabel(label) => {
-                    anyhow::anyhow!("Duplicate NetworkPlugin label \"{}\"", label)
-                }
-                ValidationError::MissingNetworkForProcessor(label) => {
-                    anyhow::anyhow!("No NetworkPlugin was registered with label \"{}\"", label)
-                }
-            })?;
+        Client::validate_labels(&network_labels, &processor_labels).map_err(|err| match err {
+            ValidationError::DuplicateNetworkLabel(label) => {
+                anyhow::anyhow!("Duplicate NetworkPlugin label \"{}\"", label)
+            }
+            ValidationError::MissingNetworkForProcessor(label) => {
+                anyhow::anyhow!("No NetworkPlugin was registered with label \"{}\"", label)
+            }
+        })?;
 
         // Start network plugins
         for loader in inventory::iter::<PluginLoader<dyn NetworkPlugin>> {
@@ -175,14 +182,12 @@ impl Client {
         // Start core plugins
         for loader in inventory::iter::<PluginLoader<dyn CorePlugin>> {
             let plugin = (loader.load)();
-            tasks.extend(
-                plugin.get_tasks(
-                    broadcast_rx.clone(),
-                    echo_senders.clone(),
-                    shutdown.clone(),
-                    context.clone(),
-                )?
-            );
+            tasks.extend(plugin.get_tasks(
+                broadcast_rx.clone(),
+                echo_senders.clone(),
+                shutdown.clone(),
+                context.clone(),
+            )?);
         }
 
         // Drive all tasks and broadcast errors
@@ -196,14 +201,10 @@ impl Client {
             };
 
             if let Some(message) = err_message {
-                let payload = Arc::new(vec![
-                    HandlerOutput::Messages(vec![
-                        Message {
-                            msg_type: MsgType::Error,
-                            text: message,
-                        }
-                    ]),
-                ]);
+                let payload = Arc::new(vec![HandlerOutput::Messages(vec![Message {
+                    msg_type: MsgType::Error,
+                    text: message,
+                }])]);
 
                 for label in network_labels.iter().copied() {
                     broadcast_tx
@@ -285,8 +286,7 @@ impl Client {
             }
         }
 
-        let network_labels: Vec<ServerLabel> =
-            snapshot.networks.iter().map(|(l, _)| *l).collect();
+        let network_labels: Vec<ServerLabel> = snapshot.networks.iter().map(|(l, _)| *l).collect();
 
         let processor_labels: Vec<ServerLabel> =
             snapshot.processors.iter().map(|(l, _)| *l).collect();
@@ -466,8 +466,7 @@ port = 8080
 
         let _guard = EnvGuard::set("TENTACLI_CONFIG_DIR", temp_dir.path());
 
-        let result: TestConfig =
-            ConfigParser::parse_from_file("test.toml").expect("parse failed");
+        let result: TestConfig = ConfigParser::parse_from_file("test.toml").expect("parse failed");
 
         assert_eq!(
             result,
@@ -497,10 +496,7 @@ port = 8080
 
         let result = Client::validate_labels(&networks, &processors);
 
-        assert_eq!(
-            result,
-            Err(ValidationError::DuplicateNetworkLabel("login"))
-        );
+        assert_eq!(result, Err(ValidationError::DuplicateNetworkLabel("login")));
     }
 
     #[test]

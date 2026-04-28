@@ -1,12 +1,12 @@
 use async_trait::async_trait;
 
-mod network;
-mod rc4;
 mod chat;
 mod init;
+mod network;
 mod object;
-mod spell;
 mod player;
+mod rc4;
+mod spell;
 
 use crate::client::prelude::*;
 use crate::plugins::wow::wotlk::realm::chat::ChatProcessor;

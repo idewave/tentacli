@@ -1,7 +1,7 @@
-use std::collections::BTreeMap;
-use std::ops::Range;
 use anyhow::anyhow;
 use serde::Serialize;
+use std::collections::BTreeMap;
+use std::ops::Range;
 
 pub trait FieldEnum: Ord + Clone + Sized {
     fn get_field_name(&self) -> String;
@@ -185,7 +185,6 @@ pub trait FieldEnum: Ord + Clone + Sized {
         Ok(value)
     }
 }
-
 
 #[macro_export]
 macro_rules! fields {
@@ -635,21 +634,23 @@ impl FieldValue {
             FieldValue::LongArray(v) => 8 * v.len(),
 
             // Custom = sum of children (structural, not "present-only")
-            FieldValue::Custom(values) => {
-                values.iter().map(|v| v.len()).sum()
-            }
+            FieldValue::Custom(values) => values.iter().map(|v| v.len()).sum(),
 
             // CustomArray = rows * sum(slot_size per row)
             // Each slot always occupies space even if it's None
             FieldValue::CustomArray(rows) => {
-                rows.iter().map(|row| {
-                    row.iter().map(|slot| {
-                        match slot {
-                            Some(v) => v.len(),
-                            None => 4, // minimum slot size in UpdateObject (u32)
-                        }
-                    }).sum::<usize>()
-                }).sum()
+                rows.iter()
+                    .map(|row| {
+                        row.iter()
+                            .map(|slot| {
+                                match slot {
+                                    Some(v) => v.len(),
+                                    None => 4, // minimum slot size in UpdateObject (u32)
+                                }
+                            })
+                            .sum::<usize>()
+                    })
+                    .sum()
             }
 
             FieldValue::None => 0,
@@ -672,8 +673,7 @@ impl FieldValue {
     #[inline]
     pub fn element_stride_slots(&self) -> usize {
         match self {
-            FieldValue::Long(_)
-            | FieldValue::LongArray(_) => 2,
+            FieldValue::Long(_) | FieldValue::LongArray(_) => 2,
             _ => 1,
         }
     }

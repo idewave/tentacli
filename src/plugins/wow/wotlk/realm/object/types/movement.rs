@@ -42,7 +42,6 @@ pub struct Movement {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub game_object_position: Option<OrientedPoint3D>,
 
-
     #[br(if(
         !object_update_flags.contains(ObjectUpdateFlags::LIVING) &&
         object_update_flags.contains(ObjectUpdateFlags::HAS_POSITION) &&
@@ -203,11 +202,23 @@ impl SplineInfo {
         (flags,): (SplineFlags,),
     ) -> BinResult<Option<SplineFacing>> {
         if flags.contains(SplineFlags::FINAL_ANGLE) {
-            Ok(Some(SplineFacing::Angle(f32::read_options(reader, endian, ())?)))
+            Ok(Some(SplineFacing::Angle(f32::read_options(
+                reader,
+                endian,
+                (),
+            )?)))
         } else if flags.contains(SplineFlags::FINAL_TARGET) {
-            Ok(Some(SplineFacing::Target(u64::read_options(reader, endian, ())?)))
+            Ok(Some(SplineFacing::Target(u64::read_options(
+                reader,
+                endian,
+                (),
+            )?)))
         } else if flags.contains(SplineFlags::FINAL_POINT) {
-            Ok(Some(SplineFacing::Point(Point3D::read_options(reader, endian, ())?)))
+            Ok(Some(SplineFacing::Point(Point3D::read_options(
+                reader,
+                endian,
+                (),
+            )?)))
         } else {
             Ok(None)
         }
@@ -286,8 +297,19 @@ pub struct OrientedPoint3D {
 }
 
 #[derive(
-    BinRead, BinWrite, IntoPrimitive, TryFromPrimitive, Serialize,
-    Copy, Clone, Debug, PartialEq, Eq, Hash, Ord, PartialOrd,
+    BinRead,
+    BinWrite,
+    IntoPrimitive,
+    TryFromPrimitive,
+    Serialize,
+    Copy,
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    Hash,
+    Ord,
+    PartialOrd,
 )]
 #[repr(u8)]
 #[br(repr = u8)]
@@ -308,15 +330,15 @@ impl core::fmt::Display for UnitMoveType {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         use UnitMoveType::*;
         let s = match self {
-            Walk       => "Walk",
-            Run        => "Run",
-            RunBack    => "RunBack",
-            Swim       => "Swim",
-            SwimBack   => "SwimBack",
-            TurnRate   => "TurnRate",
-            Flight     => "Flight",
+            Walk => "Walk",
+            Run => "Run",
+            RunBack => "RunBack",
+            Swim => "Swim",
+            SwimBack => "SwimBack",
+            TurnRate => "TurnRate",
+            Flight => "Flight",
             FlightBack => "FlightBack",
-            PitchRate  => "PitchRate",
+            PitchRate => "PitchRate",
         };
         f.write_str(s)
     }

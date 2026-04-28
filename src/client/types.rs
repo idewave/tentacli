@@ -1,9 +1,9 @@
-use std::collections::BTreeMap;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, Ordering};
 use anymap2::Map;
 use async_broadcast::RecvError;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use tokio::task::JoinHandle;
 
 use crate::client::packet::Packet;
@@ -27,10 +27,7 @@ pub type Task = JoinHandle<anyhow::Result<()>>;
 pub type ServerLabel = &'static str;
 
 pub type Callback =
-    Box<dyn FnOnce(Vec<usize>) -> anyhow::Result<Vec<HandlerOutput>>
-        + Send
-        + Sync
-        + 'static>;
+    Box<dyn FnOnce(Vec<usize>) -> anyhow::Result<Vec<HandlerOutput>> + Send + Sync + 'static>;
 
 pub type CtxMap = Map<dyn anymap2::any::Any + Send + Sync>;
 pub type ContextCallback = Box<dyn FnOnce(&mut CtxMap) + Sync + Send>;
@@ -105,10 +102,7 @@ pub struct OrderedOutput {
 }
 
 impl OrderedOutput {
-    pub fn new(
-        label: ServerLabel,
-        outputs: Arc<Vec<HandlerOutput>>,
-    ) -> Self {
+    pub fn new(label: ServerLabel, outputs: Arc<Vec<HandlerOutput>>) -> Self {
         Self {
             seq: next_seq(),
             label,

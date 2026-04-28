@@ -1,11 +1,11 @@
-use std::sync::Arc;
 use async_trait::async_trait;
-use binrw::{BinRead};
+use binrw::BinRead;
 use serde::Serialize;
+use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use crate::{enum_field};
 use crate::client::prelude::*;
+use crate::enum_field;
 
 #[derive(Packet, BinRead, Serialize, FieldsMetadata)]
 #[br(little)]
@@ -21,7 +21,7 @@ impl PacketHandler for Handler {
     async fn handle(
         &mut self,
         packet: &mut Packet,
-        _: Arc<RwLock<CtxMap>>
+        _: Arc<RwLock<CtxMap>>,
     ) -> anyhow::Result<Vec<HandlerOutput>> {
         let _ = Incoming::unpack(packet)?;
         Ok(vec![])

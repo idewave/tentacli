@@ -4,15 +4,15 @@ mod auth;
 mod network;
 mod srp;
 
-pub use auth::validate_proof::Secret;
-pub use auth::select_realm::ServerId;
 use crate::client::{
-    BytesRead, ConfigParser, NetworkPlugin, OutputBuilder, Processor, ProcessorPlugin,
-    Protocol, Serializer, ServerLabel
+    BytesRead, ConfigParser, NetworkPlugin, OutputBuilder, Processor, ProcessorPlugin, Protocol,
+    Serializer, ServerLabel,
 };
 use crate::plugins::wow::wotlk::config::Config;
-use crate::plugins::wow::wotlk::login::auth::{login_challenge, AuthProcessor};
+use crate::plugins::wow::wotlk::login::auth::{AuthProcessor, login_challenge};
 use crate::plugins::wow::wotlk::login::network::{PacketReader, PacketSerializer};
+pub use auth::select_realm::ServerId;
+pub use auth::validate_proof::Secret;
 
 const PLUGIN_LABEL: &str = "login";
 
@@ -47,7 +47,6 @@ impl NetworkPlugin for LoginPlugin {
         } else {
             Ok(None)
         }
-
     }
 }
 

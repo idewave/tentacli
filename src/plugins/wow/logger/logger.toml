@@ -1,0 +1,7 @@
+logs_dir = "."
+# false = disabled (no files/no logging), true = enabled.
+enabled = false
+# Flush interval to disk in milliseconds. Useful for slower disks/HDDs: increase value to reduce I/O pressure, decrease for faster visibility in file (0 = only flush on rotation/shutdown).
+flush_interval_ms = 200
+# 0 = always write to one file; > 0 = rotate into fragments when size exceeds this value (MiB).
+max_file_size = 0

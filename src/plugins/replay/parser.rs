@@ -31,7 +31,10 @@ impl WorldLogReader {
         Ok(Self {
             mmap,
             offset: 0,
-            opcode_filter: opcode_filter.iter().map(|opcode| opcode.as_bytes().to_vec()).collect(),
+            opcode_filter: opcode_filter
+                .iter()
+                .map(|opcode| opcode.as_bytes().to_vec())
+                .collect(),
             dedup_enabled,
             payload_buffer: Vec::new(),
             current_timestamp: None,
@@ -46,8 +49,8 @@ impl WorldLogReader {
             }
 
             let entry_start_offset = self.offset;
-            let next_entry_start_offset =
-                find_next_entry_start(&self.mmap, entry_start_offset + 1).unwrap_or(self.mmap.len());
+            let next_entry_start_offset = find_next_entry_start(&self.mmap, entry_start_offset + 1)
+                .unwrap_or(self.mmap.len());
 
             let block = &self.mmap[entry_start_offset..next_entry_start_offset];
 
@@ -61,9 +64,9 @@ impl WorldLogReader {
 
             if !self.opcode_filter.is_empty()
                 && !self
-                .opcode_filter
-                .iter()
-                .any(|filter| filter.as_slice() == opcode_name_bytes)
+                    .opcode_filter
+                    .iter()
+                    .any(|filter| filter.as_slice() == opcode_name_bytes)
             {
                 self.offset = next_entry_start_offset;
                 continue;
@@ -84,7 +87,8 @@ impl WorldLogReader {
                             self.seen_in_second.clear();
                         }
 
-                        let signature = dedup_signature_fnv1a(ts, opcode_code, &self.payload_buffer);
+                        let signature =
+                            dedup_signature_fnv1a(ts, opcode_code, &self.payload_buffer);
                         self.seen_in_second.insert(signature)
                     }
                     None => true,
@@ -187,7 +191,10 @@ impl WorldLogReader {
         let newline_pos = memchr(b'\n', trimmed_block)?;
         let mut ts_bytes = &trimmed_block[..newline_pos];
 
-        while ts_bytes.last().is_some_and(|b| *b == b'\r' || *b == b' ' || *b == b'\t') {
+        while ts_bytes
+            .last()
+            .is_some_and(|b| *b == b'\r' || *b == b' ' || *b == b'\t')
+        {
             ts_bytes = &ts_bytes[..ts_bytes.len() - 1];
         }
 
@@ -204,11 +211,11 @@ fn find_next_entry_start(haystack: &[u8], search_from: usize) -> Option<usize> {
 
     for i in 0..slice.len().saturating_sub(19) {
         if slice[i].is_ascii_digit()
-            && &slice[i+4..i+5] == b"-"
-            && &slice[i+7..i+8] == b"-"
-            && &slice[i+10..i+11] == b" "
-            && &slice[i+13..i+14] == b":"
-            && &slice[i+16..i+17] == b":"
+            && &slice[i + 4..i + 5] == b"-"
+            && &slice[i + 7..i + 8] == b"-"
+            && &slice[i + 10..i + 11] == b" "
+            && &slice[i + 13..i + 14] == b":"
+            && &slice[i + 16..i + 17] == b":"
         {
             return Some(search_from + i);
         }

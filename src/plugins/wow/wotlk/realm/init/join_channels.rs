@@ -1,7 +1,7 @@
-use std::sync::Arc;
 use async_trait::async_trait;
 use binrw::BinWrite;
 use serde::Serialize;
+use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::client::prelude::*;
@@ -29,22 +29,21 @@ impl PacketHandler for Handler {
     async fn handle(
         &mut self,
         _: &mut Packet,
-        _: Arc<RwLock<CtxMap>>
+        _: Arc<RwLock<CtxMap>>,
     ) -> anyhow::Result<Vec<HandlerOutput>> {
         let make_packet = |channel_id: u32, channel_name: &str| -> anyhow::Result<Packet> {
             Outgoing {
                 channel_id,
                 channel_name: channel_name.into(),
                 ..Default::default()
-            }.pack()
+            }
+            .pack()
         };
 
-        Ok(vec![
-            HandlerOutput::Packets(vec![
-                make_packet(COMMON_CHANNEL_ID, "Common")?,
-                make_packet(LFG_CHANNEL_ID, "LookingForGroup")?,
-                make_packet(TRADE_CHANNEL_ID, "Trade")?,
-            ])
-        ])
+        Ok(vec![HandlerOutput::Packets(vec![
+            make_packet(COMMON_CHANNEL_ID, "Common")?,
+            make_packet(LFG_CHANNEL_ID, "LookingForGroup")?,
+            make_packet(TRADE_CHANNEL_ID, "Trade")?,
+        ])])
     }
 }

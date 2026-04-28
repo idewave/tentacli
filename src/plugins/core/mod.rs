@@ -1,8 +1,8 @@
+use async_broadcast::{Receiver, RecvError};
 use std::collections::HashMap;
 use std::sync::Arc;
-use async_broadcast::{Receiver, RecvError};
-use tokio::sync::mpsc::Sender;
 use tokio::sync::RwLock;
+use tokio::sync::mpsc::Sender;
 use tokio_util::sync::CancellationToken;
 
 use crate::client::prelude::*;
