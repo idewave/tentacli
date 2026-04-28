@@ -24,18 +24,25 @@ use crate::plugins::wow::wotlk::realm;
 use crate::plugins::wow::wotlk::config::Config as WotlkConfig;
 
 #[derive(Debug, Clone, Deserialize)]
+#[serde(default)]
 pub struct Config {
     pub logs_dir: String,
-    #[serde(default)]
-    pub enabled: u8,
-    #[serde(default = "default_flush_interval_ms")]
+    pub enabled: bool,
     pub flush_interval_ms: u64,
-    #[serde(default)]
     pub max_file_size: u64,
 }
 
-fn default_flush_interval_ms() -> u64 {
-    200
+const DEFAULT_FLUSH_INTERVAL_MS: u64 = 200;
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            logs_dir: String::new(),
+            enabled: false,
+            flush_interval_ms: DEFAULT_FLUSH_INTERVAL_MS,
+            max_file_size: 0,
+        }
+    }
 }
 
 #[derive(Default)]
@@ -192,7 +199,7 @@ impl CorePlugin for Logger {
         _: Arc<RwLock<CtxMap>>,
     ) -> anyhow::Result<Vec<Task>> {
         let config: Config = ConfigParser::parse_from_file("wow/logger/logger.toml")?;
-        if config.enabled == 0 {
+        if !config.enabled {
             return Ok(vec![]);
         }
 
@@ -331,7 +338,7 @@ mod tests {
 
     use crate::client::ConfigParser;
     use crate::client::packet::{Packet, PacketOpcode, PacketType};
-    use super::{Config, Logger};
+    use super::{Config, Logger, DEFAULT_FLUSH_INTERVAL_MS};
 
     struct EnvGuard {
         key: &'static str,
@@ -455,8 +462,8 @@ character_name = "TestChar"
         )
             .expect("parse config");
 
-        assert_eq!(cfg.enabled, 0);
-        assert_eq!(cfg.flush_interval_ms, 200);
+        assert!(!cfg.enabled);
+        assert_eq!(cfg.flush_interval_ms, DEFAULT_FLUSH_INTERVAL_MS);
         assert_eq!(cfg.max_file_size, 0);
     }
 }
