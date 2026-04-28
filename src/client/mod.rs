@@ -82,6 +82,14 @@ cfg_if! {
     }
 }
 
+
+cfg_if! {
+    if #[cfg(feature = "websocket")] {
+        use crate::plugins::websocket::WebSocket;
+        register_plugin!(WebSocket, dyn CorePlugin);
+    }
+}
+
 register_plugin!(crate::plugins::core::Core, dyn CorePlugin);
 
 pub struct Client;
