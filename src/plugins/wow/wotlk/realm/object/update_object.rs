@@ -1,11 +1,11 @@
-use std::collections::{BTreeMap, HashMap};
-use std::io::Read;
-use std::sync::Arc;
 use async_trait::async_trait;
 use binrw::{BinRead, BinWrite};
 use flate2::read::DeflateDecoder;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::Serialize;
+use std::collections::{BTreeMap, HashMap};
+use std::io::Read;
+use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::client::prelude::*;
@@ -13,8 +13,8 @@ use crate::plugins::wow::wotlk::realm::object::types::movement::Movement;
 use crate::plugins::wow::wotlk::realm::object::types::packed_guid::PackedGuid;
 use crate::plugins::wow::wotlk::realm::object::types::update_data::{ObjectTypeMask, UpdateData};
 use crate::plugins::wow::wotlk::realm::object::types::update_fields::{
-    ContainerField, CorpseField, DynamicObjectField, FieldValue, GameObjectField,
-    ItemField, ObjectField, PlayerField, UnitField
+    ContainerField, CorpseField, DynamicObjectField, FieldValue, GameObjectField, ItemField,
+    ObjectField, PlayerField, UnitField,
 };
 
 #[derive(Packet, BinRead, Serialize, FieldsMetadata)]
@@ -34,7 +34,7 @@ impl PacketHandler for Handler {
     async fn handle(
         &mut self,
         packet: &mut Packet,
-        context: Arc<RwLock<CtxMap>>
+        context: Arc<RwLock<CtxMap>>,
     ) -> anyhow::Result<Vec<HandlerOutput>> {
         let mut output = vec![];
 
@@ -65,13 +65,8 @@ impl PacketHandler for Handler {
         }
 
         packet.set_packet_size(packet.content.body.len());
-        packet.set_offset_info(
-            ExtractMetadata::extract_metadata(&incoming)
-        );
-        packet.set_json(
-            serialize_packet_json(&incoming)?
-        );
-
+        packet.set_offset_info(ExtractMetadata::extract_metadata(&incoming));
+        packet.set_json(serialize_packet_json(&incoming)?);
 
         let mut creates: Vec<(PackedGuid, Object)> = Vec::new();
         let mut updates: Vec<(PackedGuid, UpdateData)> = Vec::new();
@@ -82,32 +77,32 @@ impl PacketHandler for Handler {
                     match Object::try_from(block) {
                         Ok(object) => {
                             creates.push((object.guid, object));
-                        },
+                        }
                         Err(err) => {
-                            output.push(HandlerOutput::Messages(vec![
-                                Message {
-                                    msg_type: MsgType::Error,
-                                    text: format!("Failed to build Object from block: {:?}", err),
-                                }
-                            ]));
+                            output.push(HandlerOutput::Messages(vec![Message {
+                                msg_type: MsgType::Error,
+                                text: format!("Failed to build Object from block: {:?}", err),
+                            }]));
                         }
                     }
-                },
+                }
                 BlockType::Values => {
-                    let guid = block.guid
+                    let guid = block
+                        .guid
                         .ok_or_else(|| anyhow::anyhow!("Values block without guid"))?;
-                    let update_data = block.update_data
+                    let update_data = block
+                        .update_data
                         .ok_or_else(|| anyhow::anyhow!("Values block without update_data"))?;
 
                     updates.push((guid, update_data));
-                },
+                }
                 _ => {}
             }
         }
 
         if !creates.is_empty() || !updates.is_empty() {
-            output.push(HandlerOutput::Requests(vec![
-                Request::SetContext(Some(Box::new(move |ctx: &mut CtxMap| {
+            output.push(HandlerOutput::Requests(vec![Request::SetContext(Some(
+                Box::new(move |ctx: &mut CtxMap| {
                     let Some(objects) = ctx.get_mut::<HashMap<PackedGuid, Object>>() else {
                         return;
                     };
@@ -128,8 +123,8 @@ impl PacketHandler for Handler {
                             object.update(update_data);
                         }
                     }
-                })))
-            ]));
+                }),
+            ))]));
         }
 
         Ok(output)
@@ -162,7 +157,6 @@ fn sanitize_update_data(update_data: &mut UpdateData, object_mask: ObjectTypeMas
         update_data.corpse_fields.clear();
     }
 }
-
 
 #[derive(BinRead, BinWrite, FieldsMetadata, Serialize)]
 pub struct Block {
@@ -215,12 +209,12 @@ pub struct Block {
 #[bw(repr = u8)]
 #[repr(u8)]
 pub enum BlockType {
-    Values            = 0,
-    Movement          = 1,
-    CreateObject      = 2,
-    CreateObject2     = 3,
+    Values = 0,
+    Movement = 1,
+    CreateObject = 2,
+    CreateObject2 = 3,
     OutOfRangeObjects = 4,
-    NearObjects       = 5,
+    NearObjects = 5,
 }
 
 impl CalculateMetadata for BlockType {
@@ -228,7 +222,10 @@ impl CalculateMetadata for BlockType {
         let size = size_of::<u8>();
         ctx.metadata.insert(
             ctx.current_key.clone(),
-            MetadataValue { size, offset: ctx.offset },
+            MetadataValue {
+                size,
+                offset: ctx.offset,
+            },
         );
         ctx.offset += size;
         ctx
@@ -241,15 +238,15 @@ impl CalculateMetadata for BlockType {
 #[repr(i8)]
 pub enum ObjectTypeId {
     #[default]
-    None          = -1,
-    Object        = 0,
-    Item          = 1,
-    Container     = 2,
-    Unit          = 3,
-    Player        = 4,
-    GameObject    = 5,
+    None = -1,
+    Object = 0,
+    Item = 1,
+    Container = 2,
+    Unit = 3,
+    Player = 4,
+    GameObject = 5,
     DynamicObject = 6,
-    Corpse        = 7,
+    Corpse = 7,
 }
 
 impl ObjectTypeId {
@@ -264,7 +261,10 @@ impl CalculateMetadata for ObjectTypeId {
         let size = size_of::<i8>();
         ctx.metadata.insert(
             ctx.current_key.clone(),
-            MetadataValue { size, offset: ctx.offset },
+            MetadataValue {
+                size,
+                offset: ctx.offset,
+            },
         );
         ctx.offset += size;
         ctx
@@ -309,7 +309,8 @@ impl Object {
                 self.game_object_fields.extend(update.game_object_fields);
             }
             ObjectTypeId::DynamicObject => {
-                self.dynamic_object_fields.extend(update.dynamic_object_fields);
+                self.dynamic_object_fields
+                    .extend(update.dynamic_object_fields);
             }
             ObjectTypeId::Corpse => {
                 self.corpse_fields.extend(update.corpse_fields);

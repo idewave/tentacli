@@ -212,7 +212,7 @@ mod tests {
             label: "realm",
             outputs: FilteredOutputs { outputs: &outputs },
         })
-            .expect("event should serialize");
+        .expect("event should serialize");
 
         assert!(json.contains("\"Messages\""));
         assert!(json.contains("\"Packets\""));

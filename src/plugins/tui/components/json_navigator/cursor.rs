@@ -1,6 +1,6 @@
+use serde_json::Value;
 use std::collections::HashMap;
 use std::mem;
-use serde_json::Value;
 
 use crate::plugins::tui::components::json_navigator::helpers::format_json;
 
@@ -22,7 +22,7 @@ impl JsonCursor {
         let keys = match &origin {
             Value::Object(map) => NodeKeys::Object(map.keys().cloned().collect()),
             Value::Array(arr) => NodeKeys::Array(arr.len()),
-            _ => anyhow::bail!("Primitive value cannot be used with this iterator !")
+            _ => anyhow::bail!("Primitive value cannot be used with this iterator !"),
         };
 
         self.origin = origin;
@@ -114,7 +114,9 @@ impl JsonCursor {
         path.push(segment);
 
         let ptr = format!("/{}", path.join("/"));
-        let Some(value) = self.origin.pointer(&ptr) else { return };
+        let Some(value) = self.origin.pointer(&ptr) else {
+            return;
+        };
 
         if matches!(value, Value::Object(_) | Value::Array(_)) {
             self.state.extend_path();
@@ -130,12 +132,8 @@ impl JsonCursor {
         self.update_state();
 
         let idx = match &self.state.current_keys {
-            NodeKeys::Object(keys) => {
-                keys.iter().position(|k| k == &last)
-            }
-            NodeKeys::Array(_) => {
-                last.parse::<usize>().ok()
-            }
+            NodeKeys::Object(keys) => keys.iter().position(|k| k == &last),
+            NodeKeys::Array(_) => last.parse::<usize>().ok(),
             _ => None,
         };
 
@@ -221,17 +219,19 @@ impl State {
     }
 
     pub fn extend_path(&mut self) {
-        let Some(index) = mem::take(&mut self.current_index) else { return };
+        let Some(index) = mem::take(&mut self.current_index) else {
+            return;
+        };
 
         match &self.current_keys {
             NodeKeys::Object(current_keys) => {
                 if let Some(key) = current_keys.get(index) {
                     self.path.push(key.to_string());
                 }
-            },
+            }
             NodeKeys::Array(_) => {
                 self.path.push(index.to_string());
-            },
+            }
             _ => {}
         }
     }
@@ -274,10 +274,7 @@ fn parse_one_value_span(json: &str, start: usize) -> Option<(usize, usize)> {
 }
 
 /// Build map: "a/b/1/d" → (offset, size)
-pub fn build_all_value_spans(
-    json: &str,
-    root: &Value,
-) -> HashMap<String, ValueSpan> {
+pub fn build_all_value_spans(json: &str, root: &Value) -> HashMap<String, ValueSpan> {
     let mut spans = HashMap::new();
 
     fn walk(
@@ -307,12 +304,8 @@ pub fn build_all_value_spans(
                         let key_rel = json[pos..].find(&key)?;
                         let key_start = pos + key_rel;
 
-                        let colon_rel =
-                            json[key_start + key.len()..].find(':')?;
-                        let value_start = skip_ws(
-                            json,
-                            key_start + key.len() + colon_rel + 1,
-                        );
+                        let colon_rel = json[key_start + key.len()..].find(':')?;
+                        let value_start = skip_ws(json, key_start + key.len() + colon_rel + 1);
 
                         path.push(k.clone());
                         walk(json, v, path, value_start, spans);

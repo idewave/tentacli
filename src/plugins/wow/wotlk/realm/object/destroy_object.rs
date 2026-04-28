@@ -1,8 +1,8 @@
-use std::collections::HashMap;
-use std::sync::Arc;
 use async_trait::async_trait;
 use binrw::BinRead;
 use serde::Serialize;
+use std::collections::HashMap;
+use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::client::prelude::*;
@@ -27,17 +27,15 @@ impl PacketHandler for Handler {
     ) -> anyhow::Result<Vec<HandlerOutput>> {
         let Incoming { guid, .. } = Incoming::unpack(packet)?;
 
-        Ok(vec![
-            HandlerOutput::Requests(vec![
-                Request::SetContext(Some(Box::new(move |ctx: &mut CtxMap| {
-                    let Some(objects) = ctx.get_mut::<HashMap<PackedGuid, Object>>() else {
-                        return;
-                    };
+        Ok(vec![HandlerOutput::Requests(vec![Request::SetContext(
+            Some(Box::new(move |ctx: &mut CtxMap| {
+                let Some(objects) = ctx.get_mut::<HashMap<PackedGuid, Object>>() else {
+                    return;
+                };
 
-                    let packed = PackedGuid(guid);
-                    objects.remove(&packed);
-                })))
-            ])
-        ])
+                let packed = PackedGuid(guid);
+                objects.remove(&packed);
+            })),
+        )])])
     }
 }

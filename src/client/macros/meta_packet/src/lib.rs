@@ -1,9 +1,6 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{
-    parse_macro_input,
-    Attribute, DeriveInput, Error, Expr, Ident, Result,
-};
+use syn::{Attribute, DeriveInput, Error, Expr, Ident, Result, parse_macro_input};
 
 #[proc_macro_derive(Packet, attributes(name, opcode))]
 pub fn derive_packet(input: TokenStream) -> TokenStream {
@@ -57,10 +54,7 @@ pub fn derive_packet(input: TokenStream) -> TokenStream {
         let name = match &opts.name {
             Some(n) => n.clone(),
             None => {
-                return Error::new_spanned(
-                    ident,
-                    "Missing #[name(...)] for outgoing packet",
-                )
+                return Error::new_spanned(ident, "Missing #[name(...)] for outgoing packet")
                     .to_compile_error()
                     .into();
             }
@@ -69,17 +63,13 @@ pub fn derive_packet(input: TokenStream) -> TokenStream {
         let opcode = match &opts.opcode {
             Some(o) => normalize_opcode(o.clone()),
             None => {
-                return Error::new_spanned(
-                    ident,
-                    "Missing #[opcode(...)] for outgoing packet",
-                )
+                return Error::new_spanned(ident, "Missing #[opcode(...)] for outgoing packet")
                     .to_compile_error()
                     .into();
             }
         };
 
-        let name_lit =
-            syn::LitStr::new(&name.to_string(), name.span());
+        let name_lit = syn::LitStr::new(&name.to_string(), name.span());
 
         quote! {
             impl #generics #ident #where_clause {
@@ -216,10 +206,7 @@ fn normalize_opcode(expr: Expr) -> Expr {
         && let Some(id) = path.path.get_ident()
     {
         let name = id.to_string();
-        let ok = matches!(
-            name.as_str(),
-            "U8" | "U16" | "U32" | "U64" | "Text" | "Raw"
-        );
+        let ok = matches!(name.as_str(), "U8" | "U16" | "U32" | "U64" | "Text" | "Raw");
 
         if ok && call.args.len() == 1 {
             let arg = call.args.first().cloned().unwrap();

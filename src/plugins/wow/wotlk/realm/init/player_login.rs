@@ -1,7 +1,7 @@
-use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use binrw::BinWrite;
 use serde::Serialize;
+use std::sync::{Arc, Mutex};
 use tokio::sync::RwLock;
 
 use crate::client::prelude::*;
@@ -25,7 +25,7 @@ impl PacketHandler for Handler {
     async fn handle(
         &mut self,
         _: &mut Packet,
-        _: Arc<RwLock<CtxMap>>
+        _: Arc<RwLock<CtxMap>>,
     ) -> anyhow::Result<Vec<HandlerOutput>> {
         let mut output = vec![];
         let guid = *self.guid.lock().unwrap();
@@ -33,14 +33,12 @@ impl PacketHandler for Handler {
 
         if !*guard && guid > 0 {
             output.extend(vec![
-                HandlerOutput::Packets(vec![
-                    Outgoing { guid }.pack()?
-                ]),
-                HandlerOutput::Requests(vec![
-                    Request::SetContext(Some(Box::new(move |ctx: &mut CtxMap| {
+                HandlerOutput::Packets(vec![Outgoing { guid }.pack()?]),
+                HandlerOutput::Requests(vec![Request::SetContext(Some(Box::new(
+                    move |ctx: &mut CtxMap| {
                         ctx.insert(IsLogged(true));
-                    }))),
-                ])
+                    },
+                )))]),
             ]);
 
             *guard = true;

@@ -1,6 +1,3 @@
-use std::collections::HashMap;
-use std::sync::{Arc};
-use std::time::Duration;
 use async_event_emitter::AsyncEventEmitter;
 use crossterm::event::{Event, EventStream, KeyCode, KeyEvent};
 use futures::{FutureExt, StreamExt};
@@ -11,21 +8,24 @@ use ratatui::style::{Style, Stylize};
 use ratatui::symbols::border;
 use ratatui::widgets::{Block, Clear, Paragraph};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::mpsc::Sender;
 use tokio_util::sync::CancellationToken;
 
 pub mod events;
 
-use crate::events_runtime;
 use crate::client::prelude::*;
+use crate::events_runtime;
 use crate::plugins::tui::components::app::events::{ChoicesEvent, OutputEvent};
 use crate::plugins::tui::components::json_navigator::{self, JsonNavigator};
 use crate::plugins::tui::components::log_viewer::{self, LogViewer};
 use crate::plugins::tui::components::modal::Modal;
 use crate::plugins::tui::events::traits::{
-    EventHandler, EventSystem, EventsRuntime, WithEventSystem
+    EventHandler, EventSystem, EventsRuntime, WithEventSystem,
 };
-use crate::plugins::tui::layout::{center, split_horizontal, Values};
+use crate::plugins::tui::layout::{Values, center, split_horizontal};
 use crate::plugins::tui::theme::{APP_TITLE_FG, BLACK_BG};
 use crate::plugins::tui::traits::{Focusable, UIComponent};
 
@@ -178,11 +178,12 @@ impl WithEventSystem for App {
 impl EventHandler<log_viewer::events::SelectedIndex> for App {
     async fn callback(
         &mut self,
-        event: log_viewer::events::SelectedIndex
+        event: log_viewer::events::SelectedIndex,
     ) -> anyhow::Result<Vec<Echo>> {
         let index = event.0;
         if let Some(item) = self.output_items.get(index) {
-            self.emit_down(json_navigator::events::SetItem(item.clone())).await?;
+            self.emit_down(json_navigator::events::SetItem(item.clone()))
+                .await?;
         }
 
         Ok(vec![])
@@ -213,10 +214,7 @@ events_runtime! {
 impl UIComponent for App {
     fn render(&mut self, frame: &mut Frame, rect: Rect) {
         frame.render_widget(Clear, rect);
-        frame.render_widget(
-            Block::default().style(Style::default().bg(BLACK_BG)),
-            rect,
-        );
+        frame.render_widget(Block::default().style(Style::default().bg(BLACK_BG)), rect);
         // --------LOG OUTPUT------------------------------------------
         // |                  |                   |                   |
         // |                  |                   |                   |
@@ -230,7 +228,10 @@ impl UIComponent for App {
         // ------------------------------------------------------------
 
         let [left_column, right_column] = split_horizontal(
-            rect.inner(Margin { horizontal: 1, vertical: 1 }),
+            rect.inner(Margin {
+                horizontal: 1,
+                vertical: 1,
+            }),
             Values::Percentages([40, 60]),
         );
 
@@ -254,9 +255,11 @@ impl UIComponent for App {
         };
 
         let hint = Paragraph::new(Line::from(vec![
-            Span::raw("q: quit").fg(Color::LightBlue).add_modifier(Modifier::BOLD),
+            Span::raw("q: quit")
+                .fg(Color::LightBlue)
+                .add_modifier(Modifier::BOLD),
         ]))
-            .alignment(Alignment::Left);
+        .alignment(Alignment::Left);
 
         frame.render_widget(hint, hint_area);
 

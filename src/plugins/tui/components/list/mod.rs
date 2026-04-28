@@ -1,18 +1,18 @@
-use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
 use async_event_emitter::AsyncEventEmitter;
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::Frame;
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
 use ratatui::widgets::{List, ListItem, ListState};
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 pub mod events;
 
-use crate::events_runtime;
 use crate::client::prelude::*;
+use crate::events_runtime;
 use crate::plugins::tui::events::traits::{
-    EventHandler, EventSystem, EventsRuntime, WithEventSystem
+    EventHandler, EventSystem, EventsRuntime, WithEventSystem,
 };
 use crate::plugins::tui::theme::{LIST_HIGHLIGHT_BG, LIST_HIGHLIGHT_FG};
 use crate::plugins::tui::traits::{Paginator, UIComponent};
@@ -66,7 +66,7 @@ impl StyledList {
     pub async fn add_item(
         &mut self,
         item_type: ItemType,
-        item: ListItem<'static>
+        item: ListItem<'static>,
     ) -> anyhow::Result<()> {
         self.items.push((item_type, item));
         *self.counter.entry(item_type).or_insert(0) += 1;
@@ -103,16 +103,17 @@ impl StyledList {
     }
 
     pub fn autoscroll(&mut self, enabled: bool) {
-        self.scroll_mode = if enabled { ScrollMode::Auto } else { ScrollMode::Manual };
+        self.scroll_mode = if enabled {
+            ScrollMode::Auto
+        } else {
+            ScrollMode::Manual
+        };
     }
 }
 
 impl UIComponent for StyledList {
     fn render(&mut self, frame: &mut Frame, rect: Rect) {
-        let items: Vec<ListItem> = self.items
-            .iter()
-            .map(|(_, item)| item.clone())
-            .collect();
+        let items: Vec<ListItem> = self.items.iter().map(|(_, item)| item.clone()).collect();
 
         let list = List::new(items).highlight_style(
             Style::new()
@@ -123,7 +124,6 @@ impl UIComponent for StyledList {
 
         frame.render_stateful_widget(list, rect, &mut self.state);
     }
-
 }
 
 impl WithEventSystem for StyledList {
@@ -179,7 +179,7 @@ impl Paginator for StyledList {
         match self.state.selected() {
             Some(index) if index == first_index => self.state.select_last(),
             Some(index) => self.state.select(Some(index - 1)),
-            None => self.state.select_last()
+            None => self.state.select_last(),
         }
     }
 

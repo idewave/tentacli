@@ -1,9 +1,9 @@
 use async_event_emitter::AsyncEventEmitter;
+use serde::Serialize;
+use serde::de::DeserializeOwned;
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
 use std::sync::Arc;
-use serde::de::DeserializeOwned;
-use serde::Serialize;
 use tokio::sync::mpsc::{Receiver, Sender};
 
 use crate::client::Echo;
@@ -152,7 +152,8 @@ pub trait EventHandler<T: EventType>: WithEventSystem {
 
     async fn register_event(&mut self, emit_type: EmitType) -> anyhow::Result<()> {
         let (sender, receiver) = self.create_channel();
-        self.event_system().add_channel::<T>(emit_type, sender, receiver);
+        self.event_system()
+            .add_channel::<T>(emit_type, sender, receiver);
 
         let emitter = match emit_type {
             EmitType::Local => self.event_system().local_emitter.clone(),

@@ -20,8 +20,8 @@ use tokio::time::{self, MissedTickBehavior};
 use tokio_util::sync::CancellationToken;
 
 use crate::client::prelude::*;
-use crate::plugins::wow::wotlk::realm;
 use crate::plugins::wow::wotlk::config::Config as WotlkConfig;
+use crate::plugins::wow::wotlk::realm;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(default)]
@@ -234,7 +234,8 @@ impl CorePlugin for Logger {
                                 writer.flush()?;
 
                                 fragment_idx = fragment_idx.saturating_add(1);
-                                active_path = Self::build_fragment_file_path(&log_file, fragment_idx);
+                                active_path =
+                                    Self::build_fragment_file_path(&log_file, fragment_idx);
                                 file = OpenOptions::new()
                                     .create(true)
                                     .append(true)
@@ -258,7 +259,8 @@ impl CorePlugin for Logger {
 
             let mut ordered_rx = OrderedReceiver::new(broadcast_rx);
             let mut flush_timer = if flush_interval_ms > 0 {
-                let mut interval = time::interval(std::time::Duration::from_millis(flush_interval_ms));
+                let mut interval =
+                    time::interval(std::time::Duration::from_millis(flush_interval_ms));
                 interval.set_missed_tick_behavior(MissedTickBehavior::Delay);
                 Some(interval)
             } else {
@@ -336,9 +338,9 @@ mod tests {
     use std::fs;
     use std::path::Path;
 
+    use super::{Config, DEFAULT_FLUSH_INTERVAL_MS, Logger};
     use crate::client::ConfigParser;
     use crate::client::packet::{Packet, PacketOpcode, PacketType};
-    use super::{Config, Logger, DEFAULT_FLUSH_INTERVAL_MS};
 
     struct EnvGuard {
         key: &'static str,
@@ -399,7 +401,8 @@ password = "secret"
 realm_name = "Fun Realm"
 character_name = "TestChar"
 "#,
-        ).expect("write connection");
+        )
+        .expect("write connection");
         let _guard = EnvGuard::set("TENTACLI_CONFIG_DIR", temp_dir.path());
 
         let suffix = Logger::resolve_log_file_suffix();
@@ -407,9 +410,16 @@ character_name = "TestChar"
         let path = Logger::build_log_file_path(&logs_dir, &suffix);
 
         assert_eq!(path.parent(), Some(logs_dir.as_path()));
-        let file_name = path.file_name().and_then(|x| x.to_str()).expect("file name");
+        let file_name = path
+            .file_name()
+            .and_then(|x| x.to_str())
+            .expect("file name");
         assert!(file_name.ends_with(".log"));
-        assert!(regex::Regex::new(r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}_").expect("regex").is_match(file_name));
+        assert!(
+            regex::Regex::new(r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}_")
+                .expect("regex")
+                .is_match(file_name)
+        );
         assert!(file_name.contains("Admin_User"));
         assert!(file_name.contains("Fun_Realm"));
     }
@@ -457,10 +467,9 @@ character_name = "TestChar"
 
     #[test]
     fn parse_logger_config_default_max_file_size() {
-        let cfg: Config = ConfigParser::parse_from_string(
-            "logs_dir = \"wow/logger/logs\"\n".to_string()
-        )
-            .expect("parse config");
+        let cfg: Config =
+            ConfigParser::parse_from_string("logs_dir = \"wow/logger/logs\"\n".to_string())
+                .expect("parse config");
 
         assert!(!cfg.enabled);
         assert_eq!(cfg.flush_interval_ms, DEFAULT_FLUSH_INTERVAL_MS);

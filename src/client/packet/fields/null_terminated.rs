@@ -1,8 +1,8 @@
+use binrw::{BinRead, BinResult};
+use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::io::Read;
 use std::ops::Deref;
-use binrw::{BinRead, BinResult};
-use serde::{Deserialize, Serialize};
 
 use crate::client::packet::{CalculateMetadata, MetadataContext, MetadataValue};
 
@@ -48,11 +48,10 @@ impl BinRead for NullTerminated<String> {
             buf.push(byte[0]);
         }
 
-        let s = String::from_utf8(buf)
-            .map_err(|e| binrw::Error::Custom {
-                pos: 0,
-                err: Box::new(e),
-            })?;
+        let s = String::from_utf8(buf).map_err(|e| binrw::Error::Custom {
+            pos: 0,
+            err: Box::new(e),
+        })?;
 
         Ok(NullTerminated(s))
     }

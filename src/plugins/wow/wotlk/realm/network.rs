@@ -1,5 +1,5 @@
-use std::io::{Cursor, Read};
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
+use std::io::{Cursor, Read};
 
 use crate::client::prelude::*;
 use crate::plugins::wow::wotlk::login::Secret;
@@ -23,26 +23,26 @@ impl BytesRead for PacketReader {
         let mut header = buffer[..4].to_vec();
         let mut is_long_packet = false;
 
-        if !self.is_decrypted {
-            if let Some(decryptor) = self.decryptor.as_mut() {
-                decryptor.decrypt(&mut header[..1]);
+        if !self.is_decrypted
+            && let Some(decryptor) = self.decryptor.as_mut()
+        {
+            decryptor.decrypt(&mut header[..1]);
 
-                is_long_packet = (header[0] & 0x80) != 0;
+            is_long_packet = (header[0] & 0x80) != 0;
 
-                if is_long_packet {
-                    if buffer.len() < 5 {
-                        anyhow::bail!("Incomplete header (long)... continue reading.");
-                    }
-
-                    let extra_byte = buffer[4];
-                    header.push(extra_byte);
+            if is_long_packet {
+                if buffer.len() < 5 {
+                    anyhow::bail!("Incomplete header (long)... continue reading.");
                 }
 
-                decryptor.decrypt(&mut header[1..]);
-
-                buffer[..header.len()].copy_from_slice(&header);
-                self.is_decrypted = true;
+                let extra_byte = buffer[4];
+                header.push(extra_byte);
             }
+
+            decryptor.decrypt(&mut header[1..]);
+
+            buffer[..header.len()].copy_from_slice(&header);
+            self.is_decrypted = true;
         }
 
         let mut header_reader = Cursor::new(&header);
@@ -60,10 +60,10 @@ impl BytesRead for PacketReader {
         let mut body = vec![0u8; size];
         reader.read_exact(&mut body)?;
 
-        if self.decryptor.is_none() {
-            if let Some(secret) = context.get::<Secret>() {
-                self.decryptor = Some(Decryptor::new(&secret.0.to_vec()));
-            }
+        if self.decryptor.is_none()
+            && let Some(secret) = context.get::<Secret>()
+        {
+            self.decryptor = Some(Decryptor::new(&secret.0.to_vec()));
         }
 
         self.is_decrypted = false;
@@ -71,9 +71,7 @@ impl BytesRead for PacketReader {
         let mut packet = Packet::default();
         packet.set_type(PacketType::Incoming);
         packet.set_opcode(PacketOpcode::U16(opcode));
-        packet.set_packet_name(
-            Opcode::get_opcode_name(opcode as u32).unwrap_or_default(),
-        );
+        packet.set_packet_name(Opcode::get_opcode_name(opcode as u32).unwrap_or_default());
         packet.set_packet_size(body.len() + header.len());
         packet.set_body(body);
 
@@ -105,10 +103,10 @@ impl Serializer for PacketSerializer {
 
         buffer.extend_from_slice(&packet.content.body);
 
-        if self.encryptor.is_none() {
-            if let Some(secret) = context.get::<Secret>() {
-                self.encryptor = Some(Encryptor::new(&secret.0.to_vec()));
-            }
+        if self.encryptor.is_none()
+            && let Some(secret) = context.get::<Secret>()
+        {
+            self.encryptor = Some(Encryptor::new(&secret.0.to_vec()));
         }
 
         Ok(buffer)

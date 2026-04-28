@@ -1,9 +1,9 @@
 use async_trait::async_trait;
 use binrw::BinWrite;
+use serde::Serialize;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
 use std::sync::Arc;
-use serde::Serialize;
 use tokio::sync::RwLock;
 
 use crate::client::prelude::*;
@@ -42,8 +42,12 @@ pub struct Builder;
 impl OutputBuilder for Builder {
     async fn build(&mut self, _: Arc<RwLock<CtxMap>>) -> anyhow::Result<Vec<HandlerOutput>> {
         let config: Config = ConfigParser::parse_from_file("wow/wotlk/connection.toml")?;
-        let connection = config.connection.ok_or_else(|| anyhow::anyhow!("Missing [connection]"))?;
-        let game = config.game.ok_or_else(|| anyhow::anyhow!("Missing [game]"))?;
+        let connection = config
+            .connection
+            .ok_or_else(|| anyhow::anyhow!("Missing [connection]"))?;
+        let game = config
+            .game
+            .ok_or_else(|| anyhow::anyhow!("Missing [game]"))?;
 
         Ok(vec![
             HandlerOutput::Packets(vec![
@@ -60,16 +64,16 @@ impl OutputBuilder for Builder {
                     ip: Ipv4Addr::from_str(&game.my_ip)?.into(),
                     account_length: connection.account_name.len() as u8,
                     account: connection.account_name.to_uppercase(),
-                }.pack()?,
-            ]),
-            HandlerOutput::Messages(vec![
-                Message {
-                    msg_type: MsgType::Info,
-                    text: format!(
-                        "Trying to login as \"{}\"", connection.account_name.to_uppercase()
-                    ),
                 }
-            ])
+                .pack()?,
+            ]),
+            HandlerOutput::Messages(vec![Message {
+                msg_type: MsgType::Info,
+                text: format!(
+                    "Trying to login as \"{}\"",
+                    connection.account_name.to_uppercase()
+                ),
+            }]),
         ])
     }
 }

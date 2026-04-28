@@ -1,16 +1,16 @@
-use std::sync::Arc;
 use async_trait::async_trait;
 use binrw::BinRead;
 use fields_metadata::FieldsMetadata;
 use serde::Serialize;
+use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use crate::enum_field;
 use crate::client::prelude::*;
+use crate::enum_field;
 use crate::plugins::wow::wotlk::realm::object::types::packed_guid::PackedGuid;
 use crate::plugins::wow::wotlk::realm::spell::types::{
-    AdjustMissile, AmmoInfo, CastFlags, PredictedRunes,
-    SpellTargets, VisualChain, VisualChainTargets
+    AdjustMissile, AmmoInfo, CastFlags, PredictedRunes, SpellTargets, VisualChain,
+    VisualChainTargets,
 };
 
 #[derive(Packet, BinRead, Serialize, FieldsMetadata)]
@@ -57,7 +57,7 @@ impl PacketHandler for Handler {
     async fn handle(
         &mut self,
         packet: &mut Packet,
-        _: Arc<RwLock<CtxMap>>
+        _: Arc<RwLock<CtxMap>>,
     ) -> anyhow::Result<Vec<HandlerOutput>> {
         let _ = Incoming::unpack(packet)?;
         Ok(vec![])

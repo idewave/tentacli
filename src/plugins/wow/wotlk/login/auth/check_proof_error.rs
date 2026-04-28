@@ -1,7 +1,7 @@
-use std::sync::Arc;
 use async_trait::async_trait;
 use binrw::BinRead;
 use serde::Serialize;
+use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::client::prelude::*;
@@ -20,7 +20,7 @@ impl PacketHandler for Handler {
     async fn handle(
         &mut self,
         packet: &mut Packet,
-        _: Arc<RwLock<CtxMap>>
+        _: Arc<RwLock<CtxMap>>,
     ) -> anyhow::Result<Vec<HandlerOutput>> {
         let mut outputs = vec![];
         let Incoming { code, .. } = Incoming::unpack(packet)?;
@@ -30,39 +30,25 @@ impl PacketHandler for Handler {
                 Codes::FAILED_UNKNOWN0
                 | Codes::FAILED_UNKNOWN1
                 | Codes::FAILED_INVALID_SERVER
-                | Codes::FAILED_FAIL_NOACCESS => {
-                    "Unable to connect".to_string()
-                },
-                Codes::FAILED_BANNED => {
-                    "Account was banned".to_string()
-                },
-                Codes::FAILED_SUSPENDED => {
-                    "Account was temporary suspended".to_string()
-                },
+                | Codes::FAILED_FAIL_NOACCESS => "Unable to connect".to_string(),
+                Codes::FAILED_BANNED => "Account was banned".to_string(),
+                Codes::FAILED_SUSPENDED => "Account was temporary suspended".to_string(),
                 Codes::FAILED_UNKNOWN_ACCOUNT | Codes::FAILED_INCORRECT_PASSWORD => {
                     "Credentials not valid".to_string()
-                },
-                Codes::FAILED_ALREADY_ONLINE => {
-                    "Account already online".to_string()
-                },
-                Codes::FAILED_DB_BUSY => {
-                    "Cannot login at this time, try again later".to_string()
-                },
+                }
+                Codes::FAILED_ALREADY_ONLINE => "Account already online".to_string(),
+                Codes::FAILED_DB_BUSY => "Cannot login at this time, try again later".to_string(),
                 _ => {
                     format!("Unknown error with code: \"{code}\"")
-                },
+                }
             };
 
             outputs.extend([
-                HandlerOutput::Messages(vec![
-                    Message {
-                        msg_type: MsgType::Error,
-                        text,
-                    }
-                ]),
-                HandlerOutput::Requests(vec![
-                    Request::Drop(login::PLUGIN_LABEL),
-                ])
+                HandlerOutput::Messages(vec![Message {
+                    msg_type: MsgType::Error,
+                    text,
+                }]),
+                HandlerOutput::Requests(vec![Request::Drop(login::PLUGIN_LABEL)]),
             ])
         }
 

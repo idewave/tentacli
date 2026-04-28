@@ -73,7 +73,6 @@
 //!
 //! [`inventory`]: https://docs.rs/inventory
 
-
 pub mod client;
 pub mod plugins;
 

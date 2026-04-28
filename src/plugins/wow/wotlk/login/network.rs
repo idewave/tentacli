@@ -1,12 +1,11 @@
 use binrw::BinRead;
 
 use crate::client::prelude::*;
-use crate::plugins::wow::wotlk::opcodes::Opcode;
 use crate::plugins::wow::wotlk::login::auth::{
-    login_proof::Incoming as LoginProofIncoming,
+    login_proof::Incoming as LoginProofIncoming, select_realm::Incoming as RealmlistIncoming,
     validate_proof::Incoming as ValidateProofIncoming,
-    select_realm::Incoming as RealmlistIncoming,
 };
+use crate::plugins::wow::wotlk::opcodes::Opcode;
 
 const HEADER_SIZE: usize = 1;
 
@@ -20,13 +19,13 @@ impl BytesRead for PacketReader {
         match opcode {
             Opcode::LOGIN_CHALLENGE => {
                 LoginProofIncoming::read(&mut reader)?;
-            },
+            }
             Opcode::LOGIN_PROOF => {
                 ValidateProofIncoming::read(&mut reader)?;
-            },
+            }
             Opcode::REALM_LIST => {
                 RealmlistIncoming::read(&mut reader)?;
-            },
+            }
             _ => unreachable!("Unknown opcode: {}", opcode),
         }
 

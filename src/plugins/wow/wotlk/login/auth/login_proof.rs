@@ -1,7 +1,7 @@
 use async_trait::async_trait;
-use std::sync::{Arc, Mutex};
 use binrw::{BinRead, BinWrite};
 use serde::Serialize;
+use std::sync::{Arc, Mutex};
 use tokio::sync::RwLock;
 
 use crate::client::prelude::*;
@@ -47,7 +47,7 @@ impl PacketHandler for Handler {
     async fn handle(
         &mut self,
         packet: &mut Packet,
-        _: Arc<RwLock<CtxMap>>
+        _: Arc<RwLock<CtxMap>>,
     ) -> anyhow::Result<Vec<HandlerOutput>> {
         let Incoming {
             n,
@@ -58,41 +58,45 @@ impl PacketHandler for Handler {
         } = Incoming::unpack(packet)?;
 
         let config: Config = ConfigParser::parse_from_file("wow/wotlk/connection.toml")?;
-        let connection = config.connection.ok_or_else(|| anyhow::anyhow!("Missing [connection]"))?;
+        let connection = config
+            .connection
+            .ok_or_else(|| anyhow::anyhow!("Missing [connection]"))?;
 
         let (account, password) = {
-            (connection.account_name.to_uppercase(), connection.password.to_uppercase())
+            (
+                connection.account_name.to_uppercase(),
+                connection.password.to_uppercase(),
+            )
         };
 
-        let mut srp_client = self.srp.lock().map_err(|_| anyhow::anyhow!("Mutex poisoned"))?;
+        let mut srp_client = self
+            .srp
+            .lock()
+            .map_err(|_| anyhow::anyhow!("Mutex poisoned"))?;
         srp_client.init(&n, &g, &server_ephemeral, salt);
         srp_client.calculate_session_key(&account, &password);
 
         let client_proof: [u8; 20] = srp_client.calculate_proof(&account);
         let crc_hash: [u8; 20] = [
-            0xCD, 0xCB, 0xBD, 0x51, 0x88, 0x31, 0x5E, 0x6B,
-            0x4D, 0x19, 0x44, 0x9D, 0x49, 0x2D, 0xBC, 0xFA,
-            0xF1, 0x56, 0xA3, 0x47
+            0xCD, 0xCB, 0xBD, 0x51, 0x88, 0x31, 0x5E, 0x6B, 0x4D, 0x19, 0x44, 0x9D, 0x49, 0x2D,
+            0xBC, 0xFA, 0xF1, 0x56, 0xA3, 0x47,
         ];
 
         Ok(vec![
-            HandlerOutput::Messages(vec![
-                Message {
-                    msg_type: Default::default(),
-                    text: "SRP secret created".to_string(),
+            HandlerOutput::Messages(vec![Message {
+                msg_type: Default::default(),
+                text: "SRP secret created".to_string(),
+            }]),
+            HandlerOutput::Packets(vec![
+                Outgoing {
+                    public_ephemeral: srp_client.public_ephemeral(),
+                    client_proof,
+                    crc_hash,
+                    keys_count: 0,
+                    security_flags: 0,
                 }
+                .pack()?,
             ]),
-            HandlerOutput::Packets(
-                vec![
-                    Outgoing {
-                        public_ephemeral: srp_client.public_ephemeral(),
-                        client_proof,
-                        crc_hash,
-                        keys_count: 0,
-                        security_flags: 0,
-                    }.pack()?,
-                ]
-            ),
         ])
     }
 }

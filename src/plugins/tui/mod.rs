@@ -1,15 +1,15 @@
-use std::collections::HashMap;
-use std::sync::{Arc};
 use async_broadcast::Receiver;
+use std::collections::HashMap;
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use tokio::sync::mpsc::Sender;
-use tokio::sync::{RwLock};
 use tokio_util::sync::CancellationToken;
 
 mod components;
 mod events;
 mod layout;
-mod traits;
 mod theme;
+mod traits;
 
 // use crate::client::{CtxMap, Echo, OrderedOutput, ServerLabel, Task};
 // use crate::client::plugin::CorePlugin;
@@ -27,8 +27,10 @@ impl CorePlugin for TUIPlugin {
         shutdown: CancellationToken,
         _: Arc<RwLock<CtxMap>>,
     ) -> anyhow::Result<Vec<Task>> {
-        Ok(vec![
-            App::handle_run(broadcast_rx, echo_senders.clone(), shutdown.clone())
-        ])
+        Ok(vec![App::handle_run(
+            broadcast_rx,
+            echo_senders.clone(),
+            shutdown.clone(),
+        )])
     }
 }

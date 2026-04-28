@@ -1,6 +1,6 @@
-use std::io::{Read, Seek, Write};
 use binrw::{BinRead, BinResult, BinWrite, Endian};
 use serde::Serialize;
+use std::io::{Read, Seek, Write};
 
 use crate::client::prelude::*;
 
@@ -102,7 +102,8 @@ impl BinWrite for PackedGuid {
     }
 
     fn write_options<W: Write + Seek>(
-        &self, writer: &mut W,
+        &self,
+        writer: &mut W,
         _: Endian,
         _: Self::Args<'_>,
     ) -> BinResult<()> {

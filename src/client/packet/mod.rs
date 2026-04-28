@@ -1,7 +1,7 @@
-use std::collections::HashMap;
-use std::sync::Arc;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::Arc;
 use tokio::sync::RwLock;
 
 pub mod fields;
@@ -23,13 +23,41 @@ pub enum PacketOpcode {
     Raw(Vec<u8>),
 }
 
-impl From<u8> for PacketOpcode      { fn from(v: u8) -> Self { Self::U8(v) } }
-impl From<u16> for PacketOpcode     { fn from(v: u16) -> Self { Self::U16(v) } }
-impl From<u32> for PacketOpcode     { fn from(v: u32) -> Self { Self::U32(v) } }
-impl From<u64> for PacketOpcode     { fn from(v: u64) -> Self { Self::U64(v) } }
-impl From<&str> for PacketOpcode    { fn from(v: &str) -> Self { Self::Text(v.to_owned()) } }
-impl From<String> for PacketOpcode  { fn from(v: String) -> Self { Self::Text(v) } }
-impl From<Vec<u8>> for PacketOpcode { fn from(v: Vec<u8>) -> Self { Self::Raw(v) } }
+impl From<u8> for PacketOpcode {
+    fn from(v: u8) -> Self {
+        Self::U8(v)
+    }
+}
+impl From<u16> for PacketOpcode {
+    fn from(v: u16) -> Self {
+        Self::U16(v)
+    }
+}
+impl From<u32> for PacketOpcode {
+    fn from(v: u32) -> Self {
+        Self::U32(v)
+    }
+}
+impl From<u64> for PacketOpcode {
+    fn from(v: u64) -> Self {
+        Self::U64(v)
+    }
+}
+impl From<&str> for PacketOpcode {
+    fn from(v: &str) -> Self {
+        Self::Text(v.to_owned())
+    }
+}
+impl From<String> for PacketOpcode {
+    fn from(v: String) -> Self {
+        Self::Text(v)
+    }
+}
+impl From<Vec<u8>> for PacketOpcode {
+    fn from(v: Vec<u8>) -> Self {
+        Self::Raw(v)
+    }
+}
 
 macro_rules! impl_try_from_ref {
     ($t:ty, $variant:ident) => {
@@ -45,7 +73,7 @@ macro_rules! impl_try_from_ref {
     };
 }
 
-impl_try_from_ref!(u8,  U8);
+impl_try_from_ref!(u8, U8);
 impl_try_from_ref!(u16, U16);
 impl_try_from_ref!(u32, U32);
 impl_try_from_ref!(u64, U64);
@@ -74,7 +102,9 @@ macro_rules! impl_try_from_owned {
     ($t:ty) => {
         impl TryFrom<PacketOpcode> for $t {
             type Error = anyhow::Error;
-            fn try_from(op: PacketOpcode) -> anyhow::Result<$t> { (&op).try_into() }
+            fn try_from(op: PacketOpcode) -> anyhow::Result<$t> {
+                (&op).try_into()
+            }
         }
     };
 }
@@ -316,7 +346,8 @@ pub trait Processor: Send + Sync {
     ) -> anyhow::Result<Option<Vec<HandlerOutput>>> {
         let guard = context.read().await;
         let mut handlers = self.get_handlers(&packet.metadata.opcode, &guard)?;
-        self.call_handlers(&mut handlers, packet, context.clone()).await
+        self.call_handlers(&mut handlers, packet, context.clone())
+            .await
     }
 
     async fn call_handlers(

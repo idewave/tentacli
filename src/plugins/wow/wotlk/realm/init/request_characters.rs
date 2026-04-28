@@ -1,7 +1,7 @@
-use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use binrw::BinWrite;
 use serde::Serialize;
+use std::sync::{Arc, Mutex};
 use tokio::sync::RwLock;
 
 use crate::client::prelude::*;
@@ -23,20 +23,16 @@ impl PacketHandler for Handler {
     async fn handle(
         &mut self,
         _: &mut Packet,
-        _: Arc<RwLock<CtxMap>>
+        _: Arc<RwLock<CtxMap>>,
     ) -> anyhow::Result<Vec<HandlerOutput>> {
         let mut output = vec![];
         let guid = *self.guid.lock().unwrap();
         let is_logged_in = *self.is_logged_in.lock().unwrap();
 
         if guid == 0 && !is_logged_in {
-            output.extend(
-                vec![
-                    HandlerOutput::Packets(vec![
-                        Outgoing::default().pack()?
-                    ]),
-                ]
-            );
+            output.extend(vec![HandlerOutput::Packets(vec![
+                Outgoing::default().pack()?,
+            ])]);
         }
         Ok(output)
     }

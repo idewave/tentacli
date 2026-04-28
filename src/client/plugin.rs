@@ -1,26 +1,29 @@
 use async_trait::async_trait;
 use futures::future::select_all;
-use futures::{TryFutureExt, FutureExt};
+use futures::{FutureExt, TryFutureExt};
 use std::any::Any;
 use std::collections::HashMap;
 use std::future::Future;
 use std::sync::Arc;
 use tokio::net::{TcpStream, UdpSocket};
-use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::sync::RwLock;
+use tokio::sync::mpsc::{Receiver, Sender};
 use tokio_util::sync::CancellationToken;
 
-use crate::client::packet::{BytesRead, OutputBuilder, Packet, Processor, Serializer};
 use crate::client::PluginLoader;
+use crate::client::packet::{BytesRead, OutputBuilder, Packet, Processor, Serializer};
 use crate::client::transport::{
-    Protocol, TcpRead, TcpWrite, TransportRead, TransportWrite, UdpRead, UdpWrite
+    Protocol, TcpRead, TcpWrite, TransportRead, TransportWrite, UdpRead, UdpWrite,
 };
 use crate::client::types::{
-    Request, HandlerOutput, ServerLabel, Task, Echo, Message, MsgType, CtxMap, OrderedOutput
+    CtxMap, Echo, HandlerOutput, Message, MsgType, OrderedOutput, Request, ServerLabel, Task,
 };
 
 #[async_trait]
-pub trait NetworkPlugin: Send + Sync + Any where Self: 'static {
+pub trait NetworkPlugin: Send + Sync + Any
+where
+    Self: 'static,
+{
     #[allow(clippy::too_many_arguments)]
     fn connect(
         self: Arc<Self>,
@@ -47,7 +50,8 @@ pub trait NetworkPlugin: Send + Sync + Any where Self: 'static {
                         echo_rx
                             .recv()
                             .map(|opt| opt.ok_or_else(|| anyhow::anyhow!("echo channel closed"))),
-                    ).await?;
+                    )
+                    .await?;
 
                     match echo {
                         Echo::Connect(addr) => break addr,
@@ -55,7 +59,7 @@ pub trait NetworkPlugin: Send + Sync + Any where Self: 'static {
                             echo_tx.send(other).await?;
                         }
                     }
-                }
+                },
             };
 
             let (rx, tx): (Box<dyn TransportRead>, Box<dyn TransportWrite>) = {
@@ -64,34 +68,40 @@ pub trait NetworkPlugin: Send + Sync + Any where Self: 'static {
                         let stream = TcpStream::connect(remote_addr.to_string()).await?;
                         let (rx, tx) = stream.into_split();
                         (Box::new(TcpRead(rx)), Box::new(TcpWrite(tx)))
-                    },
+                    }
                     Protocol::UDP => {
                         let socket = Arc::new(UdpSocket::bind("0.0.0.0:0").await?);
                         socket.connect(remote_addr.to_string()).await?;
-                        (Box::new(UdpRead(socket.clone())), Box::new(UdpWrite(socket)))
-                    },
+                        (
+                            Box::new(UdpRead(socket.clone())),
+                            Box::new(UdpWrite(socket)),
+                        )
+                    }
                 }
             };
 
-            broadcast_tx.broadcast(OrderedOutput::new(plugin.label(), Arc::new(vec![
-                HandlerOutput::Messages(vec![
-                    Message {
+            broadcast_tx
+                .broadcast(OrderedOutput::new(
+                    plugin.label(),
+                    Arc::new(vec![HandlerOutput::Messages(vec![Message {
                         msg_type: MsgType::Success,
                         text: format!("Connected to {remote_addr}"),
-                    },
-                ]),
-            ]))).await?;
+                    }])]),
+                ))
+                .await?;
 
             let local_cancel = shutdown.child_token();
 
-            plugin.on_connect(
-                // to send packet into write_task
-                packet_tx.clone(),
-                // to broadcast HandlerOutput to the core plugins
-                broadcast_tx.clone(),
-                &local_cancel,
-                context.clone(),
-            ).await?;
+            plugin
+                .on_connect(
+                    // to send packet into write_task
+                    packet_tx.clone(),
+                    // to broadcast HandlerOutput to the core plugins
+                    broadcast_tx.clone(),
+                    &local_cancel,
+                    context.clone(),
+                )
+                .await?;
 
             let tasks = vec![
                 plugin.clone().spawn_read_task(
@@ -133,7 +143,7 @@ pub trait NetworkPlugin: Send + Sync + Any where Self: 'static {
             match first {
                 Ok(Err(err)) => Err(err),
                 Err(err) => Err(err.into()),
-                _ => Ok(())
+                _ => Ok(()),
             }
         })
     }
@@ -245,17 +255,15 @@ pub trait NetworkPlugin: Send + Sync + Any where Self: 'static {
                 }
             }
 
-            broadcast_tx.broadcast(OrderedOutput::new(self.label(), Arc::new(vec![
-                HandlerOutput::Messages(vec![
-                    Message {
+            broadcast_tx
+                .broadcast(OrderedOutput::new(
+                    self.label(),
+                    Arc::new(vec![HandlerOutput::Messages(vec![Message {
                         msg_type: MsgType::Info,
-                        text: format!(
-                            "Read task for \"{}-connection\" was dropped",
-                            self.label()
-                        ),
-                    },
-                ]),
-            ]))).await?;
+                        text: format!("Read task for \"{}-connection\" was dropped", self.label()),
+                    }])]),
+                ))
+                .await?;
 
             Ok(())
         })
@@ -293,22 +301,19 @@ pub trait NetworkPlugin: Send + Sync + Any where Self: 'static {
                 }
             }
 
-            broadcast_tx.broadcast(OrderedOutput::new(self.label(), Arc::new(vec![
-                HandlerOutput::Messages(vec![
-                    Message {
+            broadcast_tx
+                .broadcast(OrderedOutput::new(
+                    self.label(),
+                    Arc::new(vec![HandlerOutput::Messages(vec![Message {
                         msg_type: MsgType::Info,
-                        text: format!(
-                            "Write task for \"{}-connection\" was dropped",
-                            self.label()
-                        ),
-                    },
-                ]),
-            ]))).await?;
+                        text: format!("Write task for \"{}-connection\" was dropped", self.label()),
+                    }])]),
+                ))
+                .await?;
 
             Ok(())
         })
     }
-
 
     async fn read_next_packet(
         &self,
@@ -325,14 +330,15 @@ pub trait NetworkPlugin: Send + Sync + Any where Self: 'static {
                 Ok(packet) => {
                     packet_buf.drain(..packet.metadata.packet_size);
                     return Ok(packet);
-                },
+                }
                 Err(_) => {
                     // TODO: add errors handling
                     let count = with_cancel(
                         &format!("{}-connection, read_next_packet", self.label()),
                         local_cancel,
                         read_half.read(buffer),
-                    ).await?;
+                    )
+                    .await?;
 
                     // TODO: process this error properly we do not need to attempt the read again after it
                     if count == 0 {
@@ -371,7 +377,8 @@ pub trait NetworkPlugin: Send + Sync + Any where Self: 'static {
                             packet_tx.clone(),
                             broadcast_tx.clone(),
                             &local_cancel,
-                        ).await?;
+                        )
+                        .await?;
 
                         loop {
                             let echo = with_cancel(
@@ -380,7 +387,8 @@ pub trait NetworkPlugin: Send + Sync + Any where Self: 'static {
                                 echo_rx.recv().map(|opt| {
                                     opt.ok_or_else(|| anyhow::anyhow!("echo channel closed"))
                                 }),
-                            ).await?;
+                            )
+                            .await?;
 
                             // TODO: Some echoes may be lost here; needs investigation.
                             if let Echo::Choose(ids) = echo {
@@ -393,14 +401,14 @@ pub trait NetworkPlugin: Send + Sync + Any where Self: 'static {
                         index = 0;
                         continue;
                     }
-                },
+                }
                 Request::SetContext(option) => {
                     if let Some(callback) = option.take() {
                         let mut guard = context.write().await;
                         callback(&mut guard);
                     }
-                },
-                _ => {},
+                }
+                _ => {}
             }
 
             index += 1;
@@ -414,7 +422,8 @@ pub trait NetworkPlugin: Send + Sync + Any where Self: 'static {
                 packet_tx.clone(),
                 broadcast_tx.clone(),
                 &local_cancel,
-            ).await?;
+            )
+            .await?;
         }
 
         Ok(())
@@ -428,15 +437,20 @@ pub trait NetworkPlugin: Send + Sync + Any where Self: 'static {
         local_cancel: &CancellationToken,
     ) -> anyhow::Result<()> {
         if self.enabled_outgoing() {
-            broadcast_tx.broadcast(OrderedOutput::new(self.label(), outputs.clone())).await?;
+            broadcast_tx
+                .broadcast(OrderedOutput::new(self.label(), outputs.clone()))
+                .await?;
 
             for output in &*outputs {
                 if let HandlerOutput::Packets(packets) = output {
                     with_cancel(
                         &format!("{}-connection, handle_outputs", self.label()),
                         local_cancel,
-                        packet_tx.send(packets.clone()).map_err(|e| anyhow::anyhow!(e.to_string())),
-                    ).await?;
+                        packet_tx
+                            .send(packets.clone())
+                            .map_err(|e| anyhow::anyhow!(e.to_string())),
+                    )
+                    .await?;
                 }
             }
         }
@@ -459,7 +473,8 @@ pub trait NetworkPlugin: Send + Sync + Any where Self: 'static {
                 packet_tx.clone(),
                 broadcast_tx.clone(),
                 local_cancel,
-            ).await?;
+            )
+            .await?;
         }
 
         Ok(())
@@ -549,7 +564,10 @@ pub trait ProcessorPlugin: Sync {
 }
 
 #[async_trait]
-pub trait CorePlugin: Send + Sync where Self: 'static {
+pub trait CorePlugin: Send + Sync
+where
+    Self: 'static,
+{
     fn get_tasks(
         &self,
         broadcast_rx: async_broadcast::Receiver<OrderedOutput>,
@@ -562,8 +580,11 @@ pub trait CorePlugin: Send + Sync where Self: 'static {
 pub async fn with_cancel<F, T>(
     brief_info: &str,
     local_cancel: &CancellationToken,
-    future: F
-) -> anyhow::Result<T> where F: Future<Output = anyhow::Result<T>> + Send {
+    future: F,
+) -> anyhow::Result<T>
+where
+    F: Future<Output = anyhow::Result<T>> + Send,
+{
     tokio::select! {
         biased;
         _ = local_cancel.cancelled() => {

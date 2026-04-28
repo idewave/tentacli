@@ -1,24 +1,22 @@
 pub use crate::client::packet::{
-    // Behavior / contracts
-    PacketHandler,
-    OutputBuilder,
-    Processor,
     BytesRead,
-    Serializer,
-
+    CalculateMetadata,
+    // Metadata (optional but useful in plugins)
+    ExtractMetadata,
+    MetadataContext,
+    MetadataValue,
+    OutputBuilder,
     // Core types
     Packet,
+    // Behavior / contracts
+    PacketHandler,
     PacketOpcode,
     PacketType,
 
-    // Metadata (optional but useful in plugins)
-    ExtractMetadata,
-    CalculateMetadata,
-    MetadataValue,
-    MetadataContext,
+    Processor,
+    Serializer,
+
     serialize_packet_json,
 };
 
-pub use crate::client::packet::fields::{
-    NullTerminated
-};
+pub use crate::client::packet::fields::NullTerminated;

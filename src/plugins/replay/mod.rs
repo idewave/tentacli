@@ -8,8 +8,8 @@ use async_broadcast::Receiver;
 use serde::Deserialize;
 use tokio::io::AsyncWriteExt;
 use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::mpsc::Sender;
 use tokio::sync::RwLock;
+use tokio::sync::mpsc::Sender;
 use tokio::time::{Duration, Instant};
 use tokio_util::sync::CancellationToken;
 
@@ -38,13 +38,12 @@ impl Replay {
         shutdown: CancellationToken,
     ) -> anyhow::Result<()> {
         let config: Config = ConfigParser::parse_from_file("replay/replay.toml")?;
-        let replay = config.replay.ok_or_else(|| anyhow::anyhow!("Missing [replay]"))?;
+        let replay = config
+            .replay
+            .ok_or_else(|| anyhow::anyhow!("Missing [replay]"))?;
 
-        let mut reader = parser::WorldLogReader::open(
-            &replay.world_log_path,
-            &replay.opcodes,
-            replay.dedup
-        )?;
+        let mut reader =
+            parser::WorldLogReader::open(&replay.world_log_path, &replay.opcodes, replay.dedup)?;
 
         let mut first_log_timestamp: Option<i64> = None;
         let replay_start = Instant::now();
@@ -95,7 +94,6 @@ impl Replay {
 
         Ok(())
     }
-
 }
 
 impl CorePlugin for Replay {
@@ -106,33 +104,31 @@ impl CorePlugin for Replay {
         shutdown: CancellationToken,
         _: Arc<RwLock<CtxMap>>,
     ) -> anyhow::Result<Vec<Task>> {
-        Ok(vec![
-            tokio::spawn(async move {
-                let listener = TcpListener::bind("127.0.0.1:0").await?;
-                let local_addr = listener.local_addr()?;
+        Ok(vec![tokio::spawn(async move {
+            let listener = TcpListener::bind("127.0.0.1:0").await?;
+            let local_addr = listener.local_addr()?;
 
-                if let Some(sender) = echo_senders.get(PLUGIN_LABEL) {
-                    sender.send(Echo::Connect(local_addr.to_string())).await?;
-                } else {
-                    anyhow::bail!("Echo sender for {PLUGIN_LABEL} not found");
+            if let Some(sender) = echo_senders.get(PLUGIN_LABEL) {
+                sender.send(Echo::Connect(local_addr.to_string())).await?;
+            } else {
+                anyhow::bail!("Echo sender for {PLUGIN_LABEL} not found");
+            }
+
+            let (stream, _) = tokio::select! {
+                biased;
+
+                _ = shutdown.cancelled() => {
+                    return Ok(());
                 }
 
-                let (stream, _) = tokio::select! {
-                    biased;
+                result = listener.accept() => {
+                    result?
+                }
+            };
 
-                    _ = shutdown.cancelled() => {
-                        return Ok(());
-                    }
+            Replay::handle_connection(stream, shutdown.clone()).await?;
 
-                    result = listener.accept() => {
-                        result?
-                    }
-                };
-
-                Replay::handle_connection(stream, shutdown.clone()).await?;
-
-                Ok(())
-            })
-        ])
+            Ok(())
+        })])
     }
 }
