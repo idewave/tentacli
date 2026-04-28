@@ -1,0 +1,5 @@
+logs_dir = "."
+# 0 = disabled (no files/no logging), 1 = enabled.
+enabled = 0
+# 0 = always write to one file; > 0 = rotate into fragments when size exceeds this value (MiB).
+max_file_size = 0
