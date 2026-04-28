@@ -1,0 +1,7 @@
+# TCP port for WebSocket server.
+port = 9001
+
+# Bind mode:
+# true  = bind to 127.0.0.1 (local only)
+# false = bind to 0.0.0.0 (accessible from external hosts)
+local = true
