@@ -27,9 +27,11 @@ inventory::collect!(PluginLoader<dyn ProcessorPlugin>);
 #[macro_export]
 macro_rules! register_plugin {
     ($plugin_type:ty, $trait_obj:ty) => {
-        inventory::submit! {
-            PluginLoader::<$trait_obj> {
-                load: || Arc::new(<$plugin_type>::default()) as Arc<$trait_obj>,
+        $crate::__inventory::submit! {
+            $crate::client::PluginLoader::<$trait_obj> {
+                load: || {
+                    ::std::sync::Arc::new(<$plugin_type>::default()) as ::std::sync::Arc<$trait_obj>
+                },
                 name: stringify!($plugin_type),
             }
         }
