@@ -76,4 +76,7 @@
 pub mod client;
 pub mod plugins;
 
+#[doc(hidden)]
+pub use inventory as __inventory;
+
 pub use client::Client;
