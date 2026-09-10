@@ -3,7 +3,7 @@ use async_trait::async_trait;
 mod chat;
 mod init;
 mod network;
-mod object;
+pub mod object;
 mod player;
 mod rc4;
 mod spell;
