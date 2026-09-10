@@ -10,14 +10,30 @@ mod update_object;
 
 use crate::client::prelude::*;
 use crate::plugins::wow::wotlk::opcodes::Opcode;
-use crate::plugins::wow::wotlk::realm::object::types::packed_guid::PackedGuid;
-use crate::plugins::wow::wotlk::realm::object::update_object::Object;
+
+pub use types::packed_guid::PackedGuid;
+pub use update_object::{Object, ObjectTypeId};
+
+/// Canonical WotLK object state stored by [`ObjectProcessor`] in [`CtxMap`].
+pub type ObjectMap = HashMap<PackedGuid, Object>;
+
+/// Returns the WotLK object state maintained by [`ObjectProcessor`].
+#[inline]
+pub fn objects(ctx: &CtxMap) -> Option<&ObjectMap> {
+    ctx.get::<ObjectMap>()
+}
+
+/// Returns mutable access to the WotLK object state maintained by [`ObjectProcessor`].
+#[inline]
+pub fn objects_mut(ctx: &mut CtxMap) -> Option<&mut ObjectMap> {
+    ctx.get_mut::<ObjectMap>()
+}
 
 #[derive(Default)]
 pub struct ObjectProcessor;
 impl Processor for ObjectProcessor {
     fn init(&mut self, ctx: &mut CtxMap) -> anyhow::Result<()> {
-        ctx.insert(HashMap::<PackedGuid, Object>::with_capacity(4_096));
+        ctx.insert(ObjectMap::with_capacity(4_096));
         Ok(())
     }
 
