@@ -3,7 +3,7 @@ use binrw::{BinRead, BinWrite};
 use flate2::read::DeflateDecoder;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::Serialize;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::io::Read;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -15,6 +15,7 @@ use crate::plugins::wow::wotlk::realm::object::lifecycle::{
 use crate::plugins::wow::wotlk::realm::object::types::movement::Movement;
 use crate::plugins::wow::wotlk::realm::object::types::packed_guid::PackedGuid;
 use crate::plugins::wow::wotlk::realm::object::types::update_data::{ObjectTypeMask, UpdateData};
+use crate::plugins::wow::wotlk::realm::object::names::{ObjectNameRegistry, NameQuerySnapshot};
 use crate::plugins::wow::wotlk::realm::object::ObjectMap;
 use crate::plugins::wow::wotlk::realm::object::types::update_fields::{
     ContainerField, CorpseField, DynamicObjectField, FieldValue, GameObjectField, ItemField,
@@ -115,6 +116,31 @@ impl PacketHandler for Handler {
         }
 
         if !mutations.is_empty() {
+            let query_states = {
+                let guard = context.read().await;
+                collect_name_query_states(&mutations, guard.get::<ObjectMap>())
+            };
+
+            let query_requests = {
+                let mut guard = context.write().await;
+                if let Some(registry) = guard.get_mut::<ObjectNameRegistry>() {
+                    query_states
+                        .into_iter()
+                        .flat_map(|state| registry.schedule_state(state))
+                        .collect::<Vec<_>>()
+                } else {
+                    Vec::new()
+                }
+            };
+
+            if !query_requests.is_empty() {
+                let packets = query_requests
+                    .into_iter()
+                    .map(|request| request.pack())
+                    .collect::<anyhow::Result<Vec<_>>>()?;
+                output.push(HandlerOutput::Packets(packets));
+            }
+
             let processed_at = now_millis();
             let create_count = mutations
                 .iter()
@@ -143,6 +169,41 @@ enum LifecycleMutation {
     Created(PackedGuid),
     Updated(PackedGuid),
     Removed(PackedGuid, ObjectRemovalReason),
+}
+
+fn collect_name_query_states(
+    mutations: &[ObjectMutation],
+    objects: Option<&ObjectMap>,
+) -> Vec<NameQuerySnapshot> {
+    let mut states = Vec::new();
+    let mut effective = HashMap::<PackedGuid, NameQuerySnapshot>::new();
+
+    for mutation in mutations {
+        match mutation {
+            ObjectMutation::Create(object) => {
+                let state = NameQuerySnapshot::from_object(object);
+                effective.insert(object.guid, state);
+                states.push(state);
+            }
+            ObjectMutation::Values(guid, update_data) => {
+                let current = effective.get(guid).copied().or_else(|| {
+                    objects
+                        .and_then(|objects| objects.get(guid))
+                        .map(NameQuerySnapshot::from_object)
+                });
+
+                if let Some(current) = current
+                    && let Some(updated) = current.updated(update_data)
+                {
+                    effective.insert(*guid, updated);
+                    states.push(updated);
+                }
+            }
+            ObjectMutation::Movement(..) | ObjectMutation::OutOfRange(..) => {}
+        }
+    }
+
+    states
 }
 
 fn apply_mutations(
@@ -719,6 +780,28 @@ mod tests {
         );
         assert_eq!(movement.target_guid, Some(PackedGuid(100)));
         assert_eq!(movement.game_object_rotation, Some(222));
+    }
+
+    #[test]
+    fn values_identity_update_is_reconciled_for_name_queries() {
+        let guid = PackedGuid(5);
+        let object = unit_object(guid);
+        let mut objects = ObjectMap::default();
+        objects.insert(guid, object);
+
+        let mut update = UpdateData::default();
+        update
+            .unit_fields
+            .insert(UnitField::PetNumber, FieldValue::Integer(900));
+
+        let states = collect_name_query_states(
+            &[ObjectMutation::Values(guid, update)],
+            Some(&objects),
+        );
+        assert_eq!(states.len(), 1);
+
+        let mut registry = ObjectNameRegistry::default();
+        assert_eq!(registry.schedule_state(states[0]).len(), 1);
     }
 
     #[test]
