@@ -15,6 +15,7 @@ use crate::plugins::wow::wotlk::realm::object::lifecycle::{
 use crate::plugins::wow::wotlk::realm::object::types::movement::Movement;
 use crate::plugins::wow::wotlk::realm::object::types::packed_guid::PackedGuid;
 use crate::plugins::wow::wotlk::realm::object::types::update_data::{ObjectTypeMask, UpdateData};
+use crate::plugins::wow::wotlk::realm::object::names::ObjectNameRegistry;
 use crate::plugins::wow::wotlk::realm::object::ObjectMap;
 use crate::plugins::wow::wotlk::realm::object::types::update_fields::{
     ContainerField, CorpseField, DynamicObjectField, FieldValue, GameObjectField, ItemField,
@@ -115,6 +116,30 @@ impl PacketHandler for Handler {
         }
 
         if !mutations.is_empty() {
+            let query_requests = {
+                let mut guard = context.write().await;
+                if let Some(registry) = guard.get_mut::<ObjectNameRegistry>() {
+                    mutations
+                        .iter()
+                        .filter_map(|mutation| match mutation {
+                            ObjectMutation::Create(object) => Some(object),
+                            _ => None,
+                        })
+                        .flat_map(|object| registry.schedule_for(object))
+                        .collect::<Vec<_>>()
+                } else {
+                    Vec::new()
+                }
+            };
+
+            if !query_requests.is_empty() {
+                let packets = query_requests
+                    .into_iter()
+                    .map(|request| request.pack())
+                    .collect::<anyhow::Result<Vec<_>>>()?;
+                output.push(HandlerOutput::Packets(packets));
+            }
+
             let processed_at = now_millis();
             let create_count = mutations
                 .iter()

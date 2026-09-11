@@ -6,6 +6,8 @@ mod aura_update_all;
 mod destroy_object;
 mod lifecycle;
 mod monster_move;
+mod name_query;
+mod names;
 mod player_move;
 pub mod types;
 mod update_object;
@@ -15,6 +17,10 @@ use crate::plugins::wow::wotlk::opcodes::Opcode;
 
 pub use accessors::{GameObjectRef, PlayerRef, UnitRef};
 pub use lifecycle::{ObjectLifecycle, ObjectLifecycleRegistry, ObjectRemovalReason};
+pub use names::{
+    CreatureIdentity, GameObjectIdentity, ItemIdentity, ObjectNameRegistry, PetIdentity,
+    PlayerIdentity,
+};
 pub use types::packed_guid::PackedGuid;
 pub use types::unit::{Class, Gender, PowerType, Race};
 pub use update_object::{Object, ObjectTypeId};
@@ -40,12 +46,19 @@ pub fn object_lifecycle(ctx: &CtxMap) -> Option<&ObjectLifecycleRegistry> {
     ctx.get::<ObjectLifecycleRegistry>()
 }
 
+/// Returns object identity/name metadata maintained alongside [`ObjectMap`].
+#[inline]
+pub fn object_names(ctx: &CtxMap) -> Option<&ObjectNameRegistry> {
+    ctx.get::<ObjectNameRegistry>()
+}
+
 #[derive(Default)]
 pub struct ObjectProcessor;
 impl Processor for ObjectProcessor {
     fn init(&mut self, ctx: &mut CtxMap) -> anyhow::Result<()> {
         ctx.insert(ObjectMap::with_capacity(4_096));
         ctx.insert(ObjectLifecycleRegistry::with_capacity(4_096));
+        ctx.insert(ObjectNameRegistry::default());
         Ok(())
     }
 
@@ -63,6 +76,21 @@ impl Processor for ObjectProcessor {
                 is_compressed: true,
             })],
             Opcode::SMSG_DESTROY_OBJECT => vec![Box::new(destroy_object::Handler)],
+            Opcode::SMSG_NAME_QUERY_RESPONSE => vec![Box::new(name_query::Handler {
+                kind: name_query::ResponseKind::Player,
+            })],
+            Opcode::SMSG_PET_NAME_QUERY_RESPONSE => vec![Box::new(name_query::Handler {
+                kind: name_query::ResponseKind::Pet,
+            })],
+            Opcode::SMSG_CREATURE_QUERY_RESPONSE => vec![Box::new(name_query::Handler {
+                kind: name_query::ResponseKind::Creature,
+            })],
+            Opcode::SMSG_GAMEOBJECT_QUERY_RESPONSE => vec![Box::new(name_query::Handler {
+                kind: name_query::ResponseKind::GameObject,
+            })],
+            Opcode::SMSG_ITEM_NAME_QUERY_RESPONSE => vec![Box::new(name_query::Handler {
+                kind: name_query::ResponseKind::Item,
+            })],
             Opcode::MSG_MOVE_START_FORWARD
             | Opcode::MSG_MOVE_START_BACKWARD
             | Opcode::MSG_MOVE_START_STRAFE_RIGHT

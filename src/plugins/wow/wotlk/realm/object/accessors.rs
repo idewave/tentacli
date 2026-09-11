@@ -114,6 +114,12 @@ impl<'a> UnitRef<'a> {
     }
 
     #[inline]
+    pub fn pet_number(self) -> Option<u32> {
+        field_u32(self.object.unit_fields.get(&UnitField::PetNumber))
+            .filter(|value| *value != 0)
+    }
+
+    #[inline]
     pub fn health(self) -> Option<u32> {
         field_u32(self.object.unit_fields.get(&UnitField::Health))
     }
