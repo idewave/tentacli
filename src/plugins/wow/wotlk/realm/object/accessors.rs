@@ -50,7 +50,7 @@ impl Object {
             return Some(info.location.point);
         }
         if let Some(info) = movement.position_info.as_ref() {
-            return Some(info.world_object_point);
+            return Some(info.location.point);
         }
         if let Some(position) = movement.world_object_position.as_ref() {
             return Some(position.point);

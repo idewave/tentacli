@@ -79,6 +79,56 @@ pub struct Movement {
     pub game_object_rotation: Option<i64>,
 }
 
+impl Movement {
+    /// Merge a partial UPDATE_OBJECT movement block into the accumulated object state.
+    pub(crate) fn merge_from(&mut self, incoming: Movement) {
+        let flags = incoming.object_update_flags;
+        self.object_update_flags |= flags;
+
+        if flags.contains(ObjectUpdateFlags::LIVING) {
+            self.movement_info = incoming.movement_info;
+            self.movement_speed = incoming.movement_speed;
+            self.spline_info = incoming.spline_info;
+            self.position_info = None;
+            self.game_object_position = None;
+            self.world_object_position = None;
+        } else if flags.contains(ObjectUpdateFlags::POSITION) {
+            self.position_info = incoming.position_info;
+            self.game_object_position = None;
+            self.world_object_position = None;
+        } else if flags.contains(ObjectUpdateFlags::HAS_POSITION) {
+            self.position_info = None;
+            if flags.contains(ObjectUpdateFlags::TRANSPORT) {
+                self.game_object_position = incoming.game_object_position;
+                self.world_object_position = None;
+            } else {
+                self.world_object_position = incoming.world_object_position;
+                self.game_object_position = None;
+            }
+        }
+
+        if flags.contains(ObjectUpdateFlags::LOWGUID) {
+            self.low_guid = incoming.low_guid;
+        }
+        if flags.contains(ObjectUpdateFlags::HIGHGUID) {
+            self.high_guid = incoming.high_guid;
+        }
+        if flags.contains(ObjectUpdateFlags::HAS_ATTACKING_TARGET) {
+            self.target_guid = incoming.target_guid;
+        }
+        if flags.contains(ObjectUpdateFlags::TRANSPORT) {
+            self.transport_timer = incoming.transport_timer;
+        }
+        if flags.contains(ObjectUpdateFlags::VEHICLE) {
+            self.vehicle_id = incoming.vehicle_id;
+            self.vehicle_orientation = incoming.vehicle_orientation;
+        }
+        if flags.contains(ObjectUpdateFlags::ROTATION) {
+            self.game_object_rotation = incoming.game_object_rotation;
+        }
+    }
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]
 pub struct MovementSpeed(pub BTreeMap<UnitMoveType, f32>);
 

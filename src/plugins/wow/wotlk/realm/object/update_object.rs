@@ -177,7 +177,11 @@ fn apply_mutations(
                 }
                 ObjectMutation::Movement(guid, movement) => {
                     if let Some(object) = objects.get_mut(&guid) {
-                        object.movement = Some(movement);
+                        if let Some(current) = object.movement.as_mut() {
+                            current.merge_from(movement);
+                        } else {
+                            object.movement = Some(movement);
+                        }
                         lifecycle_mutations.push(LifecycleMutation::Updated(guid));
                     }
                 }
@@ -624,6 +628,97 @@ mod tests {
         );
         let lifecycle = &ctx.get::<ObjectLifecycleRegistry>().unwrap()[&guid];
         assert_eq!(lifecycle.updated_at(), 225);
+    }
+
+    #[test]
+    fn partial_movement_update_preserves_omitted_state() {
+        use crate::plugins::wow::wotlk::realm::object::types::movement::{
+            ObjectUpdateFlags, OrientedPoint3D, Point3D,
+        };
+
+        let guid = PackedGuid(4);
+        let mut object = unit_object(guid);
+        object.movement = Some(Movement {
+            object_update_flags: ObjectUpdateFlags::HAS_POSITION
+                | ObjectUpdateFlags::HAS_ATTACKING_TARGET
+                | ObjectUpdateFlags::ROTATION,
+            world_object_position: Some(OrientedPoint3D {
+                point: Point3D {
+                    x: 10.0,
+                    y: 20.0,
+                    z: 30.0,
+                },
+                direction: 0.75,
+            }),
+            target_guid: Some(PackedGuid(99)),
+            game_object_rotation: Some(111),
+            ..Default::default()
+        });
+
+        let mut ctx = CtxMap::default();
+        let mut objects = ObjectMap::default();
+        objects.insert(guid, object);
+        ctx.insert(objects);
+
+        let mut registry = ObjectLifecycleRegistry::default();
+        registry.insert(guid, ObjectLifecycle::created(100));
+        ctx.insert(registry);
+
+        let rotation_only = Movement {
+            object_update_flags: ObjectUpdateFlags::ROTATION,
+            game_object_rotation: Some(222),
+            ..Default::default()
+        };
+
+        apply_mutations(
+            &mut ctx,
+            vec![ObjectMutation::Movement(guid, rotation_only)],
+            0,
+            250,
+        );
+
+        let movement = ctx.get::<ObjectMap>().unwrap()[&guid]
+            .movement
+            .as_ref()
+            .unwrap();
+        assert_eq!(
+            movement.world_object_position.as_ref().map(|p| p.point),
+            Some(Point3D {
+                x: 10.0,
+                y: 20.0,
+                z: 30.0,
+            })
+        );
+        assert_eq!(movement.target_guid, Some(PackedGuid(99)));
+        assert_eq!(movement.game_object_rotation, Some(222));
+
+        let target_only = Movement {
+            object_update_flags: ObjectUpdateFlags::HAS_ATTACKING_TARGET,
+            target_guid: Some(PackedGuid(100)),
+            ..Default::default()
+        };
+
+        apply_mutations(
+            &mut ctx,
+            vec![ObjectMutation::Movement(guid, target_only)],
+            0,
+            275,
+        );
+
+        let movement = ctx.get::<ObjectMap>().unwrap()[&guid]
+            .movement
+            .as_ref()
+            .unwrap();
+        assert_eq!(
+            movement.world_object_position.as_ref().map(|p| p.point),
+            Some(Point3D {
+                x: 10.0,
+                y: 20.0,
+                z: 30.0,
+            })
+        );
+        assert_eq!(movement.target_guid, Some(PackedGuid(100)));
+        assert_eq!(movement.game_object_rotation, Some(222));
     }
 
     #[test]

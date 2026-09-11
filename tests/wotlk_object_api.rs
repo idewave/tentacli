@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 use tentacli::client::prelude::CtxMap;
 use tentacli::plugins::wow::wotlk::realm::object::types::movement::{
-    Movement, OrientedPoint3D, Point3D,
+    Movement, ObjectUpdateFlags, OrientedPoint3D, Point3D, PositionInfo,
 };
 use tentacli::plugins::wow::wotlk::realm::object::types::update_data::ObjectTypeMask;
 use tentacli::plugins::wow::wotlk::realm::object::types::update_fields::{
@@ -236,6 +236,46 @@ fn typed_unit_and_game_object_accessors_cover_flags_and_movement() {
         game_object.parent_rotation(),
         Some(&[Some(0.0_f32), Some(0.5_f32), None, Some(1.0_f32)][..])
     );
+}
+
+#[test]
+fn position_info_accessor_returns_world_space_location() {
+    let mut object = empty_object(
+        PackedGuid(82),
+        ObjectTypeId::GameObject,
+        ObjectTypeMask::OBJECT | ObjectTypeMask::GAMEOBJECT,
+    );
+    object.movement = Some(Movement {
+        object_update_flags: ObjectUpdateFlags::POSITION,
+        position_info: Some(PositionInfo {
+            transport_guid: PackedGuid(500),
+            world_object_point: Point3D {
+                x: 1.0,
+                y: 2.0,
+                z: 3.0,
+            },
+            location: OrientedPoint3D {
+                point: Point3D {
+                    x: 101.0,
+                    y: 202.0,
+                    z: 303.0,
+                },
+                direction: 1.5,
+            },
+            corpse_direction: 0.0,
+        }),
+        ..Default::default()
+    });
+
+    assert_eq!(
+        object.position(),
+        Some(Point3D {
+            x: 101.0,
+            y: 202.0,
+            z: 303.0,
+        })
+    );
+    assert_eq!(object.facing(), Some(1.5));
 }
 
 #[test]
