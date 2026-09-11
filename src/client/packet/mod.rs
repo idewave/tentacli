@@ -344,8 +344,10 @@ pub trait Processor: Send + Sync {
         packet: &mut Packet,
         context: Arc<RwLock<CtxMap>>,
     ) -> anyhow::Result<Option<Vec<HandlerOutput>>> {
-        let guard = context.read().await;
-        let mut handlers = self.get_handlers(&packet.metadata.opcode, &guard)?;
+        let mut handlers = {
+            let guard = context.read().await;
+            self.get_handlers(&packet.metadata.opcode, &guard)?
+        };
         self.call_handlers(&mut handlers, packet, context.clone())
             .await
     }
