@@ -1,6 +1,5 @@
 use async_trait::async_trait;
 use binrw::{BinRead, BinWrite};
-use num_enum::{FromPrimitive, IntoPrimitive};
 use rand::distr::Alphanumeric;
 use rand::prelude::IndexedRandom;
 use rand::{Rng, rng};
@@ -14,6 +13,7 @@ use crate::client::prelude::*;
 use crate::plugins::wow::wotlk::config::Config;
 use crate::plugins::wow::wotlk::opcodes::Opcode;
 use crate::plugins::wow::wotlk::realm::object::types::movement::Point3D;
+use crate::plugins::wow::wotlk::realm::object::types::unit::{Class, Gender, Race};
 
 #[derive(Packet, BinRead, Serialize, FieldsMetadata)]
 #[br(little)]
@@ -214,59 +214,4 @@ struct EquippedItem {
     display_id: u32,
     inventory_type: u8,
     aura_id: u32,
-}
-
-#[non_exhaustive]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, IntoPrimitive, FromPrimitive)]
-#[repr(u8)]
-pub enum Gender {
-    #[default]
-    Male = 0,
-    Female = 1,
-    None = 2,
-}
-
-#[non_exhaustive]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, IntoPrimitive, FromPrimitive)]
-#[repr(u8)]
-pub enum Race {
-    #[default]
-    Human = 1,
-    Orc = 2,
-    Dwarf = 3,
-    NightElf = 4,
-    Undead = 5,
-    Tauren = 6,
-    Gnome = 7,
-    Troll = 8,
-    Goblin = 9,
-    BloodElf = 10,
-    Draenei = 11,
-    FelOrc = 12,
-    Naga = 13,
-    Broken = 14,
-    Skeleton = 15,
-    Vrykul = 16,
-    Tuskarr = 17,
-    ForestTroll = 18,
-    Taunka = 19,
-    NorthrendSkeleton = 20,
-    IceTroll = 21,
-}
-
-#[non_exhaustive]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, IntoPrimitive, FromPrimitive)]
-#[repr(u8)]
-pub enum Class {
-    #[default]
-    Warrior = 1,
-    Paladin = 2,
-    Hunter = 3,
-    Rogue = 4,
-    Priest = 5,
-    DeathKnight = 6,
-    Shaman = 7,
-    Mage = 8,
-    Warlock = 9,
-    Druid = 11,
 }

@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 
+mod accessors;
 mod aura_update;
 mod aura_update_all;
 mod destroy_object;
+mod lifecycle;
 mod monster_move;
 mod player_move;
 pub mod types;
@@ -11,7 +13,10 @@ mod update_object;
 use crate::client::prelude::*;
 use crate::plugins::wow::wotlk::opcodes::Opcode;
 
+pub use accessors::{GameObjectRef, PlayerRef, UnitRef};
+pub use lifecycle::{ObjectLifecycle, ObjectLifecycleRegistry, ObjectRemovalReason};
 pub use types::packed_guid::PackedGuid;
+pub use types::unit::{Class, Gender, PowerType, Race};
 pub use update_object::{Object, ObjectTypeId};
 
 /// Canonical WotLK object state stored by [`ObjectProcessor`] in [`CtxMap`].
@@ -29,11 +34,18 @@ pub fn objects_mut(ctx: &mut CtxMap) -> Option<&mut ObjectMap> {
     ctx.get_mut::<ObjectMap>()
 }
 
+/// Returns lifecycle metadata maintained alongside [`ObjectMap`].
+#[inline]
+pub fn object_lifecycle(ctx: &CtxMap) -> Option<&ObjectLifecycleRegistry> {
+    ctx.get::<ObjectLifecycleRegistry>()
+}
+
 #[derive(Default)]
 pub struct ObjectProcessor;
 impl Processor for ObjectProcessor {
     fn init(&mut self, ctx: &mut CtxMap) -> anyhow::Result<()> {
         ctx.insert(ObjectMap::with_capacity(4_096));
+        ctx.insert(ObjectLifecycleRegistry::with_capacity(4_096));
         Ok(())
     }
 
