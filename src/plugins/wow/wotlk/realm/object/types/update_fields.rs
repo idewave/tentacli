@@ -614,7 +614,79 @@ pub enum FieldValue {
     None,
 }
 
+
+fn merge_optional_values<T>(current: &mut Vec<Option<T>>, incoming: Vec<Option<T>>) {
+    if current.len() < incoming.len() {
+        current.resize_with(incoming.len(), || None);
+    }
+
+    for (index, value) in incoming.into_iter().enumerate() {
+        if let Some(value) = value {
+            current[index] = Some(value);
+        }
+    }
+}
+
 impl FieldValue {
+    /// Merge a partial update-field value into the accumulated object state.
+    /// Missing array/custom elements keep their previously known values.
+    pub(crate) fn merge_from(&mut self, incoming: FieldValue) {
+        if matches!(&incoming, FieldValue::None) {
+            return;
+        }
+
+        match (self, incoming) {
+            (FieldValue::IntegerArray(current), FieldValue::IntegerArray(incoming)) => {
+                merge_optional_values(current, incoming);
+            }
+            (FieldValue::LongArray(current), FieldValue::LongArray(incoming)) => {
+                merge_optional_values(current, incoming);
+            }
+            (FieldValue::FloatArray(current), FieldValue::FloatArray(incoming)) => {
+                merge_optional_values(current, incoming);
+            }
+            (FieldValue::BytesArray(current), FieldValue::BytesArray(incoming)) => {
+                merge_optional_values(current, incoming);
+            }
+            (FieldValue::TwoShortsArray(current), FieldValue::TwoShortsArray(incoming)) => {
+                merge_optional_values(current, incoming);
+            }
+            (FieldValue::Custom(current), FieldValue::Custom(incoming)) => {
+                if current.len() < incoming.len() {
+                    current.resize(incoming.len(), FieldValue::None);
+                }
+
+                for (index, value) in incoming.into_iter().enumerate() {
+                    current[index].merge_from(value);
+                }
+            }
+            (FieldValue::CustomArray(current), FieldValue::CustomArray(incoming)) => {
+                if current.len() < incoming.len() {
+                    current.resize_with(incoming.len(), Vec::new);
+                }
+
+                for (row_index, incoming_row) in incoming.into_iter().enumerate() {
+                    let current_row = &mut current[row_index];
+                    if current_row.len() < incoming_row.len() {
+                        current_row.resize_with(incoming_row.len(), || None);
+                    }
+
+                    for (column_index, value) in incoming_row.into_iter().enumerate() {
+                        let Some(value) = value else {
+                            continue;
+                        };
+
+                        match current_row[column_index].as_mut() {
+                            Some(current) => current.merge_from(value),
+                            None => current_row[column_index] = Some(value),
+                        }
+                    }
+                }
+            }
+            (current, incoming) => *current = incoming,
+        }
+    }
+
     /// Returns the exact byte size this field occupies in the WoW UpdateObject values stream.
     /// This MUST be structural, not based on Some/None presence.
     pub fn len(&self) -> usize {
@@ -676,5 +748,69 @@ impl FieldValue {
             FieldValue::Long(_) | FieldValue::LongArray(_) => 2,
             _ => 1,
         }
+    }
+}
+
+#[cfg(test)]
+mod merge_tests {
+    use super::*;
+
+    #[test]
+    fn partial_array_merges_preserve_missing_slots_for_every_array_variant() {
+        let mut integer = FieldValue::IntegerArray(vec![Some(1), Some(2)]);
+        integer.merge_from(FieldValue::IntegerArray(vec![None, Some(20), Some(30)]));
+        assert_eq!(integer, FieldValue::IntegerArray(vec![Some(1), Some(20), Some(30)]));
+
+        let mut long = FieldValue::LongArray(vec![Some(1), Some(2)]);
+        long.merge_from(FieldValue::LongArray(vec![Some(10), None, Some(30)]));
+        assert_eq!(long, FieldValue::LongArray(vec![Some(10), Some(2), Some(30)]));
+
+        let mut float = FieldValue::FloatArray(vec![Some(1.0), Some(2.0)]);
+        float.merge_from(FieldValue::FloatArray(vec![None, Some(2.5), Some(3.5)]));
+        assert_eq!(
+            float,
+            FieldValue::FloatArray(vec![Some(1.0), Some(2.5), Some(3.5)])
+        );
+
+        let mut bytes = FieldValue::BytesArray(vec![Some(1), Some(2)]);
+        bytes.merge_from(FieldValue::BytesArray(vec![Some(10), None, Some(30)]));
+        assert_eq!(bytes, FieldValue::BytesArray(vec![Some(10), Some(2), Some(30)]));
+
+        let mut shorts = FieldValue::TwoShortsArray(vec![Some((1, 2)), Some((3, 4))]);
+        shorts.merge_from(FieldValue::TwoShortsArray(vec![None, Some((9, 10))]));
+        assert_eq!(
+            shorts,
+            FieldValue::TwoShortsArray(vec![Some((1, 2)), Some((9, 10))])
+        );
+    }
+
+    #[test]
+    fn partial_custom_merge_preserves_missing_nested_values() {
+        let mut value = FieldValue::Custom(vec![
+            FieldValue::Integer(10),
+            FieldValue::TwoShorts((1, 2)),
+        ]);
+
+        value.merge_from(FieldValue::Custom(vec![
+            FieldValue::None,
+            FieldValue::TwoShorts((7, 8)),
+            FieldValue::Integer(30),
+        ]));
+
+        assert_eq!(
+            value,
+            FieldValue::Custom(vec![
+                FieldValue::Integer(10),
+                FieldValue::TwoShorts((7, 8)),
+                FieldValue::Integer(30),
+            ])
+        );
+    }
+
+    #[test]
+    fn field_value_none_does_not_erase_accumulated_state() {
+        let mut value = FieldValue::Integer(42);
+        value.merge_from(FieldValue::None);
+        assert_eq!(value, FieldValue::Integer(42));
     }
 }

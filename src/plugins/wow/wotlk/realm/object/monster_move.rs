@@ -1,7 +1,6 @@
 use async_trait::async_trait;
 use binrw::{BinRead, BinResult, Endian};
 use serde::Serialize;
-use std::collections::HashMap;
 use std::io::{Read, Seek};
 use std::mem::size_of;
 use std::sync::Arc;
@@ -9,9 +8,10 @@ use tokio::sync::RwLock;
 
 use crate::client::prelude::*;
 use crate::enum_field;
+use crate::plugins::wow::wotlk::realm::object::lifecycle::{ObjectLifecycleRegistry, now_millis};
 use crate::plugins::wow::wotlk::realm::object::types::movement::{Movement, Point3D, SplineFlags};
 use crate::plugins::wow::wotlk::realm::object::types::packed_guid::PackedGuid;
-use crate::plugins::wow::wotlk::realm::object::update_object::Object;
+use crate::plugins::wow::wotlk::realm::object::ObjectMap;
 
 #[derive(Packet, BinRead, Serialize, FieldsMetadata)]
 #[br(little)]
@@ -123,8 +123,10 @@ impl PacketHandler for Handler {
         packet: &mut Packet,
         _: Arc<RwLock<CtxMap>>,
     ) -> anyhow::Result<Vec<HandlerOutput>> {
-        let mut outputs = vec![];
         let mut incoming = Incoming::unpack(packet)?;
+        let guid = incoming.guid;
+        let updated_at = now_millis();
+        let mut updated_path = None;
 
         if let (Some(offsets), Some(dest)) =
             (incoming.linear_path.take(), incoming.destination_point)
@@ -138,11 +140,8 @@ impl PacketHandler for Handler {
             };
 
             let mut world_path = Vec::with_capacity(offsets.len() + 2);
-
-            // First point (start)
             world_path.push(start);
 
-            // Internal points (decoded from packed offsets)
             for lp in offsets {
                 let off = lp.0;
                 world_path.push(Point3D {
@@ -152,40 +151,124 @@ impl PacketHandler for Handler {
                 });
             }
 
-            // Last point (destination)
             world_path.push(dest);
 
             let linear_points: Vec<LinearPoint3D> =
                 world_path.iter().map(|p| LinearPoint3D(*p)).collect();
-
-            // Overwrite the original field with absolute world-space points
-            incoming.linear_path = Some(linear_points.clone());
-
+            incoming.linear_path = Some(linear_points);
             packet.set_json(serialize_packet_json(&incoming)?);
-
-            outputs.push(HandlerOutput::Requests(vec![Request::SetContext(Some(
-                Box::new(move |ctx: &mut CtxMap| {
-                    let Some(objects) = ctx.get_mut::<HashMap<PackedGuid, Object>>() else {
-                        return;
-                    };
-
-                    let Some(object) = objects.get_mut(&incoming.guid) else {
-                        return;
-                    };
-
-                    let movement = object.movement.get_or_insert_with(|| Movement {
-                        ..Default::default()
-                    });
-
-                    movement
-                        .spline_info
-                        .get_or_insert_with(Default::default)
-                        .path = world_path.clone();
-                }),
-            ))]))
+            updated_path = Some(world_path);
         }
 
-        Ok(outputs)
+        Ok(vec![HandlerOutput::Requests(vec![Request::SetContext(Some(
+            Box::new(move |ctx: &mut CtxMap| {
+                apply_monster_move(ctx, guid, updated_path, updated_at);
+            }),
+        ))])])
+    }
+}
+
+fn apply_monster_move(
+    ctx: &mut CtxMap,
+    guid: PackedGuid,
+    updated_path: Option<Vec<Point3D>>,
+    updated_at: u64,
+) {
+    {
+        let Some(objects) = ctx.get_mut::<ObjectMap>() else {
+            return;
+        };
+
+        let Some(object) = objects.get_mut(&guid) else {
+            return;
+        };
+
+        if let Some(world_path) = updated_path {
+            let movement = object.movement.get_or_insert_with(|| Movement {
+                ..Default::default()
+            });
+
+            movement
+                .spline_info
+                .get_or_insert_with(Default::default)
+                .path = world_path;
+        }
+    }
+
+    if let Some(registry) = ctx.get_mut::<ObjectLifecycleRegistry>()
+        && let Some(lifecycle) = registry.get_mut(&guid)
+    {
+        lifecycle.mark_updated(updated_at);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::BTreeMap;
+
+    use crate::plugins::wow::wotlk::realm::object::lifecycle::ObjectLifecycle;
+    use crate::plugins::wow::wotlk::realm::object::types::update_data::ObjectTypeMask;
+    use crate::plugins::wow::wotlk::realm::object::{Object, ObjectTypeId};
+
+    fn unit_object(guid: PackedGuid) -> Object {
+        Object {
+            guid,
+            object_type_id: ObjectTypeId::Unit,
+            object_type_mask: ObjectTypeMask::OBJECT | ObjectTypeMask::UNIT,
+            movement: None,
+            object_fields: BTreeMap::new(),
+            unit_fields: BTreeMap::new(),
+            player_fields: BTreeMap::new(),
+            item_fields: BTreeMap::new(),
+            container_fields: BTreeMap::new(),
+            game_object_fields: BTreeMap::new(),
+            dynamic_object_fields: BTreeMap::new(),
+            corpse_fields: BTreeMap::new(),
+        }
+    }
+
+    #[test]
+    fn monster_move_updates_spline_path_and_lifecycle() {
+        let guid = PackedGuid(102);
+        let mut ctx = CtxMap::default();
+
+        let mut objects = ObjectMap::default();
+        objects.insert(guid, unit_object(guid));
+        ctx.insert(objects);
+
+        let mut registry = ObjectLifecycleRegistry::default();
+        registry.insert(guid, ObjectLifecycle::created(100));
+        ctx.insert(registry);
+
+        let path = vec![
+            Point3D {
+                x: 1.0,
+                y: 2.0,
+                z: 3.0,
+            },
+            Point3D {
+                x: 4.0,
+                y: 5.0,
+                z: 6.0,
+            },
+        ];
+
+        apply_monster_move(&mut ctx, guid, Some(path.clone()), 275);
+
+        let object = &ctx.get::<ObjectMap>().unwrap()[&guid];
+        assert_eq!(
+            object
+                .movement
+                .as_ref()
+                .and_then(|movement| movement.spline_info.as_ref())
+                .map(|spline| spline.path.as_slice()),
+            Some(path.as_slice())
+        );
+
+        let lifecycle = &ctx.get::<ObjectLifecycleRegistry>().unwrap()[&guid];
+        assert_eq!(lifecycle.created_at(), 100);
+        assert_eq!(lifecycle.updated_at(), 275);
     }
 }
 
