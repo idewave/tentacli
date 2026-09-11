@@ -6,3 +6,4 @@
 .vscode
 Cargo.lock
 *.zip
+*.orig
