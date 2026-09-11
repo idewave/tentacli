@@ -1,7 +1,10 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::plugins::wow::wotlk::realm::object::name_query::NameQueryRequest;
-use crate::plugins::wow::wotlk::realm::object::types::update_fields::{FieldValue, UnitField};
+use crate::plugins::wow::wotlk::realm::object::types::update_data::UpdateData;
+use crate::plugins::wow::wotlk::realm::object::types::update_fields::{
+    FieldValue, ObjectField, UnitField,
+};
 use crate::plugins::wow::wotlk::realm::object::{Object, ObjectTypeId, PackedGuid};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -103,6 +106,65 @@ enum NameQueryKey {
     Item(u32),
 }
 
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct NameQuerySnapshot {
+    object_type_id: ObjectTypeId,
+    guid: PackedGuid,
+    entry: Option<u32>,
+    pet_number: Option<u32>,
+    pet_name_timestamp: Option<u32>,
+    schedule_primary: bool,
+    schedule_pet: bool,
+    refresh_pet_name: bool,
+}
+
+impl NameQuerySnapshot {
+    pub(crate) fn from_object(object: &Object) -> Self {
+        Self {
+            object_type_id: object.object_type_id,
+            guid: object.guid,
+            entry: entry_id(object),
+            pet_number: pet_number(object),
+            pet_name_timestamp: pet_name_timestamp(object),
+            schedule_primary: true,
+            schedule_pet: true,
+            refresh_pet_name: false,
+        }
+    }
+
+    pub(crate) fn updated(mut self, update: &UpdateData) -> Option<Self> {
+        let entry_updated = update.object_fields.contains_key(&ObjectField::Entry);
+        let pet_number_updated = update.unit_fields.contains_key(&UnitField::PetNumber);
+        let pet_name_timestamp_updated = update
+            .unit_fields
+            .contains_key(&UnitField::PetNameTimestamp);
+
+        if !entry_updated && !pet_number_updated && !pet_name_timestamp_updated {
+            return None;
+        }
+
+        self.schedule_primary = entry_updated;
+        self.schedule_pet = pet_number_updated || pet_name_timestamp_updated;
+        self.refresh_pet_name = pet_name_timestamp_updated;
+
+        if let Some(FieldValue::Integer(value)) = update.object_fields.get(&ObjectField::Entry) {
+            self.entry = (*value > 0).then_some(*value as u32);
+        }
+
+        if let Some(FieldValue::Integer(value)) = update.unit_fields.get(&UnitField::PetNumber) {
+            self.pet_number = (*value > 0).then_some(*value as u32);
+        }
+
+        if let Some(FieldValue::Integer(value)) =
+            update.unit_fields.get(&UnitField::PetNameTimestamp)
+        {
+            self.pet_name_timestamp = Some(*value as u32);
+        }
+
+        Some(self)
+    }
+}
+
 #[derive(Default)]
 pub struct ObjectNameRegistry {
     players: HashMap<PackedGuid, PlayerIdentity>,
@@ -164,54 +226,81 @@ impl ObjectNameRegistry {
     }
 
     pub(crate) fn schedule_for(&mut self, object: &Object) -> Vec<NameQueryRequest> {
+        self.schedule_state(NameQuerySnapshot::from_object(object))
+    }
+
+    pub(crate) fn schedule_state(&mut self, state: NameQuerySnapshot) -> Vec<NameQueryRequest> {
         let mut requests = Vec::with_capacity(2);
 
-        match object.object_type_id {
+        match state.object_type_id {
             ObjectTypeId::Player => {
-                let key = NameQueryKey::Player(object.guid);
-                if self.should_schedule(key) {
-                    requests.push(NameQueryRequest::Player { guid: object.guid });
+                if state.schedule_primary {
+                    let key = NameQueryKey::Player(state.guid);
+                    if self.should_schedule(key) {
+                        requests.push(NameQueryRequest::Player { guid: state.guid });
+                    }
                 }
             }
             ObjectTypeId::Unit => {
-                if let Some(entry) = entry_id(object) {
+                if state.schedule_primary
+                    && let Some(entry) = state.entry
+                {
                     let key = NameQueryKey::Creature(entry);
                     if self.should_schedule(key) {
                         requests.push(NameQueryRequest::Creature {
                             entry,
-                            guid: object.guid,
+                            guid: state.guid,
                         });
                     }
                 }
 
-                if let Some(pet_number) = pet_number(object) {
+                if state.schedule_pet
+                    && let Some(pet_number) = state.pet_number
+                {
                     let key = NameQueryKey::Pet(pet_number);
+
+                    if state.refresh_pet_name {
+                        if let (Some(identity), Some(name_timestamp)) =
+                            (self.pets.get(&pet_number), state.pet_name_timestamp)
+                            && identity.name_timestamp != name_timestamp
+                        {
+                            self.pets.remove(&pet_number);
+                        }
+
+                        self.pending.remove(&key);
+                        self.failed.remove(&key);
+                    }
+
                     if self.should_schedule(key) {
                         requests.push(NameQueryRequest::Pet {
                             pet_number,
-                            guid: object.guid,
+                            guid: state.guid,
                         });
                     }
                 }
             }
             ObjectTypeId::GameObject => {
-                if let Some(entry) = entry_id(object) {
+                if state.schedule_primary
+                    && let Some(entry) = state.entry
+                {
                     let key = NameQueryKey::GameObject(entry);
                     if self.should_schedule(key) {
                         requests.push(NameQueryRequest::GameObject {
                             entry,
-                            guid: object.guid,
+                            guid: state.guid,
                         });
                     }
                 }
             }
             ObjectTypeId::Item | ObjectTypeId::Container => {
-                if let Some(entry) = entry_id(object) {
+                if state.schedule_primary
+                    && let Some(entry) = state.entry
+                {
                     let key = NameQueryKey::Item(entry);
                     if self.should_schedule(key) {
                         requests.push(NameQueryRequest::Item {
                             entry,
-                            guid: object.guid,
+                            guid: state.guid,
                         });
                     }
                 }
@@ -342,6 +431,13 @@ fn pet_number(object: &Object) -> Option<u32> {
     }
 }
 
+fn pet_name_timestamp(object: &Object) -> Option<u32> {
+    match object.unit_fields.get(&UnitField::PetNameTimestamp)? {
+        FieldValue::Integer(value) => Some(*value as u32),
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeMap;
@@ -428,6 +524,59 @@ mod tests {
 
         registry.resolve_pet(777, "Bobby".to_string(), 42);
         assert_eq!(registry.name_for(&pet), Some("Bobby"));
+    }
+
+    #[test]
+    fn pet_number_from_values_schedules_pet_query() {
+        let mut registry = ObjectNameRegistry::default();
+        let pet = object(21, ObjectTypeId::Unit, Some(456));
+
+        assert_eq!(registry.schedule_for(&pet).len(), 1);
+
+        let mut update = UpdateData::default();
+        update
+            .unit_fields
+            .insert(UnitField::PetNumber, FieldValue::Integer(778));
+
+        let state = NameQuerySnapshot::from_object(&pet).updated(&update).unwrap();
+        let requests = registry.schedule_state(state);
+
+        assert_eq!(
+            requests,
+            vec![NameQueryRequest::Pet {
+                pet_number: 778,
+                guid: PackedGuid(21),
+            }]
+        );
+    }
+
+    #[test]
+    fn pet_name_timestamp_change_refreshes_cached_name() {
+        let mut registry = ObjectNameRegistry::default();
+        let mut pet = object(22, ObjectTypeId::Unit, Some(456));
+        pet.unit_fields
+            .insert(UnitField::PetNumber, FieldValue::Integer(779));
+        pet.unit_fields
+            .insert(UnitField::PetNameTimestamp, FieldValue::Integer(42));
+
+        registry.resolve_pet(779, "Old name".to_string(), 42);
+
+        let mut update = UpdateData::default();
+        update
+            .unit_fields
+            .insert(UnitField::PetNameTimestamp, FieldValue::Integer(43));
+
+        let state = NameQuerySnapshot::from_object(&pet).updated(&update).unwrap();
+        let requests = registry.schedule_state(state);
+
+        assert_eq!(
+            requests,
+            vec![NameQueryRequest::Pet {
+                pet_number: 779,
+                guid: PackedGuid(22),
+            }]
+        );
+        assert!(registry.pet(779).is_none());
     }
 
     #[test]
